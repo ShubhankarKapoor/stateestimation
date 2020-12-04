@@ -1,8 +1,8 @@
-def LinDistFlowBackwardForwardSweep(P_Load,Q_Load,which):
+def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None):
 
     import numpy as np
     import copy
-    
+
     if which == 37:
         from Network37 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase, R_line, X_line
     else:
@@ -27,7 +27,8 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load,which):
     V = {}
     for i in BusNum: #Note that bus 0 here shows the ideal secondary voltages of the transformer
         V[i] = 1 # square magnitude
-    
+    V[0] = 1 if V0 is None else V0
+
     #Initialization of iteration count
     k = 0 # iteration count
     e_max = 1
@@ -55,7 +56,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load,which):
         
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
-    
+    Vmag = {key:np.sqrt(val) for key, val in V.items()} # sqrt of mag
     #Report Results
     # V_mag = {}
     # V_ang = {}
@@ -71,4 +72,4 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load,which):
     
     # would want to return current as well in futuret
 
-    return(V, P_line, Q_line, e_max,k)
+    return(V, Vmag, P_line, Q_line, e_max,k)
