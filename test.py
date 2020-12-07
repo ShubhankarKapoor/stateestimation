@@ -171,8 +171,8 @@ if lin == 1:
 
 # using Full AC Network
 if full_ac == 1:
-    [V_mag_con,_,Voltage,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est, 
-                                                                        Q_Load_est,which)
+    [V_mag_con,_,Voltage,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est,
+            Q_Load_est, which, full_x_est[-1])
     Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
     V_con = Vsq_con
     
