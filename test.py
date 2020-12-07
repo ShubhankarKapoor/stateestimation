@@ -11,16 +11,21 @@ if which == 37:
 else:
     from Network906 import *
 
-# [V, Vmag, P_line, Q_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
+lin = 0
+full_ac = 1
 
-[V_mag, V_ang, Voltage, S_line, I_line, I_load, e_max, k] = BackwardForwardSweep(
-                                                            P_Load, Q_Load, which)
-Vsq =  {key:val**2 for key, val in V_mag.items()} # square of V_mag
-V = Vsq
+if lin == 1:
+    [V, Vmag, P_line, Q_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
 
-# when running full network
-P_line = {key:val.real for key, val in S_line.items()} # resistance of every line
-Q_line = {key:val.imag for key, val in S_line.items()} # reactancce of every line
+if full_ac == 1:
+    [V_mag, V_ang, Voltage, S_line, I_line, I_load, e_max, k] = BackwardForwardSweep(
+                                                                P_Load, Q_Load, which)
+    Vsq =  {key:val**2 for key, val in V_mag.items()} # square of V_mag
+    V = Vsq
+    
+    # when running full network
+    P_line = {key:val.real for key, val in S_line.items()} # resistance of every line
+    Q_line = {key:val.imag for key, val in S_line.items()} # reactancce of every line
 
 # below is state estimation
 
@@ -69,11 +74,9 @@ for k,v in P_Load.items():
 # remove p0 = 0 and the rest have values equally divided from p_ij
 p_distributed = P_line[(0,1)]/(len(P_Load_state))
 p_states = np.zeros((len(P_Load_state))) + p_distributed
-# p_states = np.insert(p_states, 0, 0) # insert 0 at loc 0
 
 q_distributed = Q_line[(0,1)]/(len(P_Load_state))
 q_states = np.zeros((len(P_Load_state))) + q_distributed
-# q_states = np.insert(q_states, 0, 0) # insert 0 at loc 0
 
 v0 = 1 # slack bus
 
@@ -134,13 +137,27 @@ full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
 full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
 full_x_est[-1] = x_est[-1] # slack bus square voltage
 
+# error function
+def error_calc(ground_truth, estimated):
+    with np.errstate(divide='ignore'):
+        err = abs((estimated-ground_truth)/ground_truth * 100)
+    err[np.isnan(err)] = 0 
+    mean_perc_error = np.mean(err)
+    max_perc_error = np.max(err)
+    
+    return mean_perc_error, max_perc_error
+
 # calculate error between state vectors
 error = x - full_x_est
 max_error = np.max(abs(error))
+mean_error_st, max_error_st = error_calc(x, full_x_est)
 
 # sum of residuals
 sum_residuals = np.sum(abs(residuals))
 results = results.T
+
+###############################################################################
+###############################################################################
 
 # Regenerated measurements using the estimated states
 keys = list(range(len(P_Load)))
@@ -148,23 +165,27 @@ array = full_x_est[0:len(P_Load)]
 P_Load_est = dict(zip(keys, array))
 Q_Load_est = dict(zip(keys, full_x_est[len(P_Load):len(P_Load)*2]))
 
-[V_con, _ ,P_line_con, Q_line_con, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
-    P_Load_est, Q_Load_est, which, full_x_est[-1]) # using lindistflow
+if lin == 1:
+    [V_con, _ ,P_line_con, Q_line_con, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
+        P_Load_est, Q_Load_est, which, full_x_est[-1]) # using lindistflow
 
 # using Full AC Network
-[V_mag_con,_,Voltage,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load, Q_Load,which)
-Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
-V_con = Vsq_con
+if full_ac == 1:
+    [V_mag_con,_,Voltage,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est, 
+                                                                        Q_Load_est,which)
+    Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
+    V_con = Vsq_con
+    
+    # when running full network
+    P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
+    Q_line_con = {key:val.imag for key, val in S_line_con.items()} # reactancce of every line
 
-# when running full network
-P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
-Q_line_con = {key:val.imag for key, val in S_line_con.items()} # reactancce of every line
-# # error calc between 
-# meas_P_line = list(P_line_con.values())
-# meas_Q_line = list(Q_line_con.values())
-# meas_P_load = list(P_Load.values())
-# meas_Q_load = list(Q_Load.values())
-# meas_V = list(V_con.values())
-# z_true = np.asarray(meas_P_line + meas_Q_line + meas_P_load + meas_Q_load + meas_V) # ground truth for meas
 
-# fix/ come up with error calc
+# error calc between measurements
+
+# pflow and qflow error
+mean_pflow_err, max_pflow_err = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
+mean_qflow_err, max_qflow_err = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
+
+# Vmag^2 error
+mean_vsq_err, max_vsq_err = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))

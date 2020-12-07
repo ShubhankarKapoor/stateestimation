@@ -69,11 +69,11 @@ def grad_pline_with_p(S_line_meas, P_Load_states, path_to_all_nodes):
     for i , (k,v) in enumerate(S_line_meas.items()): # iterate over measurements line
         # print(i,k)
         index_of_lines[i] = k
-        print(i, k, v)
+        # print(i, k, v)
         for j, node in enumerate(P_Load_states.keys()): # iterate over states node
             # print(j, node)
             if k in path_to_all_nodes[node]:
-                print(i, k, node)
+                # print(i, k, node)
                 # below we use j instead of node becasue not all nodes in the distribution are considered as state
                 # all the zib are known hence not a part of state
                 grad_array[i,j] = 1 # it will be a matrix of 0s and 1s
@@ -84,7 +84,7 @@ def grad_pseudo_with_p(p_pseudo, p_states):
     for node_i in p_pseudo.keys(): # meas node
         for j, node_j in enumerate(p_states.keys()): # state node
             if node_i == node_j:
-                print(node_i, node_j, j)
+                # print(node_i, node_j, j)
                 grad_array[node_i][j] = 1
                 break # if match found, break the search
     return grad_array
@@ -93,7 +93,7 @@ def grad_vnode_with_p(v_meas, p_states, path_to_all_nodes, R_line):
     grad_array = np.zeros((len(v_meas), len(p_states)))
     for node_i in v_meas.keys(): # meas node
         for j, node_j in enumerate(p_states.keys()): # state node
-            print(node_i, node_j)
+            # print(node_i, node_j)
             common_lines = path_to_all_nodes[node_i].intersection(path_to_all_nodes[node_j])
             grad_array[node_i][j] = -(sum(R_line[item] for item in common_lines)) * 2
     return grad_array
