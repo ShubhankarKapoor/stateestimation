@@ -15,7 +15,7 @@ lin = 0
 full_ac = 1
 
 if lin == 1:
-    [V, Vmag, P_line, Q_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
+    [V, Vmag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
 
 if full_ac == 1:
     [V_mag, V_ang, Voltage, S_line, I_line, I_load, e_max, k] = BackwardForwardSweep(
@@ -166,7 +166,7 @@ P_Load_est = dict(zip(keys, array))
 Q_Load_est = dict(zip(keys, full_x_est[len(P_Load):len(P_Load)*2]))
 
 if lin == 1:
-    [V_con, _ ,P_line_con, Q_line_con, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
+    [V_con, _ ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
         P_Load_est, Q_Load_est, which, full_x_est[-1]) # using lindistflow
 
 # using Full AC Network

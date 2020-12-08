@@ -9,8 +9,6 @@ import numpy as np
 def create_jacobian(P_line, P_Load_state, P_Load_meas, path_to_all_nodes,
                     V, R_line, X_line, num_states, num_meas):
     
-    num_states, num_meas
-    
     # initial case jacobian matrix
     # num_meas = 36*2 + 37*3 # 2 for pij and qij 3 for pj, qj, vj^2
     # num_states = 2 * 37 + 1 # 2 for pj, qj 1 for v0^2
@@ -62,15 +60,15 @@ def estimate_states():
     x = 0
     return x
 
-def grad_pline_with_p(S_line_meas, P_Load_states, path_to_all_nodes):
-    grad_array = np.zeros((len(S_line_meas), len(P_Load_states))) # meas*states
+def grad_pline_with_p(S_line_meas, p_states, path_to_all_nodes):
+    grad_array = np.zeros((len(S_line_meas), len(p_states))) # meas*states
 
     index_of_lines = {}
     for i , (k,v) in enumerate(S_line_meas.items()): # iterate over measurements line
         # print(i,k)
         index_of_lines[i] = k
         # print(i, k, v)
-        for j, node in enumerate(P_Load_states.keys()): # iterate over states node
+        for j, node in enumerate(p_states.keys()): # iterate over states node
             # print(j, node)
             if k in path_to_all_nodes[node]:
                 # print(i, k, node)

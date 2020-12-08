@@ -60,7 +60,11 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None):
         V_ang[i] = np.angle(V[i])*(180/np.pi)
 
     S_line = {}
-    for (i,j) in arcs:
-        S_line[(i,j)] = Voltage[i]*np.conj(I_line[(i,j)]) 
+    for (i,j) in LineData_Z_pu.keys():
+        S_line[(i,j)] = Voltage[i]*np.conj(I_line[(i,j)])
+        
+    # S_line = {}
+    # for (i,j) in arcs:
+    #     S_line[(i,j)] = Voltage[i]*np.conj(I_line[(i,j)]) 
 
     return(V_mag,V_ang,Voltage,S_line,I_line,I_load,e_max,k)

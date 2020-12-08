@@ -57,6 +57,14 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None):
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
     Vmag = {key:np.sqrt(val) for key, val in V.items()} # sqrt of mag
+    
+    # reorder the keys
+    S_line, P_line_ordered, Q_line_ordered = {}, {}, {}
+    for (i,j) in LineData_Z_pu.keys():
+        S_line[(i,j)] = P_line[(i,j)] + 1j*Q_line[(i,j)]
+        P_line_ordered[(i,j)] = P_line[(i,j)]
+        Q_line_ordered[(i,j)] = Q_line[(i,j)]
+    
     #Report Results
     # V_mag = {}
     # V_ang = {}
@@ -72,4 +80,4 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None):
     
     # would want to return current as well in futuret
 
-    return(V, Vmag, P_line, Q_line, e_max,k)
+    return(V, Vmag, P_line_ordered, Q_line_ordered, S_line, e_max,k)
