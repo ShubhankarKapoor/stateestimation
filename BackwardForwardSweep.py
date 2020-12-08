@@ -21,7 +21,7 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None):
     V = {}
     for i in BusNum: #Note that bus 0 here shows the ideal secondary voltages of the transformer
         V[i] = 1+0j
-    V[0] = 1 if V0 is None else V0
+    V[0] = 1 if V0 is None else (V0)**(1/2)+0j
     
     #Initialization of iteration count
     k = 0 # iteration count
