@@ -11,10 +11,10 @@ if which == 37:
 else:
     from Network906 import *
 
-data_lin = 0
-data_full_ac = 1
-est_lin = 1
-est_full_ac = 0
+data_lin = 1
+data_full_ac = 0
+est_lin = 0
+est_full_ac = 1
 comparison = 0
 
 if data_lin == 1:
@@ -59,7 +59,7 @@ W = np.linalg.inv(W)
 # add noise to measurement set
 mu, sigma = 0, 0.01 # mean and standatd deviation
 noise = np.random.normal(mu, sigma, len(z_true))
-noise = 0
+# noise = 0
 z = z_true + noise # noisy data
 
 # initialze state vars
@@ -148,12 +148,12 @@ def error_calc(ground_truth, estimated):
     mean_perc_error = np.mean(err)
     max_perc_error = np.max(err)
     
-    return err, mean_perc_error, max_perc_error
+    return err, mean_perc_error, max_perc_error, max(abs(estimated-ground_truth))
 
 # calculate error between state vectors
 error = x - full_x_est
 max_error = np.max(abs(error))
-st_err, mean_error_st, max_error_st = error_calc(x, full_x_est)
+st_err, mean_error_st, max_error_st, max_error_st_abs = error_calc(x, full_x_est)
 
 # sum of residuals
 sum_residuals = np.sum(abs(residuals))
@@ -186,18 +186,18 @@ if est_full_ac == 1:
 
 # error calc between measurements
 # pflow and qflow error
-_, mean_pflow_err, max_pflow_err = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
-_, mean_qflow_err, max_qflow_err = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
+_, mean_pflow_err, max_pflow_err, max_abs_pflow_err = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
+_, mean_qflow_err, max_qflow_err, max_abs_qflow_err = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
 
-# V_mag^2 error
-_, mean_vsq_err, max_vsq_err = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
-_, mean_vmag_err, max_vmag_err = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+# V_mag^2 and V_mag error
+_, mean_vsq_err, max_vsq_err, max_abs_vsq_err = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
+_, mean_vmag_err, max_vmag_err, max_abs_vmag_err = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
 
 # error calc between lindistflow and full AC
 if comparison == 1:
-    p_err, p_mean_err, p_max_err=error_calc(np.array(list(P_line2.values())), np.array(list(P_line.values())))
-    q_err, q_mean_err, q_max_err=error_calc(np.array(list(Q_line2.values())), np.array(list(Q_line.values())))
+    p_err, p_mean_err, p_max_err, p_max_err_abs = error_calc(np.array(list(P_line2.values())), np.array(list(P_line.values())))
+    q_err, q_mean_err, q_max_err, q_max_err_abs = error_calc(np.array(list(Q_line2.values())), np.array(list(Q_line.values())))
     
 # some manipulation for excel sheet
 aa=[]
-aa = [a for a in P_line_con.values()]
+aa = [a for a in Q_line_con.values()]
