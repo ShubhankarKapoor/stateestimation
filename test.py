@@ -50,14 +50,14 @@ meas_Q_load = list(Q_Load.values())
 meas_V = list(V.values())
 z_true = np.asarray(meas_P_line + meas_Q_line + meas_P_load + meas_Q_load + meas_V) # ground truth for meas
 
-sd = 0.01 # 0.01
+sd = 0.04 # 0.01
 weight_array = np.ones((len(z_true)))*sd
 # weight_array = np.insert(weight_array, len(weight_array), 0.00001)
 W = np.diag(weight_array) # Weight mat
 W = np.linalg.inv(W)
 
 # add noise to measurement set
-mu, sigma = 0, 0.01 # mean and standatd deviation
+mu, sigma = 0, 0.04 # mean and standatd deviation
 noise = np.random.normal(mu, sigma, len(z_true))
 # noise = 0
 z = z_true + noise # noisy data
@@ -104,7 +104,8 @@ G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
 Ginv = np.linalg.inv(G)
 
 count = 0
-delta_mat = np.zeros((len(x_est), 100000))
+delta_mat = np.zeros((len(x_est), 1000))
+residuals_mat = np.zeros((len(z), 1000))
 tol = 10e-16
 results = x_est
 emax = 100 # chosen higher than the tol
@@ -120,6 +121,7 @@ while emax > tol:
     
     # calculate measurement residuals
     residuals = z - hx
+    residuals_mat[:,count] = residuals
     
     # calculate deltax
     deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
