@@ -3,6 +3,8 @@ from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
 from jacobian_calc import create_jacobian
 from path_to_nodes import path_to_nodes
+import pandas as pd
+from some_funcs import error_calc
 
 which = 37 # IEEE 37-node or IEEE 906-node
 
@@ -11,8 +13,8 @@ if which == 37:
 else:
     from Network906 import *
 
-data_lin = 1
-data_full_ac = 0
+data_lin = 0
+data_full_ac = 1
 est_lin = 0
 est_full_ac = 1
 comparison = 0
@@ -42,7 +44,7 @@ x = np.insert(x, len(x), gt_V) # ground truth for states
 # states = ['P_Load', 'Q_Load', 'V0']
 # estimate_states(states)
 
-# measurement vector
+# true measurement vector
 meas_P_line = list(P_line.values())
 meas_Q_line = list(Q_line.values())
 meas_P_load = list(P_Load.values())
@@ -50,20 +52,38 @@ meas_Q_load = list(Q_Load.values())
 meas_V = list(V.values())
 z_true = np.asarray(meas_P_line + meas_Q_line + meas_P_load + meas_Q_load + meas_V) # ground truth for meas
 
-sd = 0.04 # 0.01
-weight_array = np.ones((len(z_true)))*sd
+sd = 0.04 # 0.01: 1% error
+# add noise to measurement set
+mu, sigma = 0, 0.04 # mean and standatd deviation
+noise = np.random.normal(mu, sigma, len(z_true))
+noise = 0
+z = z_true + noise # noisy data
+
+'''
+# get measurement vectors from csv files
+f1 = pd.read_csv('data/mm_branch_pq_noisy.csv')
+meas_P_line = f1['p_from_mw']*10
+meas_Q_line = f1['q_from_mvar']*10
+
+f2 = pd.read_csv('data/mm_bus_pq_noisy.csv')
+meas_P_load = f2['p_mw']*10
+meas_Q_load = f2['q_mvar']*10
+
+f3 = pd.read_csv('data/mm_bus_v_noisy.csv')
+meas_V = f3['vm_pu']**2
+z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V)) # ground truth for meas
+'''
+# call the function for reading measurements from csv
+weight_array1 = np.ones((len(meas_P_line)*2))*0.01
+weight_array2 = np.ones((len(meas_P_load)*2))*0.01
+weight_array3 = np.ones((len(meas_V)))*0.01
+weight_array = np.concatenate((weight_array1, weight_array2,weight_array3))
+weight_array[-1]=0.01 #
 # weight_array = np.insert(weight_array, len(weight_array), 0.00001)
 W = np.diag(weight_array) # Weight mat
 W = np.linalg.inv(W)
 
-# add noise to measurement set
-mu, sigma = 0, 0.04 # mean and standatd deviation
-noise = np.random.normal(mu, sigma, len(z_true))
-# noise = 0
-z = z_true + noise # noisy data
-
 # initialze state vars
-
 # consider the state vars only for non ZIBs
 P_Load_state = {}
 zib_index, non_zib_index = [], [] # index of zibs and non zibs
@@ -142,20 +162,11 @@ full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
 full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
 full_x_est[-1] = x_est[-1] # slack bus square voltage
 
-# error function
-def error_calc(ground_truth, estimated):
-    with np.errstate(divide='ignore'):
-        err = abs((estimated-ground_truth)/ground_truth * 100)
-    err[np.isnan(err)] = 0 
-    mean_perc_error = np.mean(err)
-    max_perc_error = np.max(err)
-    
-    return err, mean_perc_error, max_perc_error, max(abs(estimated-ground_truth))
-
 # calculate error between state vectors
 error = x - full_x_est
 max_error = np.max(abs(error))
-st_err, mean_error_st, max_error_st, max_error_st_abs = error_calc(x, full_x_est)
+st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
 
 # sum of residuals
 sum_residuals = np.sum(abs(residuals))

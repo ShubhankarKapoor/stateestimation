@@ -6,21 +6,24 @@ Created on Fri Nov 27 13:44:59 2020
 @author: shub
 """
 import numpy as np
-def create_jacobian(P_line, P_Load_state, P_Load_meas, path_to_all_nodes,
-                    V, R_line, X_line, num_states, num_meas):
-    
+def create_jacobian(P_line_mes, P_Load_state, P_Load_meas, path_to_all_nodes,
+                    Vsq_mes, R_line, X_line, num_states, num_meas):
+    # V is square of voltage mag
     # initial case jacobian matrix
     # num_meas = 36*2 + 37*3 # 2 for pij and qij 3 for pj, qj, vj^2
     # num_states = 2 * 37 + 1 # 2 for pj, qj 1 for v0^2
     jacobian_matrix = np.zeros((num_meas, num_states))
     
     # call jacobian for pline_plflow
-    grad_array, index_of_lines = grad_pline_with_p(P_line, P_Load_state, path_to_all_nodes)
+    grad_array, index_of_lines = grad_pline_with_p(P_line_mes, P_Load_state, path_to_all_nodes)
     meas_rows = grad_array.shape[0]
     state_cols = grad_array.shape[1]
     jacobian_matrix[0:meas_rows, 0:state_cols] = grad_array
     last_row_inserted = meas_rows
     
+    # might have to modify if qline is missing where there is pline or vice versa
+    # grad array would be different in that case
+    # similarly for other grad arrays as well
     # call jacobian for qline_qflow, should be exactly same as above
     jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
     last_row_inserted = 2*meas_rows # didn't do -1 because then this can be used directly
@@ -37,17 +40,17 @@ def create_jacobian(P_line, P_Load_state, P_Load_meas, path_to_all_nodes,
     last_row_inserted += meas_rows
     
     # call jacobian for vnode^2 with p
-    grad_array = grad_vnode_with_p(V, P_Load_state, path_to_all_nodes, R_line)
+    grad_array = grad_vnode_with_p(Vsq_mes, P_Load_state, path_to_all_nodes, R_line)
     meas_rows = grad_array.shape[0]
     state_cols = grad_array.shape[1]
     jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, 0:state_cols] = grad_array
     
     # call jacobian for vnode^2 with q
-    grad_array = grad_vnode_with_p(V, P_Load_state, path_to_all_nodes, X_line)
+    grad_array = grad_vnode_with_p(Vsq_mes, P_Load_state, path_to_all_nodes, X_line)
     jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
     
     # call jacobian with v0^2
-    grad_array = grad_vnode_with_v0(V)
+    grad_array = grad_vnode_with_v0(Vsq_mes)
     jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols:] = grad_array
     
     return jacobian_matrix
