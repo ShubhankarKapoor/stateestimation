@@ -4,7 +4,7 @@ import numpy as np
 from jacobian_calc import create_jacobian
 from path_to_nodes import path_to_nodes
 import pandas as pd
-from some_funcs import error_calc
+from some_funcs import error_calc, create_mes_set
 
 which = 37 # IEEE 37-node or IEEE 906-node
 
@@ -13,10 +13,10 @@ if which == 37:
 else:
     from Network906 import *
 
-data_lin = 0
-data_full_ac = 1
-est_lin = 0
-est_full_ac = 1
+data_lin = 1
+data_full_ac = 0
+est_lin = 1
+est_full_ac = 0
 comparison = 0
 
 if data_lin == 1:
@@ -45,19 +45,27 @@ x = np.insert(x, len(x), gt_V) # ground truth for states
 # estimate_states(states)
 
 # true measurement vector
-meas_P_line = list(P_line.values())
-meas_Q_line = list(Q_line.values())
-meas_P_load = list(P_Load.values())
-meas_Q_load = list(Q_Load.values())
-meas_V = list(V.values())
-z_true = np.asarray(meas_P_line + meas_Q_line + meas_P_load + meas_Q_load + meas_V) # ground truth for meas
+z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) + 
+                    list(P_Load.values()) + list(Q_Load.values()) + list(V.values())) # ground truth for meas
 
 sd = 0.04 # 0.01: 1% error
 # add noise to measurement set
 mu, sigma = 0, 0.04 # mean and standatd deviation
 noise = np.random.normal(mu, sigma, len(z_true))
-noise = 0
+# noise = 0
 z = z_true + noise # noisy data
+
+meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V  = P_line, Q_line, P_Load, Q_Load, V
+'''
+# reading measurement sets from csv files
+filename_bus = 'data/r1_bus_meas.csv'
+filename_branch = 'data/r1_branch_meas.csv'
+meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V = create_mes_set(
+    filename_bus, filename_branch)
+
+z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
+               list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # ground truth for meas
+'''
 
 '''
 # get measurement vectors from csv files
@@ -74,11 +82,17 @@ meas_V = f3['vm_pu']**2
 z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V)) # ground truth for meas
 '''
 # call the function for reading measurements from csv
-weight_array1 = np.ones((len(meas_P_line)*2))*0.01
-weight_array2 = np.ones((len(meas_P_load)*2))*0.01
-weight_array3 = np.ones((len(meas_V)))*0.01
+w1, w2, w3 = 0.04, 0.03, 0.01
+# w1, w2, w3 = 0.01, 0.01, 0.01
+w1, w2, w3 = 0.005, 0.0001, 0.001
+w1, w2, w3 = 0.05, 0.01, 0.001
+# lower the sd here more the trust in the measurement
+weight_array1 = np.ones((len(meas_P_line)*2))*w1
+weight_array2 = np.ones((len(meas_P_load)*2))*w2
+weight_array3 = np.ones((len(meas_V)))*w3
 weight_array = np.concatenate((weight_array1, weight_array2,weight_array3))
-weight_array[-1]=0.01 #
+# check below
+# weight_array[-1]=0.01 # 
 # weight_array = np.insert(weight_array, len(weight_array), 0.00001)
 W = np.diag(weight_array) # Weight mat
 W = np.linalg.inv(W)
@@ -110,14 +124,13 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 path_to_all_nodes = path_to_nodes(which)
 
 # get jacobain matrix
-# jacobian_matrix = create_jacobian(P_line, P_Load_state, P_Load_meas, path_to_all_nodes,
-#                                   V, R_line, X_line, len(x_est), len(z))
-
-
 # we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
 # only their keys
 jacobian_matrix = create_jacobian(P_line, P_Load_state, P_Load, path_to_all_nodes,
                                   V, R_line, X_line, len(x_est), len(z))
+
+# jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+#                                   meas_V, R_line, X_line, len(x_est), len(z))
 
 # some preprocessing for time saving during iterative newton method
 G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
@@ -154,7 +167,7 @@ while emax > tol:
     x_est = x_est + deltax
     results = np.vstack((results, x_est))
     count+=1
-    print(count-1)
+    print(count)
 
 # get the full vector for xest
 full_x_est = np.zeros((len(x)))
@@ -168,6 +181,9 @@ max_error = np.max(abs(error))
 st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
 st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
 
+# print some results
+print(w1, w2, w3)
+print(mean_error_st_p, max_error_st_p, mean_error_st_q, max_error_st_q)
 # sum of residuals
 sum_residuals = np.sum(abs(residuals))
 results = results.T
@@ -196,15 +212,14 @@ if est_full_ac == 1:
     P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
     Q_line_con = {key:val.imag for key, val in S_line_con.items()} # reactancce of every line
 
-
 # error calc between measurements
-# pflow and qflow error
-_, mean_pflow_err, max_pflow_err, max_abs_pflow_err = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
-_, mean_qflow_err, max_qflow_err, max_abs_qflow_err = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
-
 # V_mag^2 and V_mag error
 _, mean_vsq_err, max_vsq_err, max_abs_vsq_err = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
 _, mean_vmag_err, max_vmag_err, max_abs_vmag_err = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+
+# pflow and qflow error
+_, mean_pflow_err, max_pflow_err, max_abs_pflow_err = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
+_, mean_qflow_err, max_qflow_err, max_abs_qflow_err = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
 
 # error calc between lindistflow and full AC
 if comparison == 1:

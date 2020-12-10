@@ -12,29 +12,34 @@ def error_calc(ground_truth, estimated):
     return err, mean_perc_error, max_perc_error, max(abs(estimated-ground_truth))
 
 def create_mes_set(filename_bus, filename_branch):
-    
-    
-    # get measurement vectors from csv files
+    ''' get measurement vectors from csv files '''
+    # for testing 
+    # filename_bus = 'data/r1_bus_meas.csv'
+    # filename_branch = 'data/r1_branch_meas.csv'
+
     f1 = pd.read_csv(filename_branch)
     f1 = f1.sort_values('to_bus')
     f1['arcs'] = list(zip(f1.from_bus, f1.to_bus))
     
     f1['value'] = f1['value']*10
-    meas_Q_line = f1['q_from_mvar']*10
+    # meas_Q_line = f1['q_from_mvar']*10
     
     p_line_meas = dict(zip(f1[f1['measurement_type'] == 'p'].arcs, f1[f1['measurement_type'] == 'p'].value))
     q_line_meas = dict(zip(f1[f1['measurement_type'] == 'q'].arcs, f1[f1['measurement_type'] == 'q'].value))
     
-
-
-    
     f2 = pd.read_csv(filename_bus)
-    meas_P_load = f2['p_mw']*10
-    meas_Q_load = f2['q_mvar']*10
+    f2.sort_values('name_bus')
+    # f2['value'] = f2['value']*10
+    f2.loc[f2['measurement_type']== 'p', 'value'] = f2[f2['measurement_type'] == 'p']['value'] * 10
+    f2.loc[f2['measurement_type']== 'q', 'value'] = f2[f2['measurement_type'] == 'q']['value'] * 10
+    f2.loc[f2['measurement_type']== 'v', 'value'] = f2[f2['measurement_type'] == 'v']['value'] ** 2
+    # f2[f2['measurement_type'] == 'p']['value'] = f2[f2['measurement_type'] == 'p']['value'] * 10
     
-    f3 = pd.read_csv('data/mm_bus_v_noisy.csv')
-    meas_V = f3['vm_pu']**2
-    z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V)) # ground truth for meas
+    meas_P_load = dict(zip(f2[f2['measurement_type'] == 'p'].name_bus, f2[f2['measurement_type'] == 'p'].value))
+    meas_Q_load = dict(zip(f2[f2['measurement_type'] == 'q'].name_bus, f2[f2['measurement_type'] == 'q'].value))
+    meas_V = dict(zip(f2[f2['measurement_type'] == 'v'].name_bus, f2[f2['measurement_type'] == 'v'].value))
     
-    # return separatelyand together the measurements
+    # z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V)) # ground truth for meas
+    
+    return p_line_meas, q_line_meas, meas_P_load, meas_Q_load, meas_V
         
