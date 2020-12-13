@@ -133,11 +133,11 @@ weight_array3 = np.ones((len(meas_V)))*w3
 weight_array = np.concatenate((weight_array1, weight_array2,weight_array3))
 
 # these weights are computed from greedy placement algo
-# w1 = weight_vals(meas_P_line, c = 0.005, abs_error = 0.01)
-# w2 = weight_vals(meas_Q_line, c = 0.005, abs_error = 0.01)
-# w3 = weight_vals(meas_P_load, c = 0.2, abs_error = 0.01)
-# w4 = weight_vals(meas_Q_load, c = 0.2, abs_error = 0.01)
-# w5 = weight_vals(meas_V, c = 0.001, abs_error = 0.01)
+w1 = weight_vals(meas_P_line, c = 0.005, abs_error = 0.01)
+w2 = weight_vals(meas_Q_line, c = 0.005, abs_error = 0.01)
+w3 = weight_vals(meas_P_load, c = 0.2, abs_error = 0.01)
+w4 = weight_vals(meas_Q_load, c = 0.2, abs_error = 0.01)
+w5 = weight_vals(meas_V, c = 0.001, abs_error = 0.01)
 # print(w1, w2, w3, w4, w5)
 # weight_array1 = np.ones((len(meas_P_line)))*w1
 # weight_array2 = np.ones((len(meas_P_line)))*w2
