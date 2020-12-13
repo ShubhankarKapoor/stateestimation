@@ -4,7 +4,8 @@ import numpy as np
 from jacobian_calc import create_jacobian
 from path_to_nodes import path_to_nodes
 import pandas as pd
-from some_funcs import error_calc, create_mes_set
+from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
+                       weight_vals, noise_addition
 
 which = 37 # IEEE 37-node or IEEE 906-node
 
@@ -32,8 +33,6 @@ if data_full_ac == 1:
     P_line = {key:val.real for key, val in S_line.items()} # resistance of every line
     Q_line = {key:val.imag for key, val in S_line.items()} # reactancce of every line
 
-# below is state estimation
-
 # ground truth
 gt_P_load = list(P_Load.values())
 gt_Q_load = list(Q_Load.values())
@@ -44,18 +43,58 @@ x = np.insert(x, len(x), gt_V) # ground truth for states
 # states = ['P_Load', 'Q_Load', 'V0']
 # estimate_states(states)
 
-# true measurement vector
+# ground truth for measurements
 z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) + 
                     list(P_Load.values()) + list(Q_Load.values()) + list(V.values())) # ground truth for meas
 
-sd = 0.04 # 0.01: 1% error
-# add noise to measurement set
-mu, sigma = 0, 0.04 # mean and standatd deviation
-noise = np.random.normal(mu, sigma, len(z_true))
-# noise = 0
-z = z_true + noise # noisy data
+##############################################################################
+##############################################################################
 
-meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V  = P_line, Q_line, P_Load, Q_Load, V
+# initialze state vars
+# consider the state vars only for non ZIBs
+P_Load_state = {}
+zib_index, non_zib_index = [], [] # index of zibs and non zibs
+for k,v in P_Load.items():
+    if v != 0:
+        P_Load_state[k] = v
+        non_zib_index.append(k)
+    else:
+        zib_index.append(k)
+        
+# remove p0 = 0 and the rest have values equally divided from p_ij
+p_distributed = P_line[(0,1)]/(len(P_Load_state))
+p_states = np.zeros((len(P_Load_state))) + p_distributed
+
+q_distributed = Q_line[(0,1)]/(len(P_Load_state))
+q_states = np.zeros((len(P_Load_state))) + q_distributed
+
+v0 = 1 # slack bus
+
+x_est = np.concatenate((p_states, q_states))
+x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
+
+##############################################################################
+##############################################################################
+
+# get subset of measurement set
+num_plow_meas = 1
+num_voltage_meas = 1
+meas_P_line, meas_Q_line, meas_V = subset_of_measurements(
+    num_plow_meas, num_voltage_meas, arcs, P_line, Q_line, V)
+    
+meas_P_load, meas_Q_load  = P_Load, Q_Load
+
+z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
+               list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
+
+# noise addition
+sd = 0.25 # 0.01: 1% error
+z1 = noise_addition(z, sd)
+
+##############################################################################
+##############################################################################
+
+# call the function for reading measurements from csv
 '''
 # reading measurement sets from csv files
 filename_bus = 'data/r1_bus_meas.csv'
@@ -81,56 +120,51 @@ f3 = pd.read_csv('data/mm_bus_v_noisy.csv')
 meas_V = f3['vm_pu']**2
 z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V)) # ground truth for meas
 '''
-# call the function for reading measurements from csv
+
+# lower the sd here more the trust in the measurement
 w1, w2, w3 = 0.04, 0.03, 0.01
 # w1, w2, w3 = 0.01, 0.01, 0.01
 w1, w2, w3 = 0.005, 0.0001, 0.001
 w1, w2, w3 = 0.05, 0.01, 0.001
-# lower the sd here more the trust in the measurement
+print(w1, w2, w3)
 weight_array1 = np.ones((len(meas_P_line)*2))*w1
 weight_array2 = np.ones((len(meas_P_load)*2))*w2
 weight_array3 = np.ones((len(meas_V)))*w3
 weight_array = np.concatenate((weight_array1, weight_array2,weight_array3))
+
+# these weights are computed from greedy placement algo
+# w1 = weight_vals(meas_P_line, c = 0.005, abs_error = 0.01)
+# w2 = weight_vals(meas_Q_line, c = 0.005, abs_error = 0.01)
+# w3 = weight_vals(meas_P_load, c = 0.2, abs_error = 0.01)
+# w4 = weight_vals(meas_Q_load, c = 0.2, abs_error = 0.01)
+# w5 = weight_vals(meas_V, c = 0.001, abs_error = 0.01)
+# print(w1, w2, w3, w4, w5)
+# weight_array1 = np.ones((len(meas_P_line)))*w1
+# weight_array2 = np.ones((len(meas_P_line)))*w2
+# weight_array3 = np.ones((len(meas_P_load)))*w3
+# weight_array4 = np.ones((len(meas_Q_load)))*w4
+# weight_array5 = np.ones((len(meas_V)))*w5
+# weight_array = np.concatenate((weight_array1, weight_array2, weight_array3,
+#                                 weight_array4, weight_array5))
+
 # check below
 # weight_array[-1]=0.01 # 
 # weight_array = np.insert(weight_array, len(weight_array), 0.00001)
 W = np.diag(weight_array) # Weight mat
 W = np.linalg.inv(W)
 
-# initialze state vars
-# consider the state vars only for non ZIBs
-P_Load_state = {}
-zib_index, non_zib_index = [], [] # index of zibs and non zibs
-for k,v in P_Load.items():
-    if v != 0:
-        P_Load_state[k] = v
-        non_zib_index.append(k)
-    else:
-        zib_index.append(k)
-        
-# remove p0 = 0 and the rest have values equally divided from p_ij
-p_distributed = P_line[(0,1)]/(len(P_Load_state))
-p_states = np.zeros((len(P_Load_state))) + p_distributed
-
-q_distributed = Q_line[(0,1)]/(len(P_Load_state))
-q_states = np.zeros((len(P_Load_state))) + q_distributed
-
-v0 = 1 # slack bus
-
-x_est = np.concatenate((p_states, q_states))
-x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
-
+##############################################################################
+##############################################################################
+# state estimation
 # get paths from slack bus to all nodes
 path_to_all_nodes = path_to_nodes(which)
 
 # get jacobain matrix
 # we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
 # only their keys
-jacobian_matrix = create_jacobian(P_line, P_Load_state, P_Load, path_to_all_nodes,
-                                  V, R_line, X_line, len(x_est), len(z))
 
-# jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-#                                   meas_V, R_line, X_line, len(x_est), len(z))
+jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+                                  meas_V, R_line, X_line, len(x_est), len(z))
 
 # some preprocessing for time saving during iterative newton method
 G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
@@ -167,7 +201,11 @@ while emax > tol:
     x_est = x_est + deltax
     results = np.vstack((results, x_est))
     count+=1
-    print(count)
+    # print(count)
+
+##############################################################################
+##############################################################################
+# Error Calculations
 
 # get the full vector for xest
 full_x_est = np.zeros((len(x)))
@@ -182,8 +220,8 @@ st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p = error_calc(x[0:l
 st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
 
 # print some results
-print(w1, w2, w3)
-print(mean_error_st_p, max_error_st_p, mean_error_st_q, max_error_st_q)
+print(mean_error_st_p, max_error_st_p, max_error_st_abs_p) 
+print(mean_error_st_q, max_error_st_q, max_error_st_abs_q)
 # sum of residuals
 sum_residuals = np.sum(abs(residuals))
 results = results.T
@@ -216,6 +254,7 @@ if est_full_ac == 1:
 # V_mag^2 and V_mag error
 _, mean_vsq_err, max_vsq_err, max_abs_vsq_err = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
 _, mean_vmag_err, max_vmag_err, max_abs_vmag_err = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+print(mean_vmag_err, max_vmag_err, max_abs_vmag_err)
 
 # pflow and qflow error
 _, mean_pflow_err, max_pflow_err, max_abs_pflow_err = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
