@@ -6,6 +6,7 @@ Created on Fri Nov 27 13:44:59 2020
 @author: shub
 """
 import numpy as np
+
 def create_jacobian(P_line_mes, P_Load_state, P_Load_meas, path_to_all_nodes,
                     Vsq_mes, R_line, X_line, num_states, num_meas):
     # V is square of voltage mag

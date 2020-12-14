@@ -5,7 +5,7 @@ from jacobian_calc import create_jacobian
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
-                       weight_vals, noise_addition
+                       weight_vals, noise_addition, bus_measurements
 
 which = 37 # IEEE 37-node or IEEE 906-node
 
@@ -81,15 +81,23 @@ num_plow_meas = 1
 num_voltage_meas = 1
 meas_P_line, meas_Q_line, meas_V = subset_of_measurements(
     num_plow_meas, num_voltage_meas, arcs, P_line, Q_line, V)
-    
-meas_P_load, meas_Q_load  = P_Load, Q_Load
+
+# function for chosing 
+P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements(
+    P_Load, Q_Load, P_line[(0,1)], Q_line[(0,1)], 
+    non_zib_index, zib_index, num_known_meas=1, indices = np.array((0,)))    
+
+meas_P_load = {**P_known_meas, **P_pseudo_meas}
+meas_P_load = dict(sorted(meas_P_load.items()))
+meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
+meas_Q_load = dict(sorted(meas_Q_load.items()))
 
 z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
                list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
 
 # noise addition
-sd = 0.25 # 0.01: 1% error
-z1 = noise_addition(z, sd)
+sd = 0 # 0.01: 1% error
+z = noise_addition(z, sd)
 
 ##############################################################################
 ##############################################################################
@@ -138,14 +146,14 @@ w2 = weight_vals(meas_Q_line, c = 0.005, abs_error = 0.01)
 w3 = weight_vals(meas_P_load, c = 0.2, abs_error = 0.01)
 w4 = weight_vals(meas_Q_load, c = 0.2, abs_error = 0.01)
 w5 = weight_vals(meas_V, c = 0.001, abs_error = 0.01)
-# print(w1, w2, w3, w4, w5)
-# weight_array1 = np.ones((len(meas_P_line)))*w1
-# weight_array2 = np.ones((len(meas_P_line)))*w2
-# weight_array3 = np.ones((len(meas_P_load)))*w3
-# weight_array4 = np.ones((len(meas_Q_load)))*w4
-# weight_array5 = np.ones((len(meas_V)))*w5
-# weight_array = np.concatenate((weight_array1, weight_array2, weight_array3,
-#                                 weight_array4, weight_array5))
+print(w1, w2, w3, w4, w5)
+weight_array1 = np.ones((len(meas_P_line)))*w1
+weight_array2 = np.ones((len(meas_P_line)))*w2
+weight_array3 = np.ones((len(meas_P_load)))*w3
+weight_array4 = np.ones((len(meas_Q_load)))*w4
+weight_array5 = np.ones((len(meas_V)))*w5
+weight_array = np.concatenate((weight_array1, weight_array2, weight_array3,
+                                weight_array4, weight_array5))
 
 # check below
 # weight_array[-1]=0.01 # 
