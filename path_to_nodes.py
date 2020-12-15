@@ -19,9 +19,9 @@ def path_to_nodes(which):
     G.add_nodes_from(np.arange(0, which))
     # add edges
     G.add_edges_from((arcs))
-    # plot graph
-    plt.figure()
-    nx.draw(G, with_labels=True, font_weight='bold')
+    # uncomment below to plot graph
+    # plt.figure()
+    # nx.draw(G, with_labels=True, font_weight='bold')
     
     # get the path to nodes from the slack bus i.e. node 0
     path_nodes = [nx.shortest_path(G, 0, i) for i in range(which)]

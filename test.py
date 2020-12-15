@@ -4,6 +4,7 @@ import numpy as np
 from jacobian_calc import create_jacobian, se_wls
 from path_to_nodes import path_to_nodes
 import pandas as pd
+from itertools import combinations
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements
 
@@ -101,6 +102,74 @@ z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) +
 sd = 0 # 0.01: 1% error
 z = noise_addition(z, sd)
 
+##############################################################################
+##############################################################################
+# run different combinations of pseodo measurements
+
+arr = np.arange(len(non_zib_index))
+for i in arr: # i are number of known measurements
+    print('known meas implementation:', i)
+    list_of_combs = list(combinations(arr,i))
+    print(list_of_combs)
+    for indices in list_of_combs:
+        P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements(
+                P_Load, Q_Load, P_line[(0,1)], Q_line[(0,1)], 
+                non_zib_index, zib_index, indices = np.asarray(indices))
+            
+        meas_P_load = {**P_known_meas, **P_pseudo_meas}
+        meas_P_load = dict(sorted(meas_P_load.items()))
+        meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
+        meas_Q_load = dict(sorted(meas_Q_load.items()))
+
+        z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
+               list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
+    
+        w1 = 0.05 # weight value for pflow, qflow
+        w21 = 0.01 # known measurements for p,q at buses
+        w22 = 0.1 # pseudo measurements for p,q at buses
+        w3 = 0.001 # weight for voltage value
+        # print(w1, w21, w22, w3)
+        
+        weight_array1 = np.ones((len(meas_P_line)*2))*w1
+        weight_array2 = np.ones((len(meas_P_load)))
+        weight_array2[list(P_known_meas.keys())] = weight_array2[list(P_known_meas.keys())]*w21
+        weight_array2[list(P_pseudo_meas.keys())] = weight_array2[list(P_pseudo_meas.keys())]*w22
+        weight_array2 = np.concatenate((weight_array2, weight_array2))
+        weight_array3 = np.ones((len(meas_V)))*w3
+        weight_array = np.concatenate((weight_array1, weight_array2,weight_array3))
+
+        W = np.diag(weight_array) # Weight mat
+        W = np.linalg.inv(W)
+
+        # state estimation
+        # get paths from slack bus to all nodes
+        path_to_all_nodes = path_to_nodes(which)
+        
+        # get jacobain matrix
+        # we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
+        # only their keys
+        
+        jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+                                          meas_V, R_line, X_line, len(x_est), len(z))
+        
+        # run WLS SE
+        x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
+            x_est, z, jacobian_matrix, W, tol = None)        
+
+        # get the full vector for xest
+        full_x_est = np.zeros((len(x)))
+        full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
+        full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
+        full_x_est[-1] = x_est[-1] # slack bus square voltage
+        
+        # calculate error between state vectors
+        error = x - full_x_est
+        max_error = np.max(abs(error))
+        st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+        st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
+        # need to append these vals
+        
+# plot the chart
 ##############################################################################
 ##############################################################################
 
