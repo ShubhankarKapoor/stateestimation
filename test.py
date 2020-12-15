@@ -1,7 +1,7 @@
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
-from jacobian_calc import create_jacobian
+from jacobian_calc import create_jacobian, se_wls
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
@@ -79,13 +79,15 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 # get subset of measurement set
 num_plow_meas = 1
 num_voltage_meas = 1
+# chose powerflows and voltage magnitudes
 meas_P_line, meas_Q_line, meas_V = subset_of_measurements(
     num_plow_meas, num_voltage_meas, arcs, P_line, Q_line, V)
 
-# function for chosing 
+# chosing bus powers
+indices = np.array(np.arange(5))
 P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements(
     P_Load, Q_Load, P_line[(0,1)], Q_line[(0,1)], 
-    non_zib_index, zib_index, num_known_meas=1, indices = np.array((0,)))    
+    non_zib_index, zib_index, num_known_meas=5, indices = indices)    
 
 meas_P_load = {**P_known_meas, **P_pseudo_meas}
 meas_P_load = dict(sorted(meas_P_load.items()))
@@ -128,32 +130,51 @@ f3 = pd.read_csv('data/mm_bus_v_noisy.csv')
 meas_V = f3['vm_pu']**2
 z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V)) # ground truth for meas
 '''
+##############################################################################
+##############################################################################
 
+# static weights
 # lower the sd here more the trust in the measurement
-w1, w2, w3 = 0.04, 0.03, 0.01
-# w1, w2, w3 = 0.01, 0.01, 0.01
-w1, w2, w3 = 0.005, 0.0001, 0.001
-w1, w2, w3 = 0.05, 0.01, 0.001
-print(w1, w2, w3)
+# w1, w2, w3 = 0.04, 0.03, 0.01
+# # w1, w2, w3 = 0.01, 0.01, 0.01
+# w1, w2, w3 = 0.005, 0.0001, 0.001
+# w1, w2, w3 = 0.05, 0.01, 0.001
+# print(w1, w2, w3)
+# weight_array1 = np.ones((len(meas_P_line)*2))*w1
+# weight_array2 = np.ones((len(meas_P_load)*2))*w2
+# weight_array3 = np.ones((len(meas_V)))*w3
+# weight_array = np.concatenate((weight_array1, weight_array2,weight_array3))
+
+# # dynamic weights
+# # these weights are computed from greedy placement algo
+# w1 = weight_vals(meas_P_line, c = 0.005, abs_error = 0.01)
+# w2 = weight_vals(meas_Q_line, c = 0.005, abs_error = 0.01)
+# w3 = weight_vals(meas_P_load, c = 0.2, abs_error = 0.01)
+# w4 = weight_vals(meas_Q_load, c = 0.2, abs_error = 0.01)
+# w5 = weight_vals(meas_V, c = 0.001, abs_error = 0.01)
+# print(w1, w2, w3, w4, w5)
+# weight_array1 = np.ones((len(meas_P_line)))*w1
+# weight_array2 = np.ones((len(meas_P_line)))*w2
+# weight_array3 = np.ones((len(meas_P_load)))*w3
+# weight_array4 = np.ones((len(meas_Q_load)))*w4
+# weight_array5 = np.ones((len(meas_V)))*w5
+# weight_array = np.concatenate((weight_array1, weight_array2, weight_array3,
+#                                 weight_array4, weight_array5))
+
+# static weights but different for pseudo and known measurements
+w1 = 0.05 # weight value for pflow, qflow
+w21 = 0.01 # known measurements for p,q at buses
+w22 = 0.1 # pseudo measurements for p,q at buses
+w3 = 0.001 # weight for voltage value
+print(w1, w21, w22, w3)
+
 weight_array1 = np.ones((len(meas_P_line)*2))*w1
-weight_array2 = np.ones((len(meas_P_load)*2))*w2
+weight_array2 = np.ones((len(meas_P_load)))
+weight_array2[list(P_known_meas.keys())] = weight_array2[list(P_known_meas.keys())]*w21
+weight_array2[list(P_pseudo_meas.keys())] = weight_array2[list(P_pseudo_meas.keys())]*w22
+weight_array2 = np.concatenate((weight_array2, weight_array2))
 weight_array3 = np.ones((len(meas_V)))*w3
 weight_array = np.concatenate((weight_array1, weight_array2,weight_array3))
-
-# these weights are computed from greedy placement algo
-w1 = weight_vals(meas_P_line, c = 0.005, abs_error = 0.01)
-w2 = weight_vals(meas_Q_line, c = 0.005, abs_error = 0.01)
-w3 = weight_vals(meas_P_load, c = 0.2, abs_error = 0.01)
-w4 = weight_vals(meas_Q_load, c = 0.2, abs_error = 0.01)
-w5 = weight_vals(meas_V, c = 0.001, abs_error = 0.01)
-print(w1, w2, w3, w4, w5)
-weight_array1 = np.ones((len(meas_P_line)))*w1
-weight_array2 = np.ones((len(meas_P_line)))*w2
-weight_array3 = np.ones((len(meas_P_load)))*w3
-weight_array4 = np.ones((len(meas_Q_load)))*w4
-weight_array5 = np.ones((len(meas_V)))*w5
-weight_array = np.concatenate((weight_array1, weight_array2, weight_array3,
-                                weight_array4, weight_array5))
 
 # check below
 # weight_array[-1]=0.01 # 
@@ -174,42 +195,9 @@ path_to_all_nodes = path_to_nodes(which)
 jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
-# some preprocessing for time saving during iterative newton method
-G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
-Ginv = np.linalg.inv(G)
-
-count = 0
-delta_mat = np.zeros((len(x_est), 1000))
-residuals_mat = np.zeros((len(z), 1000))
-tol = 10e-16
-results = x_est
-emax = 100 # chosen higher than the tol
-
-while emax > tol:
-
-    # distflow backward sweep for calculating measurements
-
-    # distflow forward sweep for calculating measurements
-
-    # calculate h(x)    
-    hx = np.matmul(jacobian_matrix, x_est)
-    
-    # calculate measurement residuals
-    residuals = z - hx
-    residuals_mat[:,count] = residuals
-    
-    # calculate deltax
-    deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
-    delta_mat[:,count] = deltax
-    
-    # get tolerance
-    emax = np.max(deltax)
-    
-    # update values of state vars
-    x_est = x_est + deltax
-    results = np.vstack((results, x_est))
-    count+=1
-    # print(count)
+# run WLS SE
+x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
+    x_est, z, jacobian_matrix, W, tol = None)
 
 ##############################################################################
 ##############################################################################
@@ -231,7 +219,7 @@ st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q = error_calc(x[len
 print(mean_error_st_p, max_error_st_p, max_error_st_abs_p) 
 print(mean_error_st_q, max_error_st_q, max_error_st_abs_q)
 # sum of residuals
-sum_residuals = np.sum(abs(residuals))
+sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
 results = results.T
 
 ###############################################################################

@@ -9,6 +9,8 @@ import numpy as np
 
 def create_jacobian(P_line_mes, P_Load_state, P_Load_meas, path_to_all_nodes,
                     Vsq_mes, R_line, X_line, num_states, num_meas):
+    ''' LinDistflow based Jacobian'''
+    
     # V is square of voltage mag
     # initial case jacobian matrix
     # num_meas = 36*2 + 37*3 # 2 for pij and qij 3 for pj, qj, vj^2
@@ -56,14 +58,6 @@ def create_jacobian(P_line_mes, P_Load_state, P_Load_meas, path_to_all_nodes,
     
     return jacobian_matrix
 
-def calc_residuals():
-    residuals = 0
-    return residuals
-
-def estimate_states():
-    x = 0
-    return x
-
 def grad_pline_with_p(S_line_meas, p_states, path_to_all_nodes):
     grad_array = np.zeros((len(S_line_meas), len(p_states))) # meas*states
 
@@ -104,46 +98,46 @@ def grad_vnode_with_v0(v_meas):
     grad_array = np.ones((len(v_meas),1))
     return grad_array
 
-'''
-# make jacobian without the function
-# initial case jacobian matrix
-num_meas = 36*2 + 37*3 # 2 for pij and qij 3 for pj, qj, vj^2
-num_states = 2 * 37 + 1 # 2 for pj, qj 1 for v0^2
-jacobian_matrix = np.zeros((num_meas, num_states))
+def se_wls(x_est, z, jacobian_matrix, W, tol = None):
+    ''' Weighted Least Square Estimate'''
 
-# call jacobian for pline_plflow
-grad_array, index_of_lines = grad_pline_with_p(P_line, P_Load, path_to_all_nodes)
-meas_rows = grad_array.shape[0]
-state_cols = grad_array.shape[1]
-jacobian_matrix[0:meas_rows, 0:state_cols] = grad_array
-last_row_inserted = meas_rows
+    # some preprocessing for time saving during iterative newton method
+    G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
+    # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
+    Ginv = np.linalg.inv(G)
 
-# call jacobian for qline_qflow, should be exactly same as above
-jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
-last_row_inserted = 2*meas_rows # didn't do -1 because then this can be used directly
+    count = 0
+    delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
+    residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
+    tol = tol if tol is not None else 10e-16
+    results = x_est
+    emax = 100 # chosen higher than the tol
 
-# call jacobian for ppseudo_p
-grad_array = grad_pseudo_with_p(P_Load, P_Load)
-meas_rows = grad_array.shape[0]
-state_cols = grad_array.shape[1]
-jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, 0:state_cols] = grad_array
-last_row_inserted = last_row_inserted + meas_rows
+    while emax > tol:
 
-# call jacobian for qpseudo_q, should be same as above
-jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
-last_row_inserted += meas_rows
+        # distflow backward sweep for calculating measurements
 
-# call jacobian for vnode^2 with p
-grad_array = grad_vnode_with_p(V, P_Load, path_to_all_nodes, R_line)
-meas_rows = grad_array.shape[0]
-state_cols = grad_array.shape[1]
-jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, 0:state_cols] = grad_array
+        # distflow forward sweep for calculating measurements
 
-# call jacobian for vnode^2 with q
-grad_array = grad_vnode_with_p(V, P_Load, path_to_all_nodes, X_line)
-jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
+        # calculate h(x)    
+        hx = np.matmul(jacobian_matrix, x_est)
 
-# call jacobian with v0^2
-grad_array = grad_vnode_with_v0(V)
-jacobian_matrix[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols:] = grad_array
-'''
+        # calculate measurement residuals
+        residuals = z - hx
+        residuals_mat[:,count] = residuals
+
+        # calculate deltax
+        deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
+        # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
+        delta_mat[:,count] = deltax
+
+        # get tolerance
+        emax = np.max(deltax)
+
+        # update values of state vars
+        x_est = x_est + deltax
+        results = np.vstack((results, x_est))
+        count+=1
+        # print(count)
+    
+    return x_est, emax, count, residuals_mat, delta_mat, results
