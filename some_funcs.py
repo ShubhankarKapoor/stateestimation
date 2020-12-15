@@ -76,7 +76,9 @@ def subset_of_measurements(num_plow_meas, num_voltage_meas, arcs, P_line, Q_line
 def bus_measurements(P_Load, Q_Load, primary_branch_flow_p, 
                      primary_branch_flow_q, non_zib_index, zib_index, 
                      num_known_meas=None, indices = None):
-    ''' function for pseudo and known p,q bus '''
+    ''' function for pseudo and known p,q bus 
+    indices: array of index of known measurements in non_zib_index
+    '''
     # indices are for index in non zib array for now
     # will have to fix it in future if required
     if indices is None:

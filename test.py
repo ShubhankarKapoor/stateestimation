@@ -5,6 +5,7 @@ from jacobian_calc import create_jacobian, se_wls
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
+import seaborn
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements
 
@@ -105,12 +106,17 @@ z = noise_addition(z, sd)
 ##############################################################################
 ##############################################################################
 # run different combinations of pseodo measurements
-
+list_of_errors_p = []
+list_of_errors_q = []
+list_of_errors_v = []
 arr = np.arange(len(non_zib_index))
 for i in arr: # i are number of known measurements
+    err_for_diff_known_meas_p = []
+    err_for_diff_known_meas_q = []
+    err_for_diff_known_meas_v = []
     print('known meas implementation:', i)
     list_of_combs = list(combinations(arr,i))
-    print(list_of_combs)
+    # print(list_of_combs)
     for indices in list_of_combs:
         P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements(
                 P_Load, Q_Load, P_line[(0,1)], Q_line[(0,1)], 
@@ -167,9 +173,17 @@ for i in arr: # i are number of known measurements
         max_error = np.max(abs(error))
         st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
         st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
-        # need to append these vals
-        
+        # append the absolute error
+        err_for_diff_known_meas_p.append(max_error_st_abs_p)
+        err_for_diff_known_meas_q.append(max_error_st_abs_q)
+        err_for_diff_known_meas_v.append(abs(full_x_est[-1] - x[-1]))
+    list_of_errors_p.append(err_for_diff_known_meas_p)
+    list_of_errors_q.append(err_for_diff_known_meas_q)
+    list_of_errors_v.append(err_for_diff_known_meas_v)
 # plot the chart
+plt.figure()
+seaborn.boxplot(data=list_of_errors_q)
+seaborn.swarmplot(data=list_of_errors_q, color=".25")
 ##############################################################################
 ##############################################################################
 
