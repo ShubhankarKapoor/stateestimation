@@ -105,7 +105,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None):
     G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
     # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
     Ginv = np.linalg.inv(G)
-
+    
     count = 0
     delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
     residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
@@ -193,7 +193,14 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     # some preprocessing for time saving during iterative newton method
     G = np.matmul(jacobian_matrix.T, jacobian_matrix)
     # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
-    Ginv = np.linalg.inv(G)
+    try:
+        pseudo_inv = 0
+        Ginv = np.linalg.inv(G)
+    except np.linalg.LinAlgError as err:
+        if 'Singular matrix' in str(err):
+            pseudo_inv = 1
+            print('pseudo')
+            Ginv = np.linalg.pinv(jacobian_matrix)
 
     count = 0
     delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
@@ -208,7 +215,7 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
 
         # distflow forward sweep for calculating measurements
 
-        # calculate h(x)    
+        # calculate h(x)
         hx = np.matmul(jacobian_matrix, x_est)
 
         # calculate measurement residuals
@@ -216,8 +223,10 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
         residuals_mat[:,count] = residuals
 
         # calculate deltax
-        deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals)
-        # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
+        if pseudo_inv == 0:
+            deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals)
+        else:
+            deltax = np.matmul(Ginv, residuals)
         delta_mat[:,count] = deltax
 
         # get tolerance

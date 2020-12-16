@@ -113,6 +113,8 @@ list_of_errors_p, list_of_errors_q, list_of_errors_v = [], [], []
 store_estimates, list_of_all_combs = [], []
 list_max_error_index_p = []
 arr = np.arange(len(non_zib_index)) # used for combinations
+# use the below arr2 for considering all 10 meas as well for i
+# arr2 = np.arange(len(non_zib_index)+1) # used for combinations
 for i in arr: # i are number of known measurements
     err_for_diff_known_meas_p, err_for_diff_known_meas_q, err_for_diff_known_meas_v = [], [], []
     itermediate_results, max_abs_error_index_p = [], []
@@ -206,7 +208,7 @@ plt.title('Max Absolute Error Corresponding to known number of Measurements')
 
 # check if max error is at pseudo buses
 # count = 0 
-print('checking')
+print('checking if error nodes are known measurement nodes or not')
 for i,val in enumerate(list_max_error_index_p):
     count+=1
     for j, val2 in enumerate(val):
@@ -315,7 +317,7 @@ jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_t
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
 # run WLS SE
-x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
+x_est, emax, count, residuals_mat, delta_mat, results = se_ols(
     x_est, z, jacobian_matrix, W, tol = None)
 
 ##############################################################################
