@@ -141,3 +141,92 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None):
         # print(count)
     
     return x_est, emax, count, residuals_mat, delta_mat, results
+
+def se_rr(x_est, z, jacobian_matrix, W, k = None, tol = None):
+    ''' Ridge regression'''
+
+    k = k if k is not None else 1
+    # some preprocessing for time saving during iterative newton method
+    G = np.matmul(jacobian_matrix.T, jacobian_matrix) + k * np.diag(np.ones((len(x_est))))
+    # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
+    Ginv = np.linalg.inv(G)
+
+    count = 0
+    delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
+    residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
+    tol = tol if tol is not None else 10e-16
+    results = x_est
+    emax = 100 # chosen higher than the tol
+
+    while emax > tol:
+
+        # distflow backward sweep for calculating measurements
+
+        # distflow forward sweep for calculating measurements
+
+        # calculate h(x)    
+        hx = np.matmul(jacobian_matrix, x_est)
+
+        # calculate measurement residuals
+        residuals = z - hx
+        residuals_mat[:,count] = residuals
+
+        # calculate deltax
+        deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals)
+        # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
+        delta_mat[:,count] = deltax
+
+        # get tolerance
+        emax = np.max(deltax)
+
+        # update values of state vars
+        x_est = x_est + deltax
+        results = np.vstack((results, x_est))
+        count+=1
+        # print(count)
+    
+    return x_est, emax, count, residuals_mat, delta_mat, results
+
+def se_ols(x_est, z, jacobian_matrix, W, tol = None):
+    ''' Ordinary Least Square Estimate'''
+
+    # some preprocessing for time saving during iterative newton method
+    G = np.matmul(jacobian_matrix.T, jacobian_matrix)
+    # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
+    Ginv = np.linalg.inv(G)
+
+    count = 0
+    delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
+    residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
+    tol = tol if tol is not None else 10e-16
+    results = x_est
+    emax = 100 # chosen higher than the tol
+
+    while emax > tol:
+
+        # distflow backward sweep for calculating measurements
+
+        # distflow forward sweep for calculating measurements
+
+        # calculate h(x)    
+        hx = np.matmul(jacobian_matrix, x_est)
+
+        # calculate measurement residuals
+        residuals = z - hx
+        residuals_mat[:,count] = residuals
+
+        # calculate deltax
+        deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals)
+        # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
+        delta_mat[:,count] = deltax
+
+        # get tolerance
+        emax = np.max(deltax)
+
+        # update values of state vars
+        x_est = x_est + deltax
+        results = np.vstack((results, x_est))
+        count+=1
+        # print(count)
+    
+    return x_est, emax, count, residuals_mat, delta_mat, results

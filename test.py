@@ -1,7 +1,7 @@
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
-from jacobian_calc import create_jacobian, se_wls
+from jacobian_calc import create_jacobian, se_wls, se_ols
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
@@ -62,7 +62,8 @@ for k,v in P_Load.items():
         non_zib_index.append(k)
     else:
         zib_index.append(k)
-        
+
+non_zib_index_array = np.asarray(non_zib_index)
 # remove p0 = 0 and the rest have values equally divided from p_ij
 p_distributed = P_line[(0,1)]/(len(P_Load_state))
 p_states = np.zeros((len(P_Load_state))) + p_distributed
@@ -105,19 +106,21 @@ z = noise_addition(z, sd)
 
 ##############################################################################
 ##############################################################################
-# run different combinations of pseodo measurements
-list_of_errors_p = []
-list_of_errors_q = []
-list_of_errors_v = []
-arr = np.arange(len(non_zib_index))
+# run different combinations of pseudo measurements with equally distrbuted 
+# load among pseudo measurements
+list_of_errors_p, list_of_errors_q, list_of_errors_v = [], [], []
+# save all estimate results and combinations of different meas
+store_estimates, list_of_all_combs = [], []
+list_max_error_index_p = []
+arr = np.arange(len(non_zib_index)) # used for combinations
 for i in arr: # i are number of known measurements
-    err_for_diff_known_meas_p = []
-    err_for_diff_known_meas_q = []
-    err_for_diff_known_meas_v = []
+    err_for_diff_known_meas_p, err_for_diff_known_meas_q, err_for_diff_known_meas_v = [], [], []
+    itermediate_results, max_abs_error_index_p = [], []
     print('known meas implementation:', i)
-    list_of_combs = list(combinations(arr,i))
-    # print(list_of_combs)
-    for indices in list_of_combs:
+    combs = list(combinations(arr,i)) # combinations for i
+    list_of_all_combs.append(combs)
+
+    for indices in combs:
         P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements(
                 P_Load, Q_Load, P_line[(0,1)], Q_line[(0,1)], 
                 non_zib_index, zib_index, indices = np.asarray(indices))
@@ -146,20 +149,16 @@ for i in arr: # i are number of known measurements
 
         W = np.diag(weight_array) # Weight mat
         W = np.linalg.inv(W)
-
-        # state estimation
+        
         # get paths from slack bus to all nodes
         path_to_all_nodes = path_to_nodes(which)
         
         # get jacobain matrix
-        # we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
-        # only their keys
-        
         jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
                                           meas_V, R_line, X_line, len(x_est), len(z))
         
         # run WLS SE
-        x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
+        x_est, emax, count, residuals_mat, delta_mat, results = se_ols(
             x_est, z, jacobian_matrix, W, tol = None)        
 
         # get the full vector for xest
@@ -167,23 +166,60 @@ for i in arr: # i are number of known measurements
         full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
         full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
         full_x_est[-1] = x_est[-1] # slack bus square voltage
-        
+
+        # Regenerated measurements using the estimated states
+        keys = list(range(len(P_Load)))
+        array = full_x_est[0:len(P_Load)]
+        P_Load_est = dict(zip(keys, array))
+        Q_Load_est = dict(zip(keys, full_x_est[len(P_Load):len(P_Load)*2]))
+        [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
+        P_Load_est, Q_Load_est, which, full_x_est[-1]) # using lindistflow
+
         # calculate error between state vectors
         error = x - full_x_est
         max_error = np.max(abs(error))
-        st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
-        st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
+        st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, max_index_p = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+        st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
+        # error for voltage meas
+        _, mean_vmag_err, max_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+        
         # append the absolute error
         err_for_diff_known_meas_p.append(max_error_st_abs_p)
         err_for_diff_known_meas_q.append(max_error_st_abs_q)
-        err_for_diff_known_meas_v.append(abs(full_x_est[-1] - x[-1]))
+        # err_for_diff_known_meas_v.append(abs(full_x_est[-1] - x[-1]))
+        err_for_diff_known_meas_v.append(max_abs_vmag_err)
+        itermediate_results.append(full_x_est)
+        max_abs_error_index_p.append(max_index_p)
+        
     list_of_errors_p.append(err_for_diff_known_meas_p)
     list_of_errors_q.append(err_for_diff_known_meas_q)
     list_of_errors_v.append(err_for_diff_known_meas_v)
+    store_estimates.append(itermediate_results)
+    list_max_error_index_p.append(max_abs_error_index_p)
 # plot the chart
 plt.figure()
-seaborn.boxplot(data=list_of_errors_q)
-seaborn.swarmplot(data=list_of_errors_q, color=".25")
+seaborn.boxplot(data=list_of_errors_v)
+seaborn.swarmplot(data=list_of_errors_v, color=".25")
+plt.xlabel('Known number of measurements')
+plt.ylabel('Max absolute error in pu')
+plt.title('Max Absolute Error Corresponding to known number of Measurements')
+
+# check if max error is at pseudo buses
+# count = 0 
+print('checking')
+for i,val in enumerate(list_max_error_index_p):
+    count+=1
+    for j, val2 in enumerate(val):
+        # print(i,j)
+        if i !=0: # for avoiding empty set error
+            # have to do the following becasue list_of_all_combs contains
+            # indices for chosing the non zibs values but not the actual
+            # non zib values
+            known_meas_idx = non_zib_index_array[np.asarray(list_of_all_combs[i][j])]
+            if (np.any(np.in1d(val2, known_meas_idx))): # if any val2 is in known meas
+                # if the error is known bus meas then something is wrong    
+                print('Something wrong')
+            
 ##############################################################################
 ##############################################################################
 
@@ -295,8 +331,8 @@ full_x_est[-1] = x_est[-1] # slack bus square voltage
 # calculate error between state vectors
 error = x - full_x_est
 max_error = np.max(abs(error))
-st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
-st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
+st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
 
 # print some results
 print(mean_error_st_p, max_error_st_p, max_error_st_abs_p) 
@@ -331,18 +367,18 @@ if est_full_ac == 1:
 
 # error calc between measurements
 # V_mag^2 and V_mag error
-_, mean_vsq_err, max_vsq_err, max_abs_vsq_err = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
-_, mean_vmag_err, max_vmag_err, max_abs_vmag_err = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+_, mean_vsq_err, max_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
+_, mean_vmag_err, max_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
 print(mean_vmag_err, max_vmag_err, max_abs_vmag_err)
 
 # pflow and qflow error
-_, mean_pflow_err, max_pflow_err, max_abs_pflow_err = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
-_, mean_qflow_err, max_qflow_err, max_abs_qflow_err = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
+_, mean_pflow_err, max_pflow_err, max_abs_pflow_err, _ = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
+_, mean_qflow_err, max_qflow_err, max_abs_qflow_err, _ = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
 
 # error calc between lindistflow and full AC
 if comparison == 1:
-    p_err, p_mean_err, p_max_err, p_max_err_abs = error_calc(np.array(list(P_line2.values())), np.array(list(P_line.values())))
-    q_err, q_mean_err, q_max_err, q_max_err_abs = error_calc(np.array(list(Q_line2.values())), np.array(list(Q_line.values())))
+    p_err, p_mean_err, p_max_err, p_max_err_abs, _ = error_calc(np.array(list(P_line2.values())), np.array(list(P_line.values())))
+    q_err, q_mean_err, q_max_err, q_max_err_abs, _ = error_calc(np.array(list(Q_line2.values())), np.array(list(Q_line.values())))
     
 # some manipulation for excel sheet
 aa=[]

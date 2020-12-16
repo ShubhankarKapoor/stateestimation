@@ -9,8 +9,13 @@ def error_calc(ground_truth, estimated):
     err[np.isnan(err)] = 0
     mean_perc_error = np.mean(err)
     max_perc_error = np.max(err)
+    # absolute error
+    abs_error = abs(estimated-ground_truth)
+    max_abs_error = max(abs_error)
+    # index of max absolute error
+    max_index = np.where(abs_error == abs_error.max())[0]
 
-    return err, mean_perc_error, max_perc_error, max(abs(estimated-ground_truth))
+    return err, mean_perc_error, max_perc_error, max_abs_error, max_index
 
 def create_mes_set(filename_bus, filename_branch):
     ''' get measurement vectors from csv files '''
