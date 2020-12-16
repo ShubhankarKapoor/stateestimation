@@ -104,6 +104,7 @@ z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) +
 sd = 0 # 0.01: 1% error
 z = noise_addition(z, sd)
 
+
 ##############################################################################
 ##############################################################################
 # run different combinations of pseudo measurements with equally distrbuted 
@@ -316,8 +317,8 @@ path_to_all_nodes = path_to_nodes(which)
 jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
-# run WLS SE
-x_est, emax, count, residuals_mat, delta_mat, results = se_ols(
+# run WLS/OLS SE
+x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
     x_est, z, jacobian_matrix, W, tol = None)
 
 ##############################################################################
