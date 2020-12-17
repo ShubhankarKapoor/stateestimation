@@ -83,13 +83,13 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 num_plow_meas = 1
 num_voltage_meas = 1
 # chose powerflows and voltage magnitudes
-meas_P_line, meas_Q_line, meas_V = subset_of_measurements(
+meas_P_line, meas_Q_line, _ = subset_of_measurements(
     num_plow_meas, num_voltage_meas, arcs, P_line, Q_line, V)
 
 # chosing bus powers
 indices = np.array(np.arange(5))
-P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements_equal_distribution(
-    P_Load, Q_Load, P_line[(0,1)], Q_line[(0,1)], 
+P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
+    P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
     non_zib_index, zib_index, num_known_meas=5, indices = indices)    
 
 meas_P_load = {**P_known_meas, **P_pseudo_meas}
@@ -110,6 +110,7 @@ z = noise_addition(z, sd)
 # run different combinations of pseudo measurements with equally distrbuted 
 # load among pseudo measurements
 list_of_errors_p, list_of_errors_q, list_of_errors_v = [], [], []
+list_of_all_errors_p, list_of_all_errors_q = [], []
 # save all estimate results and combinations of different meas
 store_estimates, list_of_all_combs = [], []
 list_max_error_index_p = []
@@ -118,14 +119,15 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 # arr2 = np.arange(len(non_zib_index)+1) # used for combinations
 for i in arr: # i are number of known measurements
     err_for_diff_known_meas_p, err_for_diff_known_meas_q, err_for_diff_known_meas_v = [], [], []
+    all_err_for_diff_known_meas_p, all_err_for_diff_known_meas_q = [], []
     itermediate_results, max_abs_error_index_p = [], []
     print('known meas implementation:', i)
     combs = list(combinations(arr,i)) # combinations for i
     list_of_all_combs.append(combs)
 
     for indices in combs:
-        P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements_equal_distribution(
-                P_Load, Q_Load, P_line[(0,1)], Q_line[(0,1)], 
+        P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
+                P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
                 non_zib_index, zib_index, indices = np.asarray(indices))
             
         meas_P_load = {**P_known_meas, **P_pseudo_meas}
@@ -161,7 +163,7 @@ for i in arr: # i are number of known measurements
                                           meas_V, R_line, X_line, len(x_est), len(z))
         
         # run WLS SE
-        x_est, emax, count, residuals_mat, delta_mat, results = se_ols(
+        x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
             x_est, z, jacobian_matrix, W, tol = None)        
 
         # get the full vector for xest
@@ -186,6 +188,10 @@ for i in arr: # i are number of known measurements
         # error for voltage meas
         _, mean_vmag_err, max_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
         
+        # plot all the errors as well
+        all_err_for_diff_known_meas_p.extend(st_err_p)
+        all_err_for_diff_known_meas_q.extend(st_err_q)
+        
         # append the absolute error
         err_for_diff_known_meas_p.append(max_error_st_abs_p)
         err_for_diff_known_meas_q.append(max_error_st_abs_q)
@@ -193,19 +199,32 @@ for i in arr: # i are number of known measurements
         err_for_diff_known_meas_v.append(max_abs_vmag_err)
         itermediate_results.append(full_x_est)
         max_abs_error_index_p.append(max_index_p)
-        
+    
+    # max abs error
     list_of_errors_p.append(err_for_diff_known_meas_p)
     list_of_errors_q.append(err_for_diff_known_meas_q)
     list_of_errors_v.append(err_for_diff_known_meas_v)
+    # all errors
+    list_of_all_errors_p.append(all_err_for_diff_known_meas_p)
+    list_of_all_errors_q.append(all_err_for_diff_known_meas_q)
     store_estimates.append(itermediate_results)
     list_max_error_index_p.append(max_abs_error_index_p)
-# plot the chart
+
+# plot the max error graph
 plt.figure()
-seaborn.boxplot(data=list_of_errors_v)
-seaborn.swarmplot(data=list_of_errors_v, color=".25")
+seaborn.boxplot(data=list_of_errors_p)
+seaborn.swarmplot(data=list_of_errors_p, color=".25")
 plt.xlabel('Known number of measurements')
 plt.ylabel('Max absolute error in pu')
 plt.title('Max Absolute Error Corresponding to known number of Measurements')
+
+# plot all error graph
+# plt.figure()
+# seaborn.boxplot(data=list_of_all_errors_p)
+# seaborn.swarmplot(data=list_of_all_errors_p, color=".25")
+# plt.xlabel('Known number of measurements')
+# plt.ylabel('Max absolute error in pu')
+# plt.title('Max Absolute Error Corresponding to known number of Measurements')
 
 # check if max error is at pseudo buses
 # count = 0 

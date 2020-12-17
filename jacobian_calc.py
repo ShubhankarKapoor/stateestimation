@@ -10,7 +10,7 @@ import numpy as np
 def create_jacobian(P_line_mes, P_Load_state, P_Load_meas, path_to_all_nodes,
                     Vsq_mes, R_line, X_line, num_states, num_meas):
     ''' LinDistflow based Jacobian'''
-    
+    print(len(Vsq_mes))
     # V is square of voltage mag
     # initial case jacobian matrix
     # num_meas = 36*2 + 37*3 # 2 for pij and qij 3 for pj, qj, vj^2
