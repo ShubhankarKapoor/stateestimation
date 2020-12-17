@@ -7,7 +7,7 @@ import pandas as pd
 from itertools import combinations
 import seaborn
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
-                       weight_vals, noise_addition, bus_measurements
+                       weight_vals, noise_addition, bus_measurements_equal_distribution
 
 which = 37 # IEEE 37-node or IEEE 906-node
 
@@ -88,7 +88,7 @@ meas_P_line, meas_Q_line, meas_V = subset_of_measurements(
 
 # chosing bus powers
 indices = np.array(np.arange(5))
-P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements(
+P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements_equal_distribution(
     P_Load, Q_Load, P_line[(0,1)], Q_line[(0,1)], 
     non_zib_index, zib_index, num_known_meas=5, indices = indices)    
 
@@ -124,7 +124,7 @@ for i in arr: # i are number of known measurements
     list_of_all_combs.append(combs)
 
     for indices in combs:
-        P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements(
+        P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas =  bus_measurements_equal_distribution(
                 P_Load, Q_Load, P_line[(0,1)], Q_line[(0,1)], 
                 non_zib_index, zib_index, indices = np.asarray(indices))
             

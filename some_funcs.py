@@ -17,6 +17,16 @@ def error_calc(ground_truth, estimated):
 
     return err, mean_perc_error, max_perc_error, max_abs_error, max_index
 
+def noise_addition(z, sd, mu = None):
+
+    mu = mu if mu is not None else 0
+    # noise addition to jsut non zero values only
+    noise = np.random.normal(mu, sd, len(np.where(z!=0)[0]))
+    # noise = 0
+    z[np.where(z!=0)] = z[np.where(z!=0)] + noise # noisy data
+
+    return z
+
 def create_mes_set(filename_bus, filename_branch):
     ''' get measurement vectors from csv files '''
     # for testing
@@ -61,7 +71,7 @@ def subset_of_measurements(num_plow_meas, num_voltage_meas, arcs, P_line, Q_line
         # add slack voltage key for measurement
         v_meas_keys = np.insert(v_meas_keys, 0, 0) # so that the voltage at slack bus is always considered
         meas_V = {k:V[k] for k in v_meas_keys} # create the meas vector for V
-    
+
     # keys list p_line and q_line
     key_list = list(P_line.keys())
     if num_plow_meas == 0: # return empty dict for flows
@@ -75,10 +85,10 @@ def subset_of_measurements(num_plow_meas, num_voltage_meas, arcs, P_line, Q_line
         p_line_index = np.insert(p_line_index, 0, 0) # so that the pflow in first line is always considered
         meas_P_line = {key_list[k]: P_line[key_list[k]] for k in p_line_index}
         meas_Q_line = {key_list[k]: Q_line[key_list[k]] for k in p_line_index}
-    
+
     return meas_P_line, meas_Q_line, meas_V
 
-def bus_measurements(P_Load, Q_Load, primary_branch_flow_p, 
+def bus_measurements_equal_distribution(P_Load, Q_Load, primary_branch_flow_p, 
                      primary_branch_flow_q, non_zib_index, zib_index, 
                      num_known_meas=None, indices = None):
     ''' function for pseudo and known p,q bus 
@@ -104,11 +114,11 @@ def bus_measurements(P_Load, Q_Load, primary_branch_flow_p,
     known_meas1 = {non_zib_index[k]: P_Load[non_zib_index[k]] for k in known_meas_idx}
     known_meas2 = {k:P_Load[k] for k in zib_index} # no load measurements
     known_meas = {**known_meas1, **known_meas2}
-    
+
     # known measurements
     P_known_meas = dict(sorted(known_meas.items()))
     Q_known_meas = {k:Q_Load[k] for k in P_known_meas.keys()}
-    
+
     # distribute the load equally between unknown loads
     if len(unknown_meas_idx) != 0:
         dist_load_p = (primary_branch_flow_p - sum(P_known_meas.values()))/ len(unknown_meas_idx)
@@ -121,6 +131,55 @@ def bus_measurements(P_Load, Q_Load, primary_branch_flow_p,
         Q_pseudo_meas = {k: dist_load_q for k in P_pseudo_meas.keys()}
     else:
         P_pseudo_meas, Q_pseudo_meas = {}, {}
+
+    return P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas
+
+def bus_measurements_with_noise(P_Load, Q_Load, primary_branch_flow_p, 
+                     primary_branch_flow_q, non_zib_index, zib_index, 
+                     num_known_meas=None, indices = None):
+    ''' function for pseudo and known p,q bus 
+    indices: array of index of known measurements in non_zib_index
+    '''
+    # indices are for index in non zib array for now
+    # will have to fix it in future if required
+    if indices is None:
+        if num_known_meas is None:
+            raise ValueError("Needs either indices ot num_known_meas")
+        shuffled_vals = np.random.permutation(len(non_zib_index))
+        known_meas_idx = (shuffled_vals[0:num_known_meas])
+        unknown_meas_idx = shuffled_vals[num_known_meas:]
+    else:
+        if num_known_meas is not None and num_known_meas!=len(indices):
+            raise ValueError("NUmber of indices not equal to length of known measurements")
+        else:
+            known_meas_idx = indices
+            # missing indices from known_meas_idx
+            unknown_meas_idx = np.setdiff1d(np.arange(0,len(non_zib_index)), known_meas_idx) 
+            # should fix the above mentioned issue here
+
+    known_meas1 = {non_zib_index[k]: P_Load[non_zib_index[k]] for k in known_meas_idx}
+    known_meas2 = {k:P_Load[k] for k in zib_index} # no load measurements
+    known_meas = {**known_meas1, **known_meas2}
+
+    # known measurements
+    P_known_meas = dict(sorted(known_meas.items()))
+    Q_known_meas = {k:Q_Load[k] for k in P_known_meas.keys()}
+
+    # distribute the load equally between unknown loads
+    if len(unknown_meas_idx) != 0:
+
+        # pseudo measurements
+        pseudo_meas_p = {non_zib_index[k]:P_Load[non_zib_index[k]] for k in unknown_meas_idx}
+        pseudo_meas_q = {k: Q_Load[k] for k in pseudo_meas_p.keys()}
+        z_pseudo = np.asarray(list(pseudo_meas_p.values()) + list(pseudo_meas_q.values()))
+        sd = 0 # 0.01: 1% error
+        z_noise = noise_addition(z_pseudo, sd)
+        P_pseudo_meas = dict(zip(pseudo_meas_p.keys(),z_noise[0:len(pseudo_meas_p)]))
+        P_pseudo_meas = dict(sorted(P_pseudo_meas.items()))
+        Q_pseudo_meas = dict(zip(pseudo_meas_p.keys(),z_noise[len(pseudo_meas_p):]))
+        Q_pseudo_meas = dict(sorted(Q_pseudo_meas.items()))
+    else:
+        P_pseudo_meas, Q_pseudo_meas = {}, {}
     
     return P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas
 
@@ -128,12 +187,3 @@ def weight_vals(meas_P_line, c, abs_error):
     weight = np.mean(np.asarray(list(meas_P_line.values()))) * c + abs_error
     return weight
 
-def noise_addition(z, sd, mu = None):
-
-    mu = mu if mu is not None else 0
-    # noise addition to jsut non zero values only
-    noise = np.random.normal(mu, sd, len(np.where(z!=0)[0]))
-    # noise = 0
-    z[np.where(z!=0)] = z[np.where(z!=0)] + noise # noisy data
-    
-    return z
