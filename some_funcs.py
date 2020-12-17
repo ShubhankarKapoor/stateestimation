@@ -15,7 +15,7 @@ def error_calc(ground_truth, estimated):
     # index of max absolute error
     max_index = np.where(abs_error == abs_error.max())[0]
 
-    return err, mean_perc_error, max_perc_error, max_abs_error, max_index
+    return abs_error, mean_perc_error, max_perc_error, max_abs_error, max_index
 
 def noise_addition(z, sd, mu = None):
 

@@ -219,8 +219,8 @@ plt.ylabel('Max absolute error in pu')
 plt.title('Max Absolute Error Corresponding to known number of Measurements')
 
 # plot all error graph
-# plt.figure()
-# seaborn.boxplot(data=list_of_all_errors_p)
+plt.figure()
+seaborn.boxplot(data=list_of_all_errors_p)
 # seaborn.swarmplot(data=list_of_all_errors_p, color=".25")
 # plt.xlabel('Known number of measurements')
 # plt.ylabel('Max absolute error in pu')
