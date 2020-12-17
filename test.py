@@ -109,8 +109,13 @@ z = noise_addition(z, sd)
 ##############################################################################
 # run different combinations of pseudo measurements with equally distrbuted 
 # load among pseudo measurements
+
+# saving different errors
 list_of_errors_p, list_of_errors_q, list_of_errors_v = [], [], []
 list_of_all_errors_p, list_of_all_errors_q = [], []
+list_all_error_known_p, list_all_error_known_q = [], [] 
+list_all_error_unknown_p, list_all_error_unknown_q = [], [] 
+
 # save all estimate results and combinations of different meas
 store_estimates, list_of_all_combs = [], []
 list_max_error_index_p = []
@@ -121,6 +126,8 @@ for i in arr: # i are number of known measurements
     err_for_diff_known_meas_p, err_for_diff_known_meas_q, err_for_diff_known_meas_v = [], [], []
     all_err_for_diff_known_meas_p, all_err_for_diff_known_meas_q = [], []
     itermediate_results, max_abs_error_index_p = [], []
+    error_for_known_p, error_for_unknown_p = [], []
+    error_for_known_q, error_for_unknown_q = [], []
     print('known meas implementation:', i)
     combs = list(combinations(arr,i)) # combinations for i
     list_of_all_combs.append(combs)
@@ -138,10 +145,10 @@ for i in arr: # i are number of known measurements
         z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
                list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
     
-        w1 = 0.05 # weight value for pflow, qflow
-        w21 = 0.01 # known measurements for p,q at buses
-        w22 = 0.1 # pseudo measurements for p,q at buses
-        w3 = 0.001 # weight for voltage value
+        w1 = 0.005 # weight value for pflow, qflow
+        w21 = 0.0001 # known measurements for p,q at buses
+        w22 = 100000 # pseudo measurements for p,q at buses
+        w3 = 0.0001 # weight for voltage value
         # print(w1, w21, w22, w3)
         
         weight_array1 = np.ones((len(meas_P_line)*2))*w1
@@ -187,11 +194,7 @@ for i in arr: # i are number of known measurements
         st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
         # error for voltage meas
         _, mean_vmag_err, max_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
-        
-        # plot all the errors as well
-        all_err_for_diff_known_meas_p.extend(st_err_p)
-        all_err_for_diff_known_meas_q.extend(st_err_q)
-        
+
         # append the absolute error
         err_for_diff_known_meas_p.append(max_error_st_abs_p)
         err_for_diff_known_meas_q.append(max_error_st_abs_q)
@@ -199,7 +202,18 @@ for i in arr: # i are number of known measurements
         err_for_diff_known_meas_v.append(max_abs_vmag_err)
         itermediate_results.append(full_x_est)
         max_abs_error_index_p.append(max_index_p)
-    
+
+        # plot all the errors as well
+        all_err_for_diff_known_meas_p.extend(st_err_p)
+        all_err_for_diff_known_meas_q.extend(st_err_q)
+
+        # get known and unknown errors separately
+        known_indices = np.asarray(list(P_known_meas.keys()))
+        unknown_indices = np.asarray(list(P_pseudo_meas.keys()))
+        error_for_known_p.extend(st_err_p[known_indices]) # known p erorrs
+        error_for_known_q.extend(st_err_q[known_indices]) # known q erorrs
+        error_for_unknown_p.extend(st_err_p[unknown_indices]) # unknown p errors
+        error_for_unknown_q.extend(st_err_q[unknown_indices]) # unknown q errors
     # max abs error
     list_of_errors_p.append(err_for_diff_known_meas_p)
     list_of_errors_q.append(err_for_diff_known_meas_q)
@@ -209,6 +223,11 @@ for i in arr: # i are number of known measurements
     list_of_all_errors_q.append(all_err_for_diff_known_meas_q)
     store_estimates.append(itermediate_results)
     list_max_error_index_p.append(max_abs_error_index_p)
+    # known and unknown errors
+    list_all_error_known_p.append(error_for_known_p)
+    list_all_error_known_q.append(error_for_known_q)
+    list_all_error_unknown_p.append(error_for_unknown_p)
+    list_all_error_unknown_q.append(error_for_unknown_q)
 
 # plot the max error graph
 plt.figure()
@@ -222,10 +241,25 @@ plt.title('Max Absolute Error Corresponding to known number of Measurements')
 plt.figure()
 seaborn.boxplot(data=list_of_all_errors_p)
 # seaborn.swarmplot(data=list_of_all_errors_p, color=".25")
-# plt.xlabel('Known number of measurements')
-# plt.ylabel('Max absolute error in pu')
-# plt.title('Max Absolute Error Corresponding to known number of Measurements')
+plt.xlabel('Known number of measurements')
+plt.ylabel(' absolute error in pu')
+plt.title('All Absolute Errors Corresponding to known number of Measurements')
 
+# plot known errors
+plt.figure()
+seaborn.boxplot(data=list_all_error_known_p)
+seaborn.swarmplot(data=list_of_errors_p, color=".25")
+plt.xlabel('Known number of measurements')
+plt.ylabel('absolute error in pu')
+plt.title('Absolute Error Corresponding to known Measurements Buses')
+
+# plot known errors
+plt.figure()
+seaborn.boxplot(data=list_all_error_unknown_p)
+seaborn.swarmplot(data=list_all_error_unknown_p, color=".25")
+plt.xlabel('Known number of measurements')
+plt.ylabel('absolute error in pu')
+plt.title('Absolute Error Corresponding to unknown Measurement Buses')
 # check if max error is at pseudo buses
 # count = 0 
 print('checking if error nodes are known measurement nodes or not')
