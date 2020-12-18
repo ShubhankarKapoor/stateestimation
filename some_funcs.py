@@ -119,13 +119,18 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     P_known_meas = dict(sorted(known_meas.items()))
     Q_known_meas = {k:Q_Load[k] for k in P_known_meas.keys()}
     V_known_meas = {k:V[k] for k in known_meas1.keys()} # get voltage vals for known measurements
-
+    V_known_meas[35] = V[35]
+    V_known_meas[36] = V[36]
+    V_known_meas[26] = V[26]
+    V_known_meas[22] = V[22]
+    V_known_meas[11] = V[11]
     # include slack bus voltage at all times
     if 0 in V_known_meas.keys():
         V_known_meas = dict(sorted(V_known_meas.items()))
     else:
         V_known_meas[0] = V[0] # add slack bus voltage
         V_known_meas = dict(sorted(V_known_meas.items()))
+    
     # distribute the load equally between unknown loads
     if len(unknown_meas_idx) != 0:
         dist_load_p = (primary_branch_flow_p - sum(P_known_meas.values()))/ len(unknown_meas_idx)
@@ -133,9 +138,9 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
         dist_load_q = (primary_branch_flow_q - sum(Q_known_meas.values()))/ len(unknown_meas_idx)
 
         # pseudo measurements
-        pseudo_meas = {non_zib_index[k]: dist_load_p for k in unknown_meas_idx}
+        pseudo_meas = {non_zib_index[k]: 0 for k in unknown_meas_idx}
         P_pseudo_meas = dict(sorted(pseudo_meas.items()))
-        Q_pseudo_meas = {k: dist_load_q for k in P_pseudo_meas.keys()}
+        Q_pseudo_meas = {k: 0 for k in P_pseudo_meas.keys()}
     else:
         P_pseudo_meas, Q_pseudo_meas = {}, {}
 
