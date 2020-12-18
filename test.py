@@ -87,7 +87,7 @@ meas_P_line, meas_Q_line, _ = subset_of_measurements(
     num_plow_meas, num_voltage_meas, arcs, P_line, Q_line, V)
 
 # different combinations
-i = 8
+i = 5
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 
 # chosing bus powers
@@ -255,7 +255,7 @@ plt.title('Max Absolute Error Corresponding to known number of Measurements')
 # plot all error graph
 plt.figure()
 seaborn.boxplot(data=list_of_all_errors_p)
-# seaborn.swarmplot(data=list_of_all_errors_p, color=".25")
+# seaborn.swarmplot(data=list_of_all_errors_p, color=".25") 
 plt.xlabel('Known number of measurements')
 plt.ylabel(' absolute error in pu')
 plt.title('All Absolute Errors Corresponding to known number of Measurements')
@@ -400,13 +400,11 @@ full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*l
 full_x_est[-1] = x_est[-1] # slack bus square voltage
 
 # calculate error between state vectors
-error = x - full_x_est
-max_error = np.max(abs(error))
-st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p2, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
 st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
 
 # print some results
-print(mean_error_st_p, max_error_st_p, max_error_st_abs_p2) 
+print(mean_error_st_p, max_error_st_p, max_error_st_abs_p) 
 print(mean_error_st_q, max_error_st_q, max_error_st_abs_q)
 # sum of residuals
 sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
