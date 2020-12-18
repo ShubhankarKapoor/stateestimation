@@ -87,7 +87,7 @@ meas_P_line, meas_Q_line, _ = subset_of_measurements(
     num_plow_meas, num_voltage_meas, arcs, P_line, Q_line, V)
 
 # different combinations
-i = 0
+i = 8
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 
 # chosing bus powers
@@ -96,7 +96,7 @@ indices = np.asarray(combs[0])
 
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
-# indices = np.asarray((   1,  2,  3,  4,   8)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+# indices = np.asarray((0,   1,  2,  3,  4,  5,  6,  7,  8,  9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 if len(indices) !=0:
     corresponding_nodes = non_zib_index_array[indices]
 else:
@@ -149,7 +149,7 @@ for i in arr: # i are number of known measurements
     list_of_all_combs.append(combs)
 
     for indices in combs:
-        P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, _ =  bus_measurements_equal_distribution(
+        P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
                 P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
                 non_zib_index, zib_index, indices = np.asarray(indices))
             
@@ -161,10 +161,11 @@ for i in arr: # i are number of known measurements
         z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
                list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
     
-        w1 = 1000 # weight value for pflow, qflow
-        w21 = 0.0001 # known measurements for p,q at buses
-        w22 = 1000 # pseudo measurements for p,q at buses
-        w3 = 1000 # weight for voltage value
+
+        w1 = 1 # weight value for pflow, qflow
+        w21 = 1 # known measurements for p,q at buses
+        w22 = 1000000 # pseudo measurements for p,q at buses
+        w3 = 0.0001 # weight for voltage value
         # print1(w1, w21, w22, w3)
         
         weight_array1 = np.ones((len(meas_P_line)*2))*w1
@@ -204,13 +205,10 @@ for i in arr: # i are number of known measurements
         P_Load_est, Q_Load_est, which, full_x_est[-1]) # using lindistflow
 
         # calculate error between state vectors
-        error = x - full_x_est
-        max_error = np.max(abs(error))
         st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, max_index_p = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
         st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
         # error for voltage meas
         _, mean_vmag_err, max_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
-
         # append the absolute error
         err_for_diff_known_meas_p.append(max_error_st_abs_p)
         err_for_diff_known_meas_q.append(max_error_st_abs_q)
@@ -230,6 +228,7 @@ for i in arr: # i are number of known measurements
         error_for_known_q.extend(st_err_q[known_indices]) # known q erorrs
         error_for_unknown_p.extend(st_err_p[unknown_indices]) # unknown p errors
         error_for_unknown_q.extend(st_err_q[unknown_indices]) # unknown q errors
+
     # max abs error
     list_of_errors_p.append(err_for_diff_known_meas_p)
     list_of_errors_q.append(err_for_diff_known_meas_q)
@@ -403,11 +402,11 @@ full_x_est[-1] = x_est[-1] # slack bus square voltage
 # calculate error between state vectors
 error = x - full_x_est
 max_error = np.max(abs(error))
-st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p2, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
 st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
 
 # print some results
-print(mean_error_st_p, max_error_st_p, max_error_st_abs_p) 
+print(mean_error_st_p, max_error_st_p, max_error_st_abs_p2) 
 print(mean_error_st_q, max_error_st_q, max_error_st_abs_q)
 # sum of residuals
 sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
