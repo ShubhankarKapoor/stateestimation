@@ -80,7 +80,7 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 ##############################################################################
 
 # get subset of measurement set
-num_plow_meas = 1
+num_plow_meas = 0
 num_voltage_meas = 1
 # chose powerflows and voltage magnitudes
 meas_P_line, meas_Q_line, _ = subset_of_measurements(
@@ -92,7 +92,7 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[0])
+indices = np.asarray(combs[5])
 
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]

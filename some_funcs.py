@@ -121,12 +121,18 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     V_known_meas = {k:V[k] for k in known_meas1.keys()} # get voltage vals for known measurements
     
     # add some additional voltages
-    # V_known_meas[35] = V[35]
     # V_known_meas[36] = V[36]
+    # V_known_meas[35] = V[35]
     # V_known_meas[26] = V[26]
+    # V_known_meas[23] = V[23]
     # V_known_meas[22] = V[22]
+    # V_known_meas[21] = V[21]    
     # V_known_meas[11] = V[11]
+    # V_known_meas[8] = V[8]    
+    # V_known_meas[2] = V[2]
     # include slack bus voltage at all times
+
+    # V_known_meas = {k: V[k] for k in P_Load.keys()}
     if 0 in V_known_meas.keys():
         V_known_meas = dict(sorted(V_known_meas.items()))
     else:
