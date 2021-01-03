@@ -79,14 +79,14 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 ##############################################################################
 ##############################################################################
 
-# get subset of measurement set
-num_plow_meas = 0
+# get subset of powerflow measurement set
+num_plow_meas = 1
 num_voltage_meas = 1
-# chose powerflows and voltage magnitudes
-meas_P_line, meas_Q_line, _ = subset_of_measurements(
-    num_plow_meas, num_voltage_meas, arcs, P_line, Q_line, V)
+# chose powerflows
+meas_P_line, meas_Q_line = subset_of_measurements(
+    num_plow_meas, arcs, P_line, Q_line, V)
 
-# different combinations
+# different combinations of known nodes
 i = 5
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 

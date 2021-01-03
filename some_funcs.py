@@ -59,39 +59,29 @@ def create_mes_set(filename_bus, filename_branch):
 
     return p_line_meas, q_line_meas, meas_P_load, meas_Q_load, meas_V
 
-def subset_of_measurements(num_plow_meas, num_voltage_meas, arcs, P_line, Q_line, V):
-    ''' function for subset of pflow, qflow and vbus '''
-    # keys for voltage measurements
-    if num_voltage_meas == 0: # return empty dict for flows
-        meas_V = {}
-    elif num_voltage_meas == 1:
-        meas_V = {0:V[0]}
-    else: 
-        v_meas_keys = np.sort(random.sample(range(1,len(V)),num_voltage_meas-1))
-        # add slack voltage key for measurement
-        v_meas_keys = np.insert(v_meas_keys, 0, 0) # so that the voltage at slack bus is always considered
-        meas_V = {k:V[k] for k in v_meas_keys} # create the meas vector for V
+def subset_of_measurements(num_plow_meas, arcs, P_line, Q_line, V):
+    ''' function for subset of measurements of pflow, qflow'''
 
     # keys list p_line and q_line
     key_list = list(P_line.keys())
     if num_plow_meas == 0: # return empty dict for flows
-        return {}, {}, meas_V
+        return {}, {}
     if num_plow_meas == 1:
         meas_P_line = {key_list[0]: P_line[key_list[0]]}
         meas_Q_line = {key_list[0]: Q_line[key_list[0]]}
     else:
-        # chose keys for powerflows
+        # randomly chose keys for powerflows
         p_line_index = np.sort(random.sample(range(1,len(P_line)), num_plow_meas-1))
         p_line_index = np.insert(p_line_index, 0, 0) # so that the pflow in first line is always considered
         meas_P_line = {key_list[k]: P_line[key_list[k]] for k in p_line_index}
         meas_Q_line = {key_list[k]: Q_line[key_list[k]] for k in p_line_index}
 
-    return meas_P_line, meas_Q_line, meas_V
+    return meas_P_line, meas_Q_line
 
 def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p, 
                      primary_branch_flow_q, non_zib_index, zib_index, 
                      num_known_meas=None, indices = None):
-    ''' function for pseudo and known p,q bus 
+    ''' function for pseudo and known p, q, v bus measurements
     indices: array of index of known measurements in non_zib_index
     '''
     # indices are for index in non zib array for now
@@ -145,7 +135,7 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
         # dist_load = (sum(Q_Load.values()) - sum(P_known_meas.values()))/ len(unknown_meas_idx)
         dist_load_q = (primary_branch_flow_q - sum(Q_known_meas.values()))/ len(unknown_meas_idx)
 
-        # pseudo measurements
+        # assign initial vals to pseudo measurements
         pseudo_meas = {non_zib_index[k]: 0 for k in unknown_meas_idx}
         P_pseudo_meas = dict(sorted(pseudo_meas.items()))
         Q_pseudo_meas = {k: 0 for k in P_pseudo_meas.keys()}
