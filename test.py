@@ -1,7 +1,7 @@
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
-from jacobian_calc import create_jacobian, se_wls, se_ols
+from jacobian_calc import create_jacobian, se_wls, se_ols, se_rr
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
@@ -79,10 +79,10 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 ##############################################################################
 ##############################################################################
 
-# get subset of powerflow measurement set
+# get subset of lineflow measurement set
 num_plow_meas = 1
 num_voltage_meas = 1
-# chose powerflows
+# chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
@@ -96,7 +96,7 @@ indices = np.asarray(combs[5])
 
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
-# indices = np.asarray((0,   1,  2,  3,  4,  5,  6,  7,  8,  9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 if len(indices) !=0:
     corresponding_nodes = non_zib_index_array[indices]
 else:
@@ -387,7 +387,7 @@ jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_t
 
 # run WLS/OLS SE
 x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
-    x_est, z, jacobian_matrix, W, tol = None)
+    x_est, z, jacobian_matrix, W)
 
 ##############################################################################
 ##############################################################################

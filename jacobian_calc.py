@@ -145,7 +145,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None):
 def se_rr(x_est, z, jacobian_matrix, W, k = None, tol = None):
     ''' Ridge regression'''
 
-    k = k if k is not None else 1
+    k = k if k is not None else 0 # 0 makes it ols
     # some preprocessing for time saving during iterative newton method
     G = np.matmul(jacobian_matrix.T, jacobian_matrix) + k * np.diag(np.ones((len(x_est))))
     # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
