@@ -154,11 +154,11 @@ def se_rr(x_est, z, jacobian_matrix, W, k = None, tol = None):
     count = 0
     delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
     residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
-    tol = tol if tol is not None else 10e-16
+    tol = tol if tol is not None else 10e-12
     results = x_est
     emax = 100 # chosen higher than the tol
 
-    while emax > tol:
+    while emax > tol and count < 1:
 
         # distflow backward sweep for calculating measurements
 
@@ -183,7 +183,6 @@ def se_rr(x_est, z, jacobian_matrix, W, k = None, tol = None):
         x_est = x_est + deltax
         results = np.vstack((results, x_est))
         count+=1
-        # print(count)
     
     return x_est, emax, count, residuals_mat, delta_mat, results
 
@@ -205,7 +204,7 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     count = 0
     delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
     residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
-    tol = tol if tol is not None else 10e-16
+    tol = tol if tol is not None else 10e-12
     results = x_est
     emax = 100 # chosen higher than the tol
 
@@ -225,7 +224,7 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
         # calculate deltax
         if pseudo_inv == 0:
             deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals)
-        else:
+        else: # cannot remember why I'm doing this
             deltax = np.matmul(Ginv, residuals)
         delta_mat[:,count] = deltax
 

@@ -87,22 +87,23 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 5
+i = 9
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[5])
+indices = np.asarray(combs[8])
 
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
-indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+# indices = np.asarray((0,  1,  2,  3,  4,  5,  6,  7,  8,  9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 if len(indices) !=0:
     corresponding_nodes = non_zib_index_array[indices]
 else:
     corresponding_nodes = np.asarray(())
     
 not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
+print(not_considered)
 
 P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
     P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
@@ -386,29 +387,45 @@ jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_t
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
 # run WLS/OLS SE
-x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
-    x_est, z, jacobian_matrix, W)
+k_range = np.arange(1,1.6,0.1)
+for coeff in k_range:
 
-##############################################################################
-##############################################################################
-# Error Calculations
-
-# get the full vector for xest
-full_x_est = np.zeros((len(x)))
-full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
-full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
-full_x_est[-1] = x_est[-1] # slack bus square voltage
-
-# calculate error between state vectors
-st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
-st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
-
-# print some results
-print(mean_error_st_p, max_error_st_p, max_error_st_abs_p) 
-print(mean_error_st_q, max_error_st_q, max_error_st_abs_q)
-# sum of residuals
-sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
-results = results.T
+    p_distributed = P_line[(0,1)]/(len(P_Load_state))
+    p_states = np.zeros((len(P_Load_state))) + p_distributed
+    
+    q_distributed = Q_line[(0,1)]/(len(P_Load_state))
+    q_states = np.zeros((len(P_Load_state))) + q_distributed
+    
+    v0 = 1 # slack bus
+    
+    x_est = np.concatenate((p_states, q_states))
+    x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
+    x_est, emax, count, residuals_mat, delta_mat, results = se_rr(
+        x_est, z, jacobian_matrix, W, k=coeff)
+    
+    ##############################################################################
+    ##############################################################################
+    # Error Calculations
+    
+    # get the full vector for xest
+    full_x_est = np.zeros((len(x)))
+    full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
+    full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
+    full_x_est[-1] = x_est[-1] # slack bus square voltage
+    
+    print(x[not_considered], full_x_est[not_considered])
+    # print(x[not_considered+37], full_x_est[not_considered+37])
+    
+    # calculate error between state vectors
+    st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+    st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
+    
+    # print some results
+    # print(mean_error_st_p, max_error_st_p, max_error_st_abs_p) 
+    # print(mean_error_st_q, max_error_st_q, max_error_st_abs_q)
+    # sum of residuals
+    sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
+    results = results.T
 
 ###############################################################################
 ###############################################################################
