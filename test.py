@@ -355,7 +355,7 @@ z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V))
 # static weights but different for pseudo and known measurements
 w1 = 1 # weight value for pflow, qflow
 w21 = 1 # known measurements for p,q at buses
-w22 = 1000000 # pseudo measurements for p,q at buses
+w22 = 100000000000 # pseudo measurements for p,q at buses
 w3 = 0.0001 # weight for voltage value
 print(w1, w21, w22, w3)
 
@@ -398,16 +398,17 @@ q_states = np.zeros((len(P_Load_state))) + q_distributed
 
 v0 = 1 # slack bus
 
+x_est = np.concatenate((p_states, q_states))
+x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
+
 # weight matrix on estimates from RR
 W_rr = np.ones((len(x_est))) * w21 # weights on know p, q bus meas
 W_rr[not_considered_indices] = w22 # weights on unknown p_buses
 W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_buses
 W_rr[-1] = w3
 
-x_est = np.concatenate((p_states, q_states))
-x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
-x_est, emax, count, residuals_mat, delta_mat, results = se_wrr(
-    x_est, z, jacobian_matrix, W, k=1)
+x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
+    x_est, z, jacobian_matrix, W)
 
 ##############################################################################
 ##############################################################################
