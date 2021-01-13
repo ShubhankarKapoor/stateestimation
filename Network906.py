@@ -10,13 +10,12 @@ import time
 #Network characteristics
 ########################################################### 
 busNo = 906+1
-ReadLineData = pd.read_excel (r'/mnt/d/University/Simulations/Hosting Capacity/Data/LVNetworks/Network_1/Feeder_1/Lines.xlsx')
-ReadLineCodeData = pd.read_excel (r'/mnt/d/University/Simulations/Hosting Capacity/Data/LVNetworks/Network_1/Feeder_1/LineCode.xlsx')
-ReadLoadBuses = pd.read_excel (r'/mnt/d/University/Simulations/Hosting Capacity/Data/LVNetworks/Network_1/Feeder_1/Loads.xlsx')
-LoadData = pd.read_excel (r'/mnt/d/University/Simulations/Hosting Capacity/Data/LVNetworks/Network_1/Feeder_1/LoadShapes.xlsx')
-
+ReadLineData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/Network_1/Feeder_1/Lines.xlsx')
+ReadLineCodeData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/Network_1/Feeder_1/LineCode.xlsx')
+ReadLoadBuses = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/Network_1/Feeder_1/Loads.xlsx')
+LoadData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/Network_1/Feeder_1/LoadShapes.xlsx')
 Vbase = .48/np.sqrt(3) #kV
-Sbase = 100 #kVA three-phase
+Sbase = 1 #kVA three-phase
 
 BusNum = range(0,busNo)
 Slack_Bus_Num=[0] #slack bus
@@ -89,26 +88,21 @@ LineData[(0,1)] = [[element for element in row] for row in Z_t_new_pu]
 ###########################################################
 #P.U impedance matrix
 ########################################################### 
-LineData_Z_pu_threePhase = {}
+LineData_Z_pu_threePhase = {} # three phase impedance
+LineData_Z_pu = {} # single phase impedance
 for (i,j) in LineData.keys():
     LineData_Z_pu_threePhase[(i,j)] = [[element*0.001/Zbase for element in row] for row in LineData[(i,j)]] # 0.001 is to convert the length of the lines to km
-
-###########################################################
-#P.U impedance matrix for single phase system
-########################################################### 
-LineData_Z_pu = {}
-for (i,j) in LineData.keys():
     LineData_Z_pu[(i,j)] = LineData_Z_pu_threePhase[(i,j)][0][0] # Only Phase "A" is considered. 
-    
+
 ###########################################################
 #Load Data
 ########################################################### 
 P_Load = {}
 Q_Load = {}
 
-LoadBuses = [] #Identify load buses from data sheet 
-for i in range(0,len(ReadLoadBuses)):
-    LoadBuses.append(ReadLoadBuses.iat[i,0])
+LoadBuses = [] #Identify load buses from data sheet
+phase = 'A' # get loads for a specific phase
+LoadBuses = np.asarray(ReadLoadBuses[ReadLoadBuses['phaseNumber'] == phase]['BusNumber'])
 
 seed(10)
 SS = [] 
@@ -127,6 +121,12 @@ for i in BusNum:
 # Let's just consider a specific time like t = 720 (data for 12pm)
 for i in BusNum:
     P_Load[i] = P_Load[i][720]
-    Q_Load[i] = Q_Load[i][720]
+    Q_Load[i] = Q_Load[i][720]       
 
-        
+# added nw info on top of Masoume's code
+R_line = {key:val.real for key, val in LineData_Z_pu.items()} # resistance of every line
+X_line = {key:val.imag for key, val in LineData_Z_pu.items()} # reactancce of every line
+
+# will have to normalize P and Q before running state estimation
+P_Load = {key:val/Sbase for key, val in P_Load.items()} # ground truth
+Q_Load = {key:val/Sbase for key, val in Q_Load.items()} # ground truth
