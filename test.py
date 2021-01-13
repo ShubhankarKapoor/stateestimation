@@ -9,15 +9,15 @@ import seaborn
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution
 
-which = 37 # IEEE 37-node or IEEE 906-node
+which = 906 # IEEE 37-node or IEEE 906-node
 
 if which == 37:
     from Network37 import *
 else:
     from Network906 import *
 
-data_lin = 1
-data_full_ac = 0
+data_lin = 0
+data_full_ac = 1
 est_lin = 1
 est_full_ac = 0
 comparison = 0
@@ -42,8 +42,8 @@ gt_V = V[0]
 x = np.asarray(gt_P_load + gt_Q_load) # ground truth for states
 x = np.insert(x, len(x), gt_V) # ground truth for states
 
-# states = ['P_Load', 'Q_Load', 'V0']
-# estimate_states(states)
+x_true = np.hstack((np.asarray(gt_P_load)[LoadBuses], np.asarray(gt_Q_load)[LoadBuses]))
+x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for nonzib buses
 
 # ground truth for measurements
 z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) + 
@@ -87,16 +87,16 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 5
+i = 20
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[5])
+indices = np.asarray(combs[20])
 
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
-indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+# indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 if len(indices) !=0:
     corresponding_nodes = non_zib_index_array[indices]
 else:
