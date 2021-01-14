@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 def path_to_nodes(which):
     if which == 37: # IEEE 37-node or IEEE 906-node
         from Network37 import arcs
-    if which == (906 or 907): # IEEE 37-node or IEEE 906-node
+    if which == 906 or which == 907: # IEEE 37-node or IEEE 906-node
         from Network906 import arcs
         which = 906 + 1 # becasue there are 907 buses, see nw 906 script
         
