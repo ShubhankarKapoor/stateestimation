@@ -16,8 +16,8 @@ if which == 37:
 else:
     from Network906 import *
 
-data_lin = 1
-data_full_ac = 0
+data_lin = 0
+data_full_ac = 1
 est_lin = 1
 est_full_ac = 0
 comparison = 0
@@ -121,6 +121,10 @@ meas_P_load = {**P_known_meas, **P_pseudo_meas}
 meas_P_load = dict(sorted(meas_P_load.items()))
 meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
 meas_Q_load = dict(sorted(meas_Q_load.items()))
+meas_V = {key: V[key] for key in not_considered}
+# del meas_V[34]
+meas_V[0]=1
+meas_V = dict(sorted(meas_V.items()))
 
 z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
                list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
