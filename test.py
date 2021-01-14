@@ -1,7 +1,8 @@
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
-from jacobian_calc import create_jacobian, se_wls, se_ols, se_wrr, se_rr
+from jacobian_calc import create_jacobian
+from solvers import se_wls, se_ols, se_wrr, se_rr
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
@@ -371,7 +372,7 @@ z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V))
 # static weights but different for pseudo and known measurements
 w1 = 1 # weight value for pflow, qflow
 w21 = 1 # known measurements for p,q at buses
-w22 = 100000000000 # pseudo measurements for p,q at buses
+w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
 w3 = 0.0001 # weight for voltage value
 print(w1, w21, w22, w3)
 
@@ -406,6 +407,7 @@ jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_t
 k_range = np.arange(1,1.6,0.1)
 # for coeff in k_range:
 
+# reinitializing here so its easier test case
 p_distributed = P_line[(0,1)]/(len(P_Load_state))
 p_states = np.zeros((len(P_Load_state))) + p_distributed
 
@@ -436,8 +438,8 @@ full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
 full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
 full_x_est[-1] = x_est[-1] # slack bus square voltage
 
-print(x[not_considered], full_x_est[not_considered])
-print(x[not_considered+37], full_x_est[not_considered+37])
+# print(x[not_considered], full_x_est[not_considered])
+# print(x[not_considered+37], full_x_est[not_considered+37])
 
 # calculate error between state vectors
 st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
