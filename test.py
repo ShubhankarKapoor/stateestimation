@@ -2,7 +2,7 @@ from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
 from jacobian_calc import create_jacobian
-from solvers import se_wls, se_ols, se_wrr, se_rr
+from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, stochastic_gradient_descent
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
@@ -10,15 +10,15 @@ import seaborn
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution
 
-which = 907 # IEEE 37-node or IEEE 906-node
+which = 37 # IEEE 37-node or IEEE 906-node
 
 if which == 37:
     from Network37 import *
 else:
     from Network906 import *
 
-data_lin = 0
-data_full_ac = 1
+data_lin = 1
+data_full_ac = 0
 est_lin = 1
 est_full_ac = 0
 comparison = 0
@@ -43,8 +43,8 @@ gt_V = V[0]
 x = np.asarray(gt_P_load + gt_Q_load) # ground truth for states
 x = np.insert(x, len(x), gt_V) # ground truth for states
 
-x_true = np.hstack((np.asarray(gt_P_load)[LoadBuses], np.asarray(gt_Q_load)[LoadBuses]))
-x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for nonzib buses
+# x_true = np.hstack((np.asarray(gt_P_load)[LoadBuses], np.asarray(gt_Q_load)[LoadBuses]))
+# x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for nonzib buses
 
 # ground truth for measurements
 z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) + 
@@ -62,6 +62,8 @@ for k,v in P_Load.items():
         P_Load_state[k] = v
         non_zib_index.append(k)
     else:
+        # P_Load_state[k] = v # included to consider all nodes
+        # non_zib_index.append(k) # included to consider all nodes
         zib_index.append(k)
 
 non_zib_index_array = np.asarray(non_zib_index)
@@ -88,7 +90,7 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 19
+i = 9
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 
 # chosing bus powers
@@ -99,7 +101,7 @@ indices = np.asarray(combs[0])
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
 
-# indices = np.asarray((0,  1,  2,  3,  4,  5,  6,  7,  8,  9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+indices = np.asarray(( 0,   1,  2,  3,  4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 
 # 906
 # [ 34, 70, 73, 74, 225, 289, 349, 387, 388, 502, 562, 563, 611, 629, 817, 860, 861, 896, 898, 900, 906]
@@ -107,8 +109,8 @@ indices = np.asarray(combs[0])
   # [     1,      3,  4,   5,        7,   8,   9,             12,  13,  14,       16,            19,  20]
 
 # indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
-indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,   10,  11,  
-                      12,  13,  14,  15,  16, 17, 18, 19, 20))
+# indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,   10,  11,  
+#                       12,  13,  14,  15,  16, 17, 18, 19, 20))
 
 if len(indices) !=0:
     corresponding_nodes = non_zib_index_array[indices]
@@ -126,10 +128,10 @@ meas_P_load = {**P_known_meas, **P_pseudo_meas}
 meas_P_load = dict(sorted(meas_P_load.items()))
 meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
 meas_Q_load = dict(sorted(meas_Q_load.items()))
-meas_V = {key: V[key] for key in not_considered}
-# del meas_V[34]
-meas_V[0]=1
-meas_V = dict(sorted(meas_V.items()))
+# meas_V = {key: V[key] for key in not_considered}
+# # del meas_V[34]
+# meas_V[0]=1
+# meas_V = dict(sorted(meas_V.items()))
 
 z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
                list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
@@ -425,8 +427,8 @@ W_rr[not_considered_indices] = w22 # weights on unknown p_buses
 W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_buses
 W_rr[-1] = w3
 
-x_est, emax, count, residuals_mat, delta_mat, results = se_wls(
-    x_est, z, jacobian_matrix, W)
+x_est, emax, count, residuals_mat, delta_mat, results = se_wrr(
+    x_est, z, jacobian_matrix, W, k=0.1)
 
 ##############################################################################
 ##############################################################################
