@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     ''' Ordinary Least Square Estimate
@@ -200,12 +201,13 @@ def cost(theta, H, y):
     H & y(z) have their usual meaning.
     theta(xest) - vector of coefficients.
     '''
-    m = len(y)
+    # m = len(y)
+    m = 1 # for SGD
     # Calculating Cost
     c = np.sum(np.square((H.dot(theta))-y))/(2 * m)
     return c
 
-def batch_gradient_descent(H, y,theta,W,lr,iterations, tol = None):
+def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     '''
     returns array of thetas, cost of every iteration
     H - H matrix
@@ -226,19 +228,21 @@ def batch_gradient_descent(H, y,theta,W,lr,iterations, tol = None):
     emax = 100 # chosen higher than the tol
     # Calculating theta for every iteration.
     # for i in range(iterations):
-    while emax > tol and count<iterations*20 :
+    while emax > tol and count < iterations*500 :
         # print(count)
-        residuals = H.dot(theta)-y
-        w_residuals = np.dot(W,residuals) # weighted residuals
-        gradient = H.T.dot(w_residuals)/m
+        residuals = H.dot(theta) -y
+        w_residuals = np.dot(W, residuals) # weighted residuals
+        gradient = 1/m*H.T.dot(w_residuals)
+        # gradient = 1/m*(np.matmul(np.matmul(np.matmul(H.T, W), H), theta) - np.matmul(np.matmul(H.T, W), y))
+        # print(gradient, gradient2)
         theta = theta - lr * gradient # new weights/ thetas
         thetas = np.vstack((thetas, theta)) # store the result in a matrix
-        costs.append(cost(theta,H,y))
+        costs.append(cost(theta, H, y))
         emax = np.max(np.abs(thetas[count+1,:]-thetas[count,:]))
         count+=1
         if count % 30000==0:
-            print(count)
-    return theta,thetas,costs, count
+            print(count, emax)
+    return theta, thetas, costs, count
 
 def stochastic_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     ''' implements SGD '''
@@ -252,22 +256,23 @@ def stochastic_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     # parameters are updated with every new measurement
     for j in range(iterations):
         if j%300 == 0:
-            print(j)
+            print(j, emax)
         for i in range(H.shape[0]):
             # yhat = np.matmul(, x2)
             residuals = H[i,:].dot(theta)-y[i] # scalar in SGD
-            w_residuals = np.dot(W[i,i],residuals) # weighted residuals
-            # the line below isnt SGD coz of dot product
+            w_residuals = np.dot(W[i,i], residuals) # weighted residuals
             gradient = H[i,:].T.dot(w_residuals)
             theta = theta - lr * gradient # new weights/ thetas
             thetas = np.vstack((thetas, theta)) # store the result in a matrix
-            costs.append(cost(theta,H[i,:],y[i]))
+            costs.append(cost(theta, H[i,:], y[i]))
             emax = np.max(np.abs(thetas[j+1,:]-thetas[j,:]))
 
-    return theta,thetas,costs, j
+    return theta, thetas, costs, j
 
 def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
-    ''' implements SGD '''
+    ''' implements SGD with shuffle
+        mathematically same as above implementation: checked
+    '''
     tol = tol if tol is not None else 10e-12
     thetas = theta
     costs = []
@@ -275,20 +280,21 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
 
     for j in range(iterations): # num iters
         if j%300 == 0:
-            print(j)
-        for i, meas in enumerate(y):
+            print(j, emax)
+            shuffled_set = np.random.permutation(len(y)) # shuffle the meas
+        for i in shuffled_set:
         # chose meas randomly rather than in an order
             # can iterate over thetas individually to double check
             estimate = np.sum(np.multiply(H[i,:], theta))
-            w_residual = (meas - estimate) * W[i,i] # commo grad term for each parameter
-            # grad calculated for (y-Hx)^2*W
+            w_residual = (y[i] - estimate) * W[i,i] # commo grad term for each parameter
+            # grad calculated for (1/2)*(y-Hx)^2*W
             gradient = -1 * w_residual * H[i,:]
             theta = theta - (lr * gradient) # update parameters
             thetas = np.vstack((thetas, theta)) # store the result in a matrix
             costs.append(cost(theta,H[i,:],y[i]))
             emax = np.max(np.abs(thetas[j+1,:]-thetas[j,:]))
 
-    return theta,thetas,costs, j
+    return theta, thetas, costs, j
 
 # testing gradient descents
 # Learning Rate
@@ -306,14 +312,23 @@ v0 = 1 # slack bus
 
 x_est = np.concatenate((p_states, q_states))
 x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
-H,y,theta,W,lr,iterations = jacobian_matrix,z,x_est,W,lr,iterations
+x_est = np.random.uniform(0, 1/len(x_est), len(x_est)) # initialize with small random vals 
+H, y, theta, W, lr, iterations = jacobian_matrix, z, x_est, W, lr, iterations
 
 # Running Batch Gradient Descent
-x_est,thetas,costs, counts = batch_gradient_descent(jacobian_matrix,z,x_est,W,lr,iterations)
+x_estb, thetasb, costsb, countsb = batch_gradient_descent(
+    jacobian_matrix, z, x_est, W, lr, iterations)
 
 # Running Stochastic Gradient Descent
-x_estt,thetas,costs, counts = stochastic_gradient_descent(jacobian_matrix,z,x_est,W,lr,iterations)
-x_est2,thetas2,costs2, counts2 = stochastic_gradient_descent2(jacobian_matrix,z,x_est,W,lr,iterations)
+start_time = time.time()
+x_estt, thetas, costs, counts = stochastic_gradient_descent(
+    jacobian_matrix, z, x_est, W, lr, iterations)
+print('------First Function Run Time------', time.time() - start_time)
+
+start_time = time.time()
+x_est2, thetas2, costs2, counts2 = stochastic_gradient_descent2(
+    jacobian_matrix, z, x_est, W, lr, iterations)
+print('------Second Function Run Time------', time.time() - start_time)
 # printing final values.
 # print('Final Theta 0 value: {:0.3f}\nFinal Theta 1 value: {:0.3f}'.format(theta[0][0],theta[1][0]))
-print('Final Cost/MSE(L2 Loss) Value: {:0.3f}'.format(costs[-1]))
+print('Final Cost/MSE(L2 Loss) Value: {:0.3f}'.format(costs2[-1]))
