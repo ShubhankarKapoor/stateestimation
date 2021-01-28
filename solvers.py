@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import torch
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     ''' Ordinary Least Square Estimate
@@ -219,7 +220,7 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     '''
     #Getting number of observations.
     m = len(y)
-    tol = tol if tol is not None else 10e-8
+    tol = tol if tol is not None else 10e-12
     # Initializing cost and theta's arrays with zeroes.
     
     thetas = theta
@@ -228,12 +229,17 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     emax = 100 # chosen higher than the tol
     # Calculating theta for every iteration.
     # for i in range(iterations):
-    while emax > tol and count < iterations*500 :
+    while emax > tol and count < iterations*100 :
         # print(count)
         residuals = H.dot(theta) -y
         w_residuals = np.dot(W, residuals) # weighted residuals
-        gradient = 1/m*H.T.dot(w_residuals)
-        # gradient = 1/m*(np.matmul(np.matmul(np.matmul(H.T, W), H), theta) - np.matmul(np.matmul(H.T, W), y))
+        gradient = 1/m*H.T.dot(w_residuals) # it is correct
+        # another way to check grad, just to make more sense
+        # w_residuals = w_residuals.reshape((m,1))
+        # gradient2 = H * w_residuals
+        # gradient2 = 1/m*np.sum(gradient2, axis = 0)
+        # another way
+        # # gradient = 1/m*(np.matmul(np.matmul(np.matmul(H.T, W), H), theta) - np.matmul(np.matmul(H.T, W), y))
         # print(gradient, gradient2)
         theta = theta - lr * gradient # new weights/ thetas
         thetas = np.vstack((thetas, theta)) # store the result in a matrix
@@ -278,7 +284,7 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
     costs = []
     emax = 100 # chosen higher than the tol
 
-    for j in range(iterations): # num iters
+    for j in range(iterations*500): # num iters
         if j%300 == 0:
             print(j, emax)
             shuffled_set = np.random.permutation(len(y)) # shuffle the meas
@@ -286,7 +292,7 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
         # chose meas randomly rather than in an order
             # can iterate over thetas individually to double check
             estimate = np.sum(np.multiply(H[i,:], theta))
-            w_residual = (y[i] - estimate) * W[i,i] # commo grad term for each parameter
+            w_residual = (y[i] - estimate) * W[i,i] # common grad term for each parameter
             # grad calculated for (1/2)*(y-Hx)^2*W
             gradient = -1 * w_residual * H[i,:]
             theta = theta - (lr * gradient) # update parameters
@@ -298,7 +304,7 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
 
 # testing gradient descents
 # Learning Rate
-lr = 0.0001
+lr = 0.001 # 0.0001
 # Number of iterations
 iterations = 3000
 # Initializing a random value to give algorithm a base value.
@@ -314,7 +320,7 @@ x_est = np.concatenate((p_states, q_states))
 x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 x_est = np.random.uniform(0, 1/len(x_est), len(x_est)) # initialize with small random vals 
 H, y, theta, W, lr, iterations = jacobian_matrix, z, x_est, W, lr, iterations
-
+x_est=x_estb
 # Running Batch Gradient Descent
 x_estb, thetasb, costsb, countsb = batch_gradient_descent(
     jacobian_matrix, z, x_est, W, lr, iterations)
@@ -332,3 +338,75 @@ print('------Second Function Run Time------', time.time() - start_time)
 # printing final values.
 # print('Final Theta 0 value: {:0.3f}\nFinal Theta 1 value: {:0.3f}'.format(theta[0][0],theta[1][0]))
 print('Final Cost/MSE(L2 Loss) Value: {:0.3f}'.format(costs2[-1]))
+
+class LeastSquaresRegressorTorch1():
+
+    def __init__(self, n_iter=10, eta=0.1, batch_size=10):
+        self.n_iter = n_iter
+        self.eta = eta
+        self.batch_size = batch_size
+        
+    def fit(self, H, y, W):
+
+        n_instances, n_features = H.shape
+        
+        # we need to "wrap" the NumPy arrays H and y as PyTorch tensors
+        Ht = torch.tensor(H, dtype=torch.float)
+        Yt = torch.tensor(y, dtype=torch.float)
+        Wt = torch.tensor(W, dtype=torch.float)
+        # initialize the weight vector to all zeros
+        # self.x_est = torch.zeros(n_features, requires_grad=True, dtype=torch.float)
+        self.x_est = torch.rand(n_features, requires_grad=True)
+
+        self.history = []
+
+        # we select an optimizer, in this case (minibatch) SGD.
+        # it needs to be told what parameters to optimize, and what learning rate (lr) to use
+        optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum=0.9)
+        # as an alternative to SGD, we could have used adaptive gradient-based optimization
+        # algorithms such as Adam. I don't think they give an improvement in this case though,
+        # since the objective function is so simple.
+        #   optimizer = torch.optim.Adam([self.x_est], lr=self.eta)
+        
+        for i in range(self.n_iter):
+            
+            total_loss = 0
+            
+            for batch_start in range(0, n_instances, self.batch_size):
+                batch_end = batch_start + self.batch_size
+
+                # pick out the batch again, as in the other notebook
+                Hbatch = Ht[batch_start:batch_end, :]
+                Ybatch = Yt[batch_start:batch_end]
+                Wbatch = Wt[batch_start:batch_end,batch_start:batch_end]
+                # mv = matrix-vector multiplication in Torch
+                G = Hbatch.mv(self.x_est)
+                
+                # note the similarities to the NumPy implementation
+                Error = (G - Ybatch) * torch.diagonal(Wbatch)
+                loss_batch = torch.sum(Error**2) / len(Ybatch)
+                
+                # we sum up the loss values for all the batches.
+                # the item() here is to convert the tensor into a single number
+                total_loss += loss_batch.item()
+                
+                # reset all gradients
+                optimizer.zero_grad()                  
+
+                # compute the gradients for the loss for this batch
+                loss_batch.backward()
+
+                # for SGD, this is equivalent to x_est -= learning_rate * gradient as we saw before
+                optimizer.step()
+                          
+            self.history.append(total_loss)
+
+        print('SGD-minibatch final loss: {:.4f}'.format(total_loss))
+        return self.x_est
+
+import matplotlib.pyplot as plt
+# test pytorch implementation
+regr = LeastSquaresRegressorTorch1(n_iter=500000, eta=0.00000001, batch_size=100)
+xx= regr.fit(H, y, W)
+plt.figure()
+plt.plot(regr.history, '.-')
