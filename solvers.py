@@ -356,13 +356,16 @@ class LeastSquaresRegressorTorch1():
         Wt = torch.tensor(W, dtype=torch.float)
         # initialize the weight vector to all zeros
         # self.x_est = torch.zeros(n_features, requires_grad=True, dtype=torch.float)
+        torch.manual_seed(0)
         self.x_est = torch.rand(n_features, requires_grad=True)
 
         self.history = []
 
         # we select an optimizer, in this case (minibatch) SGD.
         # it needs to be told what parameters to optimize, and what learning rate (lr) to use
-        optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum=0.9)
+        # optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum=0.9)
+        optimizer = torch.optim.Adagrad([self.x_est], lr=0.01, 
+                                        lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
         # as an alternative to SGD, we could have used adaptive gradient-based optimization
         # algorithms such as Adam. I don't think they give an improvement in this case though,
         # since the objective function is so simple.
@@ -406,7 +409,7 @@ class LeastSquaresRegressorTorch1():
 
 import matplotlib.pyplot as plt
 # test pytorch implementation
-regr = LeastSquaresRegressorTorch1(n_iter=500000, eta=0.00000001, batch_size=100)
+regr = LeastSquaresRegressorTorch1(n_iter=100000, eta=0.001, batch_size=100)
 xx= regr.fit(H, y, W)
 plt.figure()
 plt.plot(regr.history, '.-')
