@@ -79,6 +79,8 @@ v0 = 1 # slack bus
 x_est = np.concatenate((p_states, q_states))
 x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 
+x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
+x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 ##############################################################################
 
