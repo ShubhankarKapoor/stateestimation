@@ -78,6 +78,9 @@ v0 = 1 # slack bus
 
 x_est = np.concatenate((p_states, q_states))
 x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
+np.random.seed(0)
+x_est = np.random.uniform(0, 1/len(x_est), len(x_est)) # initialize with small random vals
+x_est = np.random.uniform(0, 1, len(x_est)) # initialize with small random vals
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
@@ -377,7 +380,7 @@ z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V))
 w1 = 1 # weight value for pflow, qflow
 w21 = 1 # known measurements for p,q at buses
 w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
-w3 = 0.0001 # weight for voltage value
+w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
 print(w1, w21, w22, w3)
 
 weight_array1 = np.ones((len(meas_P_line)*2))*w1

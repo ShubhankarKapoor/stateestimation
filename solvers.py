@@ -320,6 +320,7 @@ x_est = np.concatenate((p_states, q_states))
 x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 x_est = np.random.uniform(0, 1/len(x_est), len(x_est)) # initialize with small random vals 
 H, y, theta, W, lr, iterations = jacobian_matrix, z, x_est, W, lr, iterations
+
 x_est=x_estb
 # Running Batch Gradient Descent
 x_estb, thetasb, costsb, countsb = batch_gradient_descent(
@@ -364,7 +365,8 @@ class LeastSquaresRegressorTorch1():
         # we select an optimizer, in this case (minibatch) SGD.
         # it needs to be told what parameters to optimize, and what learning rate (lr) to use
         # optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum=0.9)
-        optimizer = torch.optim.Adagrad([self.x_est], lr=0.01, 
+        # can tune the lr below
+        optimizer = torch.optim.Adagrad([self.x_est], lr=0.1, 
                                         lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
         # as an alternative to SGD, we could have used adaptive gradient-based optimization
         # algorithms such as Adam. I don't think they give an improvement in this case though,
@@ -409,7 +411,7 @@ class LeastSquaresRegressorTorch1():
 
 import matplotlib.pyplot as plt
 # test pytorch implementation
-regr = LeastSquaresRegressorTorch1(n_iter=100000, eta=0.001, batch_size=100)
-xx= regr.fit(H, y, W)
+regr = LeastSquaresRegressorTorch1(n_iter=5000, eta=0.001, batch_size=100) # can try different n_iters & batch size
+xx = regr.fit(H, y, W)
 plt.figure()
 plt.plot(regr.history, '.-')
