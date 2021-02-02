@@ -73,11 +73,12 @@ p_states = np.zeros((len(P_Load_state))) + p_distributed
 
 q_distributed = Q_line[(0,1)]/(len(P_Load_state))
 q_states = np.zeros((len(P_Load_state))) + q_distributed
-
 v0 = 1 # slack bus
 
 x_est = np.concatenate((p_states, q_states))
 x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
+
+# random initialization of state vars instead of above
 torch.manual_seed(0)
 x_est = torch.rand(len(x_est)) # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
@@ -183,25 +184,13 @@ jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_t
 k_range = np.arange(1,1.6,0.1)
 # for coeff in k_range:
 
-# reinitializing here so its easier test case
-p_distributed = P_line[(0,1)]/(len(P_Load_state))
-p_states = np.zeros((len(P_Load_state))) + p_distributed
-
-q_distributed = Q_line[(0,1)]/(len(P_Load_state))
-q_states = np.zeros((len(P_Load_state))) + q_distributed
-
-v0 = 1 # slack bus
-
-x_est = np.concatenate((p_states, q_states))
-x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
-
 # weight matrix on estimates from RR
 W_rr = np.ones((len(x_est))) * w21 # weights on know p, q bus meas
 W_rr[not_considered_indices] = w22 # weights on unknown p_buses
 W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_buses
 W_rr[-1] = w3
 
-x_est, emax, count, residuals_mat, delta_mat, results = se_wrr(
+x_estn, emax, count, residuals_mat, delta_mat, results = se_wrr(
     x_est, z, jacobian_matrix, W, k=0.1)
 
 ##############################################################################
@@ -210,9 +199,9 @@ x_est, emax, count, residuals_mat, delta_mat, results = se_wrr(
 
 # get the full vector for xest
 full_x_est = np.zeros((len(x)))
-full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
-full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
-full_x_est[-1] = x_est[-1] # slack bus square voltage
+full_x_est[non_zib_index] = x_estn[0:len(non_zib_index)] # insert p vals
+full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_estn[len(non_zib_index):2*len(non_zib_index)] # insert q vals
+full_x_est[-1] = x_estn[-1] # slack bus square voltage
 
 # print(x[not_considered], full_x_est[not_considered])
 # print(x[not_considered+37], full_x_est[not_considered+37])
@@ -265,10 +254,6 @@ _, mean_qflow_err, max_qflow_err, max_abs_qflow_err, _ = error_calc(np.array(lis
 ##############################################################################
 ##############################################################################
 # Running the gradient Algorithm
-
-torch.manual_seed(0)
-x_est = torch.rand(len(x_est)) # so that the initial condn is same as pytorch
-x_est =  x_est.detach().cpu().numpy()
 lr, iterations = 0.1, 60000 # Learning Rate and Number of iterations
  
 # x_est=x_estb
