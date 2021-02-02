@@ -305,49 +305,7 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
         j+=1
     return theta, thetas, costs, j, emax
 
-# testing gradient descents
-# Learning Rate
-lr = 0.1 # 0.0001
-# Number of iterations
-iterations = 60000
-# Initializing a random value to give algorithm a base value.
-p_distributed = P_line[(0,1)]/(len(P_Load_state))
-p_states = np.zeros((len(P_Load_state))) + p_distributed
-
-q_distributed = Q_line[(0,1)]/(len(P_Load_state))
-q_states = np.zeros((len(P_Load_state))) + q_distributed
-
-v0 = 1 # slack bus
-
-x_est = np.concatenate((p_states, q_states))
-x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
-torch.manual_seed(0)
-x_est = torch.rand(len(x_est)) # so that the initial condn is same as pytorch
-x_est =  x_est.detach().cpu().numpy()
-# np.random.seed(0)
-# x_est = np.random.uniform(0, 1, len(x_est)) # initialize with small random vals
-H, y, theta, W, lr, iterations = jacobian_matrix, z, x_est, W, lr, iterations
-
-# x_est=x_estb
-# Running Batch Gradient Descent
-x_estb, thetasb, costsb, countsb = batch_gradient_descent(
-    jacobian_matrix, z, x_est, W, lr, iterations)
-
-# Running Stochastic Gradient Descent
-start_time = time.time()
-x_estt, thetas, costs, counts = stochastic_gradient_descent(
-    jacobian_matrix, z, x_est, W, lr, iterations)
-print('------First Function Run Time------', time.time() - start_time)
-
-start_time = time.time()
-x_est2, thetas2, costs2, counts2, emaxs = stochastic_gradient_descent2(
-    jacobian_matrix, z, x_est, W, lr, iterations)
-print('------Second Function Run Time------', time.time() - start_time)
-# printing final values.
-# print('Final Theta 0 value: {:0.3f}\nFinal Theta 1 value: {:0.3f}'.format(theta[0][0],theta[1][0]))
-print('Final Cost/MSE(L2 Loss) Value: {:0.3f}'.format(costs2[-1]))
-
-class LeastSquaresRegressorTorch1():
+class WLeastSquaresRegressorTorch():
 
     def __init__(self, n_iter=10, eta=0.1, batch_size=10):
         self.n_iter = n_iter
@@ -373,7 +331,7 @@ class LeastSquaresRegressorTorch1():
         # it needs to be told what parameters to optimize, and what learning rate (lr) to use
         print(self.eta)
         # gradient descent algo
-        optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum =0.9 )
+        optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum =0.9)
         # adagrad descent
         # optimizer = torch.optim.Adagrad([self.x_est], lr=self.eta, 
         #                                 lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
@@ -415,12 +373,3 @@ class LeastSquaresRegressorTorch1():
 
         print('SGD-minibatch final loss: {:.4f}'.format(total_loss))
         return self.x_est
-
-import matplotlib.pyplot as plt
-# test pytorch implementation
-# can tune the lr below, dependent on your weights
-# can try different n_iters & batch size
-regr = LeastSquaresRegressorTorch1(n_iter=5000, eta=0.1, batch_size=len(y))
-xx = regr.fit(H, y, W)
-plt.figure()
-plt.plot(regr.history, '.-')
