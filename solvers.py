@@ -233,7 +233,7 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
         # print(count)
         residuals = H.dot(theta) -y
         w_residuals = np.dot(W, residuals) # weighted residuals
-        gradient = 1/m*H.T.dot(w_residuals) # it is correct
+        gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct
         # another way to check grad, just to make more sense
         # w_residuals = w_residuals.reshape((m,1))
         # gradient2 = H * w_residuals
@@ -309,7 +309,7 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
 # Learning Rate
 lr = 0.1 # 0.0001
 # Number of iterations
-iterations = 30000
+iterations = 60000
 # Initializing a random value to give algorithm a base value.
 p_distributed = P_line[(0,1)]/(len(P_Load_state))
 p_states = np.zeros((len(P_Load_state))) + p_distributed
@@ -373,12 +373,12 @@ class LeastSquaresRegressorTorch1():
         # it needs to be told what parameters to optimize, and what learning rate (lr) to use
         print(self.eta)
         # gradient descent algo
-        # optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum=0.9)
+        optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum =0.9 )
         # adagrad descent
         # optimizer = torch.optim.Adagrad([self.x_est], lr=self.eta, 
         #                                 lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
         # adam decent
-        optimizer = torch.optim.Adam([self.x_est], lr=self.eta)
+        # optimizer = torch.optim.Adam([self.x_est], lr=self.eta)
         
         for i in range(self.n_iter):
             
@@ -394,7 +394,7 @@ class LeastSquaresRegressorTorch1():
                 # mv = matrix-vector multiplication in Torch
                 G = Hbatch.mv(self.x_est)
                 
-                # note the similarities to the NumPy implementation
+                # Loss
                 Error = (G - Ybatch) * torch.diagonal(Wbatch)
                 loss_batch = torch.sum(Error**2) / len(Ybatch)
                 
@@ -420,7 +420,7 @@ import matplotlib.pyplot as plt
 # test pytorch implementation
 # can tune the lr below, dependent on your weights
 # can try different n_iters & batch size
-regr = LeastSquaresRegressorTorch1(n_iter=1500, eta=0.1, batch_size=100)
+regr = LeastSquaresRegressorTorch1(n_iter=5000, eta=0.1, batch_size=len(y))
 xx = regr.fit(H, y, W)
 plt.figure()
 plt.plot(regr.history, '.-')
