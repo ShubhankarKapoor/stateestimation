@@ -100,7 +100,7 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[0])
+indices = np.asarray(combs[1])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
