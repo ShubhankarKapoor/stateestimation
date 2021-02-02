@@ -1,48 +1,6 @@
 import numpy as np
-
-def se_wls(x_est, z, jacobian_matrix, W, tol = None):
-    ''' Weighted Least Square Estimate'''
-
-    # some preprocessing for time saving during iterative newton method
-    G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
-    # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
-    Ginv = np.linalg.inv(G)
-    
-    count = 0
-    delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
-    residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
-    tol = tol if tol is not None else 10e-12
-    results = x_est
-    emax = 100 # chosen higher than the tol
-
-    while emax > tol:
-
-        # distflow backward sweep for calculating measurements
-
-        # distflow forward sweep for calculating measurements
-
-        # calculate h(x)    
-        hx = np.matmul(jacobian_matrix, x_est)
-
-        # calculate measurement residuals
-        residuals = z - hx
-        residuals_mat[:,count] = residuals
-
-        # calculate deltax
-        deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
-        # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
-        delta_mat[:,count] = deltax
-
-        # get tolerance
-        emax = np.max(deltax)
-
-        # update values of state vars
-        x_est = x_est + deltax
-        results = np.vstack((results, x_est))
-        count+=1
-        # print(count)
-    
-    return x_est, emax, count, residuals_mat, delta_mat, results
+import time
+import torch
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     ''' Ordinary Least Square Estimate
@@ -99,6 +57,50 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     
     return x_est, emax, count, residuals_mat, delta_mat, results
 
+def se_wls(x_est, z, jacobian_matrix, W, tol = None):
+    ''' Weighted Least Square Estimate'''
+
+    # some preprocessing for time saving during iterative newton method
+    G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
+    # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
+    Ginv = np.linalg.inv(G)
+    
+    count = 0
+    delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
+    residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
+    tol = tol if tol is not None else 10e-12
+    results = x_est
+    emax = 100 # chosen higher than the tol
+
+    while emax > tol:
+
+        # distflow backward sweep for calculating measurements
+
+        # distflow forward sweep for calculating measurements
+
+        # calculate h(x)    
+        hx = np.matmul(jacobian_matrix, x_est)
+
+        # calculate measurement residuals
+        residuals = z - hx
+        residuals_mat[:,count] = residuals
+
+        # calculate deltax
+        deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
+        # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
+        delta_mat[:,count] = deltax
+
+        # get tolerance
+        emax = np.max(deltax)
+
+        # update values of state vars
+        x_est = x_est + deltax
+        results = np.vstack((results, x_est))
+        count+=1
+        # print(count)
+    
+    return x_est, emax, count, residuals_mat, delta_mat, results
+
 def se_wrr(x_est, z, jacobian_matrix, W, k, tol = None):
     ''' Weighted Least Square Estimate with L2 regularisation OR
         Weighted Ridge Regression
@@ -111,13 +113,13 @@ def se_wrr(x_est, z, jacobian_matrix, W, k, tol = None):
     Ginv = np.linalg.inv(G)
     
     count = 0
-    delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
-    residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
+    delta_mat = np.zeros((jacobian_matrix.shape[1], 5000)) # delta in states
+    residuals_mat = np.zeros((jacobian_matrix.shape[0], 5000)) # meas residuals
     tol = tol if tol is not None else 10e-12
     results = x_est
     emax = 100 # chosen higher than the tol
 
-    while emax > tol and count<2:
+    while emax > tol and count < 2:
 
         # distflow backward sweep for calculating measurements
 
@@ -193,31 +195,32 @@ def se_rr(x_est, z, jacobian_matrix, W_rr, k = None, tol = None):
     
     return x_est, emax, count, residuals_mat, delta_mat, results
 
-def cost(theta,X,y):
+def cost(theta, H, y):
     '''
     (): shows the vars used in our code
     Calculates cost of the function.
-    X(H) & y(z) have their usual meaning.
+    H & y(z) have their usual meaning.
     theta(xest) - vector of coefficients.
     '''
     # m = len(y)
+    m = 1 # for SGD
     # Calculating Cost
-    c = np.sum(np.square((X.dot(theta))-y))  
+    c = np.sum(np.square((H.dot(theta))-y))/(2 * m)
     return c
 
-def batch_gradient_descent(X,y,theta,W,alpha,iterations, tol = None):
+def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     '''
     returns array of thetas, cost of every iteration
-    X - X matrix
+    H - H matrix
     y - target variable matrix
     theta - matrix of regression coefficients
     W - diagonal matrix for weights
-    alpha - learning rate
+    lr - learning rate
     iteration - number of iteration to be run
     '''
     #Getting number of observations.
     m = len(y)
-    tol = tol if tol is not None else 10e-9
+    tol = tol if tol is not None else 10e-12
     # Initializing cost and theta's arrays with zeroes.
     
     thetas = theta
@@ -226,25 +229,28 @@ def batch_gradient_descent(X,y,theta,W,alpha,iterations, tol = None):
     emax = 100 # chosen higher than the tol
     # Calculating theta for every iteration.
     # for i in range(iterations):
-    while emax > tol:
+    while emax > tol and count < iterations :
         # print(count)
-        residuals = X.dot(theta)-y
-        w_residuals = np.dot(W,residuals) # weighted residuals
-        gradient = X.T.dot(w_residuals)/m
-        theta = theta - alpha * gradient # new weights/ thetas
+        residuals = H.dot(theta) -y
+        w_residuals = np.dot(W, residuals) # weighted residuals
+        gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct
+        # another way to check grad, just to make more sense
+        # w_residuals = w_residuals.reshape((m,1))
+        # gradient2 = H * w_residuals
+        # gradient2 = 1/m*np.sum(gradient2, axis = 0)
+        # another way
+        # # gradient = 1/m*(np.matmul(np.matmul(np.matmul(H.T, W), H), theta) - np.matmul(np.matmul(H.T, W), y))
+        # print(gradient, gradient2)
+        theta = theta - lr * gradient # new weights/ thetas
         thetas = np.vstack((thetas, theta)) # store the result in a matrix
-        costs.append(cost(theta,X,y))
+        costs.append(cost(theta, H, y))
         emax = np.max(np.abs(thetas[count+1,:]-thetas[count,:]))
         count+=1
         if count % 30000==0:
-            print(count)
-        # if count == iterations*25:
-        #     break
-        # if i!=0 and : # tol
-        #     break
-    return theta,thetas,costs, count
+            print(count, emax)
+    return theta, thetas, costs, count
 
-def stochastic_gradient_descent(X,y,theta,W,alpha,iterations, tol = None):
+def stochastic_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     ''' implements SGD '''
     tol = tol if tol is not None else 10e-12
     # Initializing cost and theta's arrays with zeroes.
@@ -253,45 +259,117 @@ def stochastic_gradient_descent(X,y,theta,W,alpha,iterations, tol = None):
     costs = []
     # count = 0
     emax = 100 # chosen higher than the tol
+    j = 0 # iteration count    
     # parameters are updated with every new measurement
-    for j in range(iterations):
+    # for j in range(iterations):
+    while emax > tol and j < iterations: # num iters and change in x    
         if j%300 == 0:
-            print(j)
-        for i in range(X.shape[0]):
+            print(j, emax)
+        for i in range(H.shape[0]):
             # yhat = np.matmul(, x2)
-            residuals = X[i,:].dot(theta)-y[i] # scalar in SGD
-            w_residuals = np.dot(W[i,i],residuals) # weighted residuals
-            gradient = X[i,:].T.dot(w_residuals)
-            theta = theta - alpha * gradient # new weights/ thetas
+            residuals = H[i,:].dot(theta)-y[i] # scalar in SGD
+            w_residuals = np.dot(W[i,i], residuals) # weighted residuals
+            gradient = H[i,:].T.dot(w_residuals)
+            theta = theta - lr * gradient # new weights/ thetas
             thetas = np.vstack((thetas, theta)) # store the result in a matrix
-            costs.append(cost(theta,X[i,:],y[i]))
-            emax = np.max(np.abs(thetas[j+1,:]-thetas[j,:]))
+            costs.append(cost(theta, H[i,:], y[i]))
+            emax = np.max(np.abs(thetas[-1,:]-thetas[-2,:])) # chane in x
+        j+=1
+    return theta, thetas, costs, j
 
-    return theta,thetas,costs, j
+def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
+    ''' implements SGD with shuffle
+        mathematically same as above implementation: checked
+    '''
+    tol = tol if tol is not None else 10e-12
+    thetas = theta
+    costs = []
+    emax = 100 # chosen higher than the tol
+    j = 0 # iteration count
+    # for j in range(iterations): # num iters
+    while emax > tol and j < iterations: # num iters and change in x
+        if j%300 == 0:
+            print(j, emax)
+            shuffled_set = np.random.permutation(len(y)) # shuffle the meas
+        for i in shuffled_set:
+        # chose meas randomly rather than in an order
+            # can iterate over thetas individually to double check
+            estimate = np.sum(np.multiply(H[i,:], theta))
+            w_residual = (y[i] - estimate) * W[i,i] # common grad term for each parameter
+            # grad calculated for (1/2)*(y-Hx)^2*W
+            gradient = -1 * w_residual * H[i,:]
+            theta = theta - (lr * gradient) # update parameters
+            thetas = np.vstack((thetas, theta)) # store the result in a matrix
+            costs.append(cost(theta,H[i,:],y[i]))
+            emax = np.max(np.abs(thetas[-1,:]-thetas[-2,:])) # change in x
+        j+=1
+    return theta, thetas, costs, j, emax
 
-# testing gradient descents
-# Learning Rate
-# alpha = 0.0001
-# # Number of iterations
-# iterations = 3000
-# # Initializing a random value to give algorithm a base value.
-# p_distributed = P_line[(0,1)]/(len(P_Load_state))
-# p_states = np.zeros((len(P_Load_state))) + p_distributed
+class WLeastSquaresRegressorTorch():
 
-# q_distributed = Q_line[(0,1)]/(len(P_Load_state))
-# q_states = np.zeros((len(P_Load_state))) + q_distributed
+    def __init__(self, n_iter=10, eta=0.1, batch_size=10):
+        self.n_iter = n_iter
+        self.eta = eta
+        self.batch_size = batch_size
+        
+    def fit(self, H, y, W):
 
-# v0 = 1 # slack bus
+        n_instances, n_features = H.shape
+        
+        # we need to "wrap" the NumPy arrays H and y as PyTorch tensors
+        Ht = torch.tensor(H, dtype=torch.float)
+        Yt = torch.tensor(y, dtype=torch.float)
+        Wt = torch.tensor(W, dtype=torch.float)
+        # initialize the weight vector to all zeros
+        # self.x_est = torch.zeros(n_features, requires_grad=True, dtype=torch.float)
+        torch.manual_seed(0)
+        self.x_est = torch.rand(n_features, requires_grad=True)
 
-# x_est = np.concatenate((p_states, q_states))
-# x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
-# X,y,theta,W,alpha,iterations = jacobian_matrix,z,x_est,W,alpha,iterations
+        self.history = []
 
-# # Running Batch Gradient Descent
-# x_est,thetas,costs, counts = batch_gradient_descent(jacobian_matrix,z,x_est,W,alpha,iterations)
+        # we select an optimizer, in this case (minibatch) SGD.
+        # it needs to be told what parameters to optimize, and what learning rate (lr) to use
+        print(self.eta)
+        # gradient descent algo
+        optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum =0.9)
+        # adagrad descent
+        # optimizer = torch.optim.Adagrad([self.x_est], lr=self.eta, 
+        #                                 lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
+        # adam decent
+        # optimizer = torch.optim.Adam([self.x_est], lr=self.eta)
+        
+        for i in range(self.n_iter):
+            
+            total_loss = 0
+            
+            for batch_start in range(0, n_instances, self.batch_size):
+                batch_end = batch_start + self.batch_size
 
-# # Running Stochastic Gradient Descent
-# x_est,thetas,costs, counts = stochastic_gradient_descent(jacobian_matrix,z,x_est,W,alpha,iterations)
-# # printing final values.
-# # print('Final Theta 0 value: {:0.3f}\nFinal Theta 1 value: {:0.3f}'.format(theta[0][0],theta[1][0]))
-# print('Final Cost/MSE(L2 Loss) Value: {:0.3f}'.format(costs[-1]))
+                # pick out the batch again, as in the other notebook
+                Hbatch = Ht[batch_start:batch_end, :]
+                Ybatch = Yt[batch_start:batch_end]
+                Wbatch = Wt[batch_start:batch_end,batch_start:batch_end]
+                # mv = matrix-vector multiplication in Torch
+                G = Hbatch.mv(self.x_est)
+                
+                # Loss
+                Error = (G - Ybatch) * torch.diagonal(Wbatch)
+                loss_batch = torch.sum(Error**2) / len(Ybatch)
+                
+                # we sum up the loss values for all the batches.
+                # the item() here is to convert the tensor into a single number
+                total_loss += loss_batch.item()
+                
+                # reset all gradients
+                optimizer.zero_grad()                  
+
+                # compute the gradients for the loss for this batch
+                loss_batch.backward()
+
+                # for SGD, this is equivalent to x_est -= learning_rate * gradient as we saw before
+                optimizer.step()
+                          
+            self.history.append(total_loss)
+
+        print('SGD-minibatch final loss: {:.4f}'.format(total_loss))
+        return self.x_est
