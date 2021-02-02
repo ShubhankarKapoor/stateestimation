@@ -2,14 +2,17 @@ from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
 from jacobian_calc import create_jacobian
-from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, stochastic_gradient_descent
+from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
+    stochastic_gradient_descent, stochastic_gradient_descent2, \
+    WLeastSquaresRegressorTorch
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
-import seaborn
+import seaborn, time
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution
-
+import torch
+import matplotlib.pyplot as plt
 which = 37 # IEEE 37-node or IEEE 906-node
 
 if which == 37:
@@ -43,9 +46,6 @@ gt_V = V[0]
 x = np.asarray(gt_P_load + gt_Q_load) # ground truth for states
 x = np.insert(x, len(x), gt_V) # ground truth for states
 
-# x_true = np.hstack((np.asarray(gt_P_load)[LoadBuses], np.asarray(gt_Q_load)[LoadBuses]))
-# x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for nonzib buses
-
 # ground truth for measurements
 z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) + 
                     list(P_Load.values()) + list(Q_Load.values()) + list(V.values())) # ground truth for meas
@@ -78,9 +78,9 @@ v0 = 1 # slack bus
 
 x_est = np.concatenate((p_states, q_states))
 x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
-np.random.seed(0)
-x_est = np.random.uniform(0, 1/len(x_est), len(x_est)) # initialize with small random vals
-x_est = np.random.uniform(0, 1, len(x_est)) # initialize with small random vals
+torch.manual_seed(0)
+x_est = torch.rand(len(x_est)) # so that the initial condn is same as pytorch
+x_est =  x_est.detach().cpu().numpy()
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
@@ -144,6 +144,165 @@ z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) +
 # noise addition
 sd = 0 # 0.01: 1% error
 z = noise_addition(z, sd)
+
+# static weights but different for pseudo and known measurements
+w1 = 1 # weight value for pflow, qflow
+w21 = 1 # known measurements for p,q at buses
+w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
+w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
+print(w1, w21, w22, w3)
+
+weight_array1 = np.ones((len(meas_P_line)*2))*w1
+weight_array2 = np.ones((len(meas_P_load)))
+weight_array2[list(P_known_meas.keys())] = weight_array2[list(P_known_meas.keys())]*w21
+weight_array2[list(P_pseudo_meas.keys())] = weight_array2[list(P_pseudo_meas.keys())]*w22
+weight_array2 = np.concatenate((weight_array2, weight_array2))
+weight_array3 = np.ones((len(meas_V)))*w3
+weight_array = np.concatenate((weight_array1, weight_array2,weight_array3))
+
+# check below
+# weight_array[-1]=0.01 # 
+# weight_array = np.insert(weight_array, len(weight_array), 0.00001)
+W = np.diag(weight_array) # Weight mat
+W = np.linalg.inv(W)
+
+##############################################################################
+##############################################################################
+# state estimation
+# get paths from slack bus to all nodes
+path_to_all_nodes = path_to_nodes(which)
+
+# get jacobain matrix
+# we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
+# only their keys
+
+jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+                                  meas_V, R_line, X_line, len(x_est), len(z))
+
+# run WLS/OLS SE
+k_range = np.arange(1,1.6,0.1)
+# for coeff in k_range:
+
+# reinitializing here so its easier test case
+p_distributed = P_line[(0,1)]/(len(P_Load_state))
+p_states = np.zeros((len(P_Load_state))) + p_distributed
+
+q_distributed = Q_line[(0,1)]/(len(P_Load_state))
+q_states = np.zeros((len(P_Load_state))) + q_distributed
+
+v0 = 1 # slack bus
+
+x_est = np.concatenate((p_states, q_states))
+x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
+
+# weight matrix on estimates from RR
+W_rr = np.ones((len(x_est))) * w21 # weights on know p, q bus meas
+W_rr[not_considered_indices] = w22 # weights on unknown p_buses
+W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_buses
+W_rr[-1] = w3
+
+x_est, emax, count, residuals_mat, delta_mat, results = se_wrr(
+    x_est, z, jacobian_matrix, W, k=0.1)
+
+##############################################################################
+##############################################################################
+# Error Calculations
+
+# get the full vector for xest
+full_x_est = np.zeros((len(x)))
+full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
+full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
+full_x_est[-1] = x_est[-1] # slack bus square voltage
+
+# print(x[not_considered], full_x_est[not_considered])
+# print(x[not_considered+37], full_x_est[not_considered+37])
+
+# calculate error between state vectors
+st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
+
+# print some results
+print(mean_error_st_p, max_error_st_p, max_error_st_abs_p) 
+print(mean_error_st_q, max_error_st_q, max_error_st_abs_q)
+# sum of residuals
+sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
+results = results.T
+
+###############################################################################
+###############################################################################
+
+# Regenerated measurements using the estimated states
+keys = list(range(len(P_Load)))
+array = full_x_est[0:len(P_Load)]
+P_Load_est = dict(zip(keys, array))
+Q_Load_est = dict(zip(keys, full_x_est[len(P_Load):len(P_Load)*2]))
+
+if est_lin == 1:
+    [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
+        P_Load_est, Q_Load_est, which, full_x_est[-1]) # using lindistflow
+
+# using Full AC Network
+if est_full_ac == 1:
+    [V_mag_con,_,_,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est,
+            Q_Load_est, which, full_x_est[-1])
+    Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
+    V_con = Vsq_con
+    
+    # when running full network
+    P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
+    Q_line_con = {key:val.imag for key, val in S_line_con.items()} # reactancce of every line
+
+# error calc between measurements
+# V_mag^2 and V_mag error
+_, mean_vsq_err, max_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
+_, mean_vmag_err, max_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+print(mean_vmag_err, max_vmag_err, max_abs_vmag_err)
+
+# pflow and qflow error
+_, mean_pflow_err, max_pflow_err, max_abs_pflow_err, _ = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
+_, mean_qflow_err, max_qflow_err, max_abs_qflow_err, _ = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
+
+##############################################################################
+##############################################################################
+# Running the gradient Algorithm
+
+torch.manual_seed(0)
+x_est = torch.rand(len(x_est)) # so that the initial condn is same as pytorch
+x_est =  x_est.detach().cpu().numpy()
+lr, iterations = 0.1, 60000 # Learning Rate and Number of iterations
+ 
+# x_est=x_estb
+# Batch Gradient Descent
+print('Running BGD')
+x_estb, thetasb, costsb, countsb = batch_gradient_descent(
+    jacobian_matrix, z, x_est, W, lr, iterations)
+
+# Running Stochastic Gradient Descent
+# start_time = time.time()
+# x_estt, thetas, costs, counts = stochastic_gradient_descent(
+#     jacobian_matrix, z, x_est, W, lr, iterations)
+# print('------First Function Run Time------', time.time() - start_time)
+
+# start_time = time.time()
+# x_est2, thetas2, costs2, counts2, emaxs = stochastic_gradient_descent2(
+#     jacobian_matrix, z, x_est, W, lr, iterations)
+# print('------Second Function Run Time------', time.time() - start_time)
+# print('Final Cost/MSE(L2 Loss) Value: {:0.3f}'.format(costs2[-1]))
+
+# test pytorch implementation
+# can tune the lr below, dependent on your weights
+# can try different n_iters & batch size
+print('Running Pytorch Implementation')
+regr = WLeastSquaresRegressorTorch(n_iter=5000, eta=lr, batch_size=len(z))
+xx = regr.fit(jacobian_matrix, z, W)
+plt.figure()
+plt.plot(regr.history, '.-')
+##############################################################################
+##############################################################################
+# error calc between lindistflow and full AC
+if comparison == 1:
+    p_err, p_mean_err, p_max_err, p_max_err_abs, _ = error_calc(np.array(list(P_line2.values())), np.array(list(P_line.values())))
+    q_err, q_mean_err, q_max_err, q_max_err_abs, _ = error_calc(np.array(list(Q_line2.values())), np.array(list(Q_line.values())))
 
 '''
 ##############################################################################
@@ -376,128 +535,6 @@ z = np.concatenate((meas_P_line, meas_Q_line, meas_P_load, meas_Q_load, meas_V))
 # weight_array = np.concatenate((weight_array1, weight_array2, weight_array3,
 #                                 weight_array4, weight_array5))
 
-# static weights but different for pseudo and known measurements
-w1 = 1 # weight value for pflow, qflow
-w21 = 1 # known measurements for p,q at buses
-w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
-w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
-print(w1, w21, w22, w3)
-
-weight_array1 = np.ones((len(meas_P_line)*2))*w1
-weight_array2 = np.ones((len(meas_P_load)))
-weight_array2[list(P_known_meas.keys())] = weight_array2[list(P_known_meas.keys())]*w21
-weight_array2[list(P_pseudo_meas.keys())] = weight_array2[list(P_pseudo_meas.keys())]*w22
-weight_array2 = np.concatenate((weight_array2, weight_array2))
-weight_array3 = np.ones((len(meas_V)))*w3
-weight_array = np.concatenate((weight_array1, weight_array2,weight_array3))
-
-# check below
-# weight_array[-1]=0.01 # 
-# weight_array = np.insert(weight_array, len(weight_array), 0.00001)
-W = np.diag(weight_array) # Weight mat
-W = np.linalg.inv(W)
-
-##############################################################################
-##############################################################################
-# state estimation
-# get paths from slack bus to all nodes
-path_to_all_nodes = path_to_nodes(which)
-
-# get jacobain matrix
-# we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
-# only their keys
-
-jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-                                  meas_V, R_line, X_line, len(x_est), len(z))
-
-# run WLS/OLS SE
-k_range = np.arange(1,1.6,0.1)
-# for coeff in k_range:
-
-# reinitializing here so its easier test case
-p_distributed = P_line[(0,1)]/(len(P_Load_state))
-p_states = np.zeros((len(P_Load_state))) + p_distributed
-
-q_distributed = Q_line[(0,1)]/(len(P_Load_state))
-q_states = np.zeros((len(P_Load_state))) + q_distributed
-
-v0 = 1 # slack bus
-
-x_est = np.concatenate((p_states, q_states))
-x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
-
-# weight matrix on estimates from RR
-W_rr = np.ones((len(x_est))) * w21 # weights on know p, q bus meas
-W_rr[not_considered_indices] = w22 # weights on unknown p_buses
-W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_buses
-W_rr[-1] = w3
-
-x_est, emax, count, residuals_mat, delta_mat, results = se_wrr(
-    x_est, z, jacobian_matrix, W, k=0.1)
-
-##############################################################################
-##############################################################################
-# Error Calculations
-
-# get the full vector for xest
-full_x_est = np.zeros((len(x)))
-full_x_est[non_zib_index] = x_est[0:len(non_zib_index)] # insert p vals
-full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_est[len(non_zib_index):2*len(non_zib_index)] # insert q vals
-full_x_est[-1] = x_est[-1] # slack bus square voltage
-
-# print(x[not_considered], full_x_est[not_considered])
-# print(x[not_considered+37], full_x_est[not_considered+37])
-
-# calculate error between state vectors
-st_err_p, mean_error_st_p, max_error_st_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
-st_err_q, mean_error_st_q, max_error_st_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
-
-# print some results
-print(mean_error_st_p, max_error_st_p, max_error_st_abs_p) 
-print(mean_error_st_q, max_error_st_q, max_error_st_abs_q)
-# sum of residuals
-sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
-results = results.T
-
-###############################################################################
-###############################################################################
-
-# Regenerated measurements using the estimated states
-keys = list(range(len(P_Load)))
-array = full_x_est[0:len(P_Load)]
-P_Load_est = dict(zip(keys, array))
-Q_Load_est = dict(zip(keys, full_x_est[len(P_Load):len(P_Load)*2]))
-
-if est_lin == 1:
-    [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
-        P_Load_est, Q_Load_est, which, full_x_est[-1]) # using lindistflow
-
-# using Full AC Network
-if est_full_ac == 1:
-    [V_mag_con,_,_,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est,
-            Q_Load_est, which, full_x_est[-1])
-    Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
-    V_con = Vsq_con
-    
-    # when running full network
-    P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
-    Q_line_con = {key:val.imag for key, val in S_line_con.items()} # reactancce of every line
-
-# error calc between measurements
-# V_mag^2 and V_mag error
-_, mean_vsq_err, max_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
-_, mean_vmag_err, max_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
-print(mean_vmag_err, max_vmag_err, max_abs_vmag_err)
-
-# pflow and qflow error
-_, mean_pflow_err, max_pflow_err, max_abs_pflow_err, _ = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
-_, mean_qflow_err, max_qflow_err, max_abs_qflow_err, _ = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
-
-# error calc between lindistflow and full AC
-if comparison == 1:
-    p_err, p_mean_err, p_max_err, p_max_err_abs, _ = error_calc(np.array(list(P_line2.values())), np.array(list(P_line.values())))
-    q_err, q_mean_err, q_max_err, q_max_err_abs, _ = error_calc(np.array(list(Q_line2.values())), np.array(list(Q_line.values())))
-    
-# some manipulation for excel sheet
+# some manipulation to copy results in excel sheet
 aa=[]
 aa = [a for a in Q_line_con.values()]
