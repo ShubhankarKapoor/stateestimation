@@ -229,7 +229,7 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     emax = 100 # chosen higher than the tol
     # Calculating theta for every iteration.
     # for i in range(iterations):
-    while emax > tol and count < iterations*100 :
+    while emax > tol and count < iterations :
         # print(count)
         residuals = H.dot(theta) -y
         w_residuals = np.dot(W, residuals) # weighted residuals
@@ -259,8 +259,10 @@ def stochastic_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     costs = []
     # count = 0
     emax = 100 # chosen higher than the tol
+    j = 0 # iteration count    
     # parameters are updated with every new measurement
-    for j in range(iterations):
+    # for j in range(iterations):
+    while emax > tol and j < iterations: # num iters and change in x    
         if j%300 == 0:
             print(j, emax)
         for i in range(H.shape[0]):
@@ -271,8 +273,8 @@ def stochastic_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
             theta = theta - lr * gradient # new weights/ thetas
             thetas = np.vstack((thetas, theta)) # store the result in a matrix
             costs.append(cost(theta, H[i,:], y[i]))
-            emax = np.max(np.abs(thetas[j+1,:]-thetas[j,:]))
-
+            emax = np.max(np.abs(thetas[-1,:]-thetas[-2,:])) # chane in x
+        j+=1
     return theta, thetas, costs, j
 
 def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
@@ -283,8 +285,9 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
     thetas = theta
     costs = []
     emax = 100 # chosen higher than the tol
-
-    for j in range(iterations*500): # num iters
+    j = 0 # iteration count
+    # for j in range(iterations): # num iters
+    while emax > tol and j < iterations: # num iters and change in x
         if j%300 == 0:
             print(j, emax)
             shuffled_set = np.random.permutation(len(y)) # shuffle the meas
@@ -298,15 +301,15 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
             theta = theta - (lr * gradient) # update parameters
             thetas = np.vstack((thetas, theta)) # store the result in a matrix
             costs.append(cost(theta,H[i,:],y[i]))
-            emax = np.max(np.abs(thetas[j+1,:]-thetas[j,:]))
-
-    return theta, thetas, costs, j
+            emax = np.max(np.abs(thetas[-1,:]-thetas[-2,:])) # change in x
+        j+=1
+    return theta, thetas, costs, j, emax
 
 # testing gradient descents
 # Learning Rate
-lr = 0.001 # 0.0001
+lr = 0.1 # 0.0001
 # Number of iterations
-iterations = 3000
+iterations = 30000
 # Initializing a random value to give algorithm a base value.
 p_distributed = P_line[(0,1)]/(len(P_Load_state))
 p_states = np.zeros((len(P_Load_state))) + p_distributed
@@ -318,10 +321,14 @@ v0 = 1 # slack bus
 
 x_est = np.concatenate((p_states, q_states))
 x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
-x_est = np.random.uniform(0, 1/len(x_est), len(x_est)) # initialize with small random vals 
+torch.manual_seed(0)
+x_est = torch.rand(len(x_est)) # so that the initial condn is same as pytorch
+x_est =  x_est.detach().cpu().numpy()
+# np.random.seed(0)
+# x_est = np.random.uniform(0, 1, len(x_est)) # initialize with small random vals
 H, y, theta, W, lr, iterations = jacobian_matrix, z, x_est, W, lr, iterations
 
-x_est=x_estb
+# x_est=x_estb
 # Running Batch Gradient Descent
 x_estb, thetasb, costsb, countsb = batch_gradient_descent(
     jacobian_matrix, z, x_est, W, lr, iterations)
@@ -333,7 +340,7 @@ x_estt, thetas, costs, counts = stochastic_gradient_descent(
 print('------First Function Run Time------', time.time() - start_time)
 
 start_time = time.time()
-x_est2, thetas2, costs2, counts2 = stochastic_gradient_descent2(
+x_est2, thetas2, costs2, counts2, emaxs = stochastic_gradient_descent2(
     jacobian_matrix, z, x_est, W, lr, iterations)
 print('------Second Function Run Time------', time.time() - start_time)
 # printing final values.
@@ -364,14 +371,14 @@ class LeastSquaresRegressorTorch1():
 
         # we select an optimizer, in this case (minibatch) SGD.
         # it needs to be told what parameters to optimize, and what learning rate (lr) to use
+        print(self.eta)
+        # gradient descent algo
         # optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum=0.9)
-        # can tune the lr below
-        optimizer = torch.optim.Adagrad([self.x_est], lr=0.1, 
-                                        lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
-        # as an alternative to SGD, we could have used adaptive gradient-based optimization
-        # algorithms such as Adam. I don't think they give an improvement in this case though,
-        # since the objective function is so simple.
-        #   optimizer = torch.optim.Adam([self.x_est], lr=self.eta)
+        # adagrad descent
+        # optimizer = torch.optim.Adagrad([self.x_est], lr=self.eta, 
+        #                                 lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
+        # adam decent
+        optimizer = torch.optim.Adam([self.x_est], lr=self.eta)
         
         for i in range(self.n_iter):
             
@@ -411,7 +418,9 @@ class LeastSquaresRegressorTorch1():
 
 import matplotlib.pyplot as plt
 # test pytorch implementation
-regr = LeastSquaresRegressorTorch1(n_iter=5000, eta=0.001, batch_size=100) # can try different n_iters & batch size
+# can tune the lr below, dependent on your weights
+# can try different n_iters & batch size
+regr = LeastSquaresRegressorTorch1(n_iter=1500, eta=0.1, batch_size=100)
 xx = regr.fit(H, y, W)
 plt.figure()
 plt.plot(regr.history, '.-')
