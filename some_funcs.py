@@ -1,21 +1,90 @@
 import numpy as np
 import pandas as pd
 import random
+from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
+from BackwardForwardSweep import BackwardForwardSweep
 
 # error function
 def error_calc(ground_truth, estimated):
-    with np.errstate(divide='ignore'):
+    # when gtruth is 0 it gives a warning in divide
+    # this is to avoid the warning    
+    with np.errstate(divide='ignore', invalid='ignore'):
         err = abs((estimated-ground_truth)/ground_truth * 100)
     err[np.isnan(err)] = 0
+    
+    # Percentage error
     mean_perc_error = np.mean(err)
     max_perc_error = np.max(err)
+    
     # absolute error
     abs_error = abs(estimated-ground_truth)
     max_abs_error = max(abs_error)
+    mean_abs_error = np.mean(abs_error)
+    
     # index of max absolute error
     max_index = np.where(abs_error == abs_error.max())[0]
 
-    return abs_error, mean_perc_error, max_perc_error, max_abs_error, max_index
+    return abs_error, mean_perc_error, max_perc_error, mean_abs_error, max_abs_error, max_index
+
+def error_calc_refactor(x, x_estn, non_zib_index, P_Load, est_lin, est_full_ac, 
+                        which, V, V_mag, state_err= None, V_err = None):
+    ''' Takes the non zib estiates states and returns the complete error
+        x: true state values
+        x_estn: estimated state values
+    '''
+    state_err = state_err if state_err is not None else True
+    V_err = V_err if V_err is not None else True
+
+    if state_err == True: # error between states
+        full_x_est = np.zeros((len(x)))
+        full_x_est[non_zib_index] = x_estn[0:len(non_zib_index)] # insert p vals
+        full_x_est[len(P_Load)+np.asarray(non_zib_index)] = x_estn[len(non_zib_index):2*len(non_zib_index)] # insert q vals
+        full_x_est[-1] = x_estn[-1] # slack bus square voltage
+        
+        # print(x[not_considered], full_x_est[not_considered])
+        # print(x[not_considered+37], full_x_est[not_considered+37])
+        
+        # calculate error between state vectors
+        st_err_p, mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+        st_err_q, mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
+        
+        # print some results
+        print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
+        print('p bus err:', mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p) 
+        print('q bus err:', mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q)
+
+    if V_err == True: # error between measurements
+        # following being converted to a format compatible with power flow
+        keys = list(range(len(P_Load)))
+        array = full_x_est[0:len(P_Load)]
+        P_Load_est = dict(zip(keys, array))
+        Q_Load_est = dict(zip(keys, full_x_est[len(P_Load):len(P_Load)*2]))
+
+        # Regenerated measurements using the estimated states
+        if est_lin == 1:
+            [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
+                P_Load_est, Q_Load_est, which, full_x_est[-1]) # using lindistflow
+        
+        # using Full AC Network
+        if est_full_ac == 1:
+            [V_mag_con,_,_,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est,
+                    Q_Load_est, which, full_x_est[-1])
+            Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
+            V_con = Vsq_con
+            
+            # when running full network
+            P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
+            Q_line_con = {key:val.imag for key, val in S_line_con.items()} # reactancce of every line
+        
+        # error calc between measurements
+        # V_mag^2 and V_mag error
+        _, mean_vsq_err, max_vsq_err, mean_abs_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
+        _, mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+        print('vmag bus err:', mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err)
+        
+        # pflow and qflow error
+        # _, mean_pflow_err, max_pflow_err, mean_abs_pflow_err, max_abs_pflow_err, _ = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
+        # _, mean_qflow_err, max_qflow_err, mean_abs_qflow_err, max_abs_qflow_err, _ = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
 
 def noise_addition(z, sd, mu = None):
 
