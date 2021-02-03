@@ -97,18 +97,18 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 9
+i = 8
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[0])
+indices = np.asarray(combs[1])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
 
-# indices = np.asarray(( 0,   1,  2,  3,  4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+# indices = np.asarray(( 0,   1,  2,  3,  4,  5,  6,    8, 9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 
 # 906
 # [ 34, 70, 73, 74, 225, 289, 349, 387, 388, 502, 562, 563, 611, 629, 817, 860, 861, 896, 898, 900, 906]
@@ -191,24 +191,17 @@ W_rr[not_considered_indices] = w22 # weights on unknown p_buses
 W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_buses
 W_rr[-1] = w3
 
-x_estn, emax, count, residuals_mat, delta_mat, results = se_wrr(
-    x_est, z, jacobian_matrix, W, k=0.1)
+x_estn, emax, count, residuals_mat, delta_mat, results = se_wls(
+    x_est, z, jacobian_matrix, W)
 
 ##############################################################################
 sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
 results = results.T
-##############################################################################
-##############################################################################
-# Error Calculations
-
-# the following function is used when the states are non zib buses
-error_calc_refactor(x, x_estn, non_zib_index, P_Load, est_lin, est_full_ac, 
-                        which, V, V_mag)
 
 ##############################################################################
 ##############################################################################
 # Running the gradient Algorithm
-lr, iterations = 1, 30000 # Learning Rate and Number of iterations
+lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
  
 # x_est=x_estb
 # Batch Gradient Descent
@@ -232,10 +225,21 @@ x_estb, thetasb, costsb, countsb = batch_gradient_descent(
 # can tune the lr below, dependent on your weights
 # can try different n_iters & batch size
 print('Running Pytorch Implementation')
-regr = WLeastSquaresRegressorTorch(n_iter=5000, eta=0.1, batch_size=len(z))
+regr = WLeastSquaresRegressorTorch(n_iter=30000, eta=1, batch_size=len(z))
 xx = regr.fit(jacobian_matrix, z, W)
 # plt.figure()
 # plt.plot(regr.history, '.-') # plot the cost function
+##############################################################################
+##############################################################################
+# Error Calculations
+
+# the following function is used when the states are non zib buses
+error_calc_refactor(x, x_estn, non_zib_index, P_Load, est_lin, est_full_ac, 
+                        which, V, V_mag) # for WLS
+error_calc_refactor(x, x_estb, non_zib_index, P_Load, est_lin, est_full_ac, 
+                        which, V, V_mag) # for self GD
+error_calc_refactor(x, xx.detach().numpy(), non_zib_index, P_Load, est_lin, est_full_ac, 
+                        which, V, V_mag) # for pytorch GD
 ##############################################################################
 ##############################################################################
 # error calc between lindistflow and full AC
