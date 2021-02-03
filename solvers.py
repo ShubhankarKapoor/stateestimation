@@ -329,7 +329,7 @@ class WLeastSquaresRegressorTorch():
 
         # we select an optimizer, in this case (minibatch) SGD.
         # it needs to be told what parameters to optimize, and what learning rate (lr) to use
-        print(self.eta)
+        # print(self.eta)
         # gradient descent algo
         optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum =0.9)
         # adagrad descent
