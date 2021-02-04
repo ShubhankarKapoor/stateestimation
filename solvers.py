@@ -335,6 +335,9 @@ class WLeastSquaresRegressorTorch():
         # adagrad descent
         optimizer = torch.optim.Adagrad([self.x_est], lr=self.eta, 
                                         lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
+        
+        # optimizer = torch.optim.RMSprop([self.x_est], lr=self.eta, 
+        #     alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
         # adam decent
         # optimizer = torch.optim.Adam([self.x_est], lr=self.eta)
         

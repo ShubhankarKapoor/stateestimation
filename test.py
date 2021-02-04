@@ -102,13 +102,13 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i)) 
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[1])
+indices = np.asarray(combs[2])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
 
-# indices = np.asarray(( 0,   1,  2,  3,  4,  5,  6,    8, 9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+indices = np.asarray(()) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 
 # 906
 # [ 34, 70, 73, 74, 225, 289, 349, 387, 388, 502, 562, 563, 611, 629, 817, 860, 861, 896, 898, 900, 906]
@@ -205,7 +205,7 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
  
 # x_est=x_estb
 # Batch Gradient Descent
-print('Running BGD')
+# print('Running BGD')
 x_estb, thetasb, costsb, countsb = batch_gradient_descent(
     jacobian_matrix, z, x_est, W, lr, iterations)
 
@@ -225,7 +225,7 @@ x_estb, thetasb, costsb, countsb = batch_gradient_descent(
 # can tune the lr below, dependent on your weights
 # can try different n_iters & batch size
 print('Running Pytorch Implementation')
-regr = WLeastSquaresRegressorTorch(n_iter=30000, eta=1, batch_size=len(z))
+regr = WLeastSquaresRegressorTorch(n_iter=30000, eta=0.01, batch_size=len(z))
 xx = regr.fit(jacobian_matrix, z, W)
 # plt.figure()
 # plt.plot(regr.history, '.-') # plot the cost function
