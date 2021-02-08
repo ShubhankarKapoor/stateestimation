@@ -9,12 +9,12 @@ def error_calc(ground_truth, estimated):
     # when gtruth is 0 it gives a warning in divide
     # this is to avoid the warning    
     with np.errstate(divide='ignore', invalid='ignore'):
-        err = abs((estimated-ground_truth)/ground_truth * 100)
-    err[np.isnan(err)] = 0
+        perc_err = abs((estimated-ground_truth)/ground_truth * 100)
+    perc_err[np.isnan(perc_err)] = 0
     
     # Percentage error
-    mean_perc_error = np.mean(err)
-    max_perc_error = np.max(err)
+    mean_perc_error = np.mean(perc_err)
+    max_perc_error = np.max(perc_err)
     
     # absolute error
     abs_error = abs(estimated-ground_truth)
@@ -24,7 +24,7 @@ def error_calc(ground_truth, estimated):
     # index of max absolute error
     max_index = np.where(abs_error == abs_error.max())[0]
 
-    return abs_error, mean_perc_error, max_perc_error, mean_abs_error, max_abs_error, max_index
+    return perc_err, mean_perc_error, max_perc_error, abs_error, mean_abs_error, max_abs_error, max_index
 
 def error_calc_refactor(x, x_estn, non_zib_index, P_Load, est_lin, est_full_ac, 
                         which, V, V_mag, state_err= None, V_err = None):
@@ -45,8 +45,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, P_Load, est_lin, est_full_ac,
         # print(x[not_considered+37], full_x_est[not_considered+37])
         
         # calculate error between state vectors
-        st_err_p, mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p, _ = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
-        st_err_q, mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
+        errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p = error_calc(x[0:len(P_Load)], full_x_est[0:len(P_Load)])
+        errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, _ = error_calc(x[len(P_Load):2*len(P_Load)], full_x_est[len(P_Load):2*len(P_Load)])
         
         # print some results
         print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
@@ -78,13 +78,19 @@ def error_calc_refactor(x, x_estn, non_zib_index, P_Load, est_lin, est_full_ac,
         
         # error calc between measurements
         # V_mag^2 and V_mag error
-        _, mean_vsq_err, max_vsq_err, mean_abs_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
-        _, mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+        errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
+        errperc_vector_vmag, mean_vmag_err, max_vmag_err, _, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
         print('vmag bus err:', mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err)
         
         # pflow and qflow error
         # _, mean_pflow_err, max_pflow_err, mean_abs_pflow_err, max_abs_pflow_err, _ = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
         # _, mean_qflow_err, max_qflow_err, mean_abs_qflow_err, max_abs_qflow_err, _ = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
+        return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
+               errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
+               errperc_vector_vmag, mean_vmag_err, max_vmag_err, _, mean_abs_vmag_err, max_abs_vmag_err
+    else:
+        return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
+               errperc_vectorp, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
 
 def noise_addition(z, sd, mu = None):
 
@@ -180,16 +186,16 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     V_known_meas = {k:V[k] for k in known_meas1.keys()} # get voltage vals for known measurements
     
     # add some additional voltages
-    V_known_meas[36] = V[36]
-    V_known_meas[35] = V[35]
-    V_known_meas[26] = V[26]
-    V_known_meas[23] = V[23]
-    V_known_meas[22] = V[22]
-    V_known_meas[21] = V[21]
-    V_known_meas[11] = V[11]
-    V_known_meas[10] = V[10]
-    V_known_meas[8] = V[8]
-    V_known_meas[2] = V[2]
+    # V_known_meas[36] = V[36]
+    # V_known_meas[35] = V[35]
+    # V_known_meas[26] = V[26]
+    # V_known_meas[23] = V[23]
+    # V_known_meas[22] = V[22]
+    # V_known_meas[21] = V[21]
+    # V_known_meas[11] = V[11]
+    # V_known_meas[10] = V[10]
+    # V_known_meas[8] = V[8]
+    # V_known_meas[2] = V[2]
     # V_known_meas[817] = V[817]
     # V_known_meas[860] = V[860]
     # V_known_meas[861] = V[861]
