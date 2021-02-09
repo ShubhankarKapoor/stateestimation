@@ -15,8 +15,21 @@ from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
 from path_to_nodes import path_to_nodes
 from itertools import combinations
 import seaborn, time, torch
+import matplotlib.pyplot as plt
 from some_funcs import  subset_of_measurements, bus_measurements_equal_distribution, \
                        error_calc_refactor    
+
+SMALL_SIZE = 8
+MEDIUM_SIZE = 15
+BIGGER_SIZE = 22
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=BIGGER_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=BIGGER_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)
 
 which = 37 # IEEE 37-node or IEEE 906-node
 
@@ -214,36 +227,36 @@ for i in arr: # i are number of known measurements
     list_all_error_unknown_q.append(error_for_unknown_q)
 
 # plot the max error graph
-plt.figure()
-seaborn.boxplot(data=list_of_errors_p)
-seaborn.swarmplot(data=list_of_errors_p, color=".25")
-plt.xlabel('Known number of measurements')
-plt.ylabel('Max absolute error in pu')
-plt.title('Max Absolute Error Corresponding to known number of Measurements')
+# plt.figure()
+# seaborn.boxplot(data=list_of_errors_p)
+# seaborn.swarmplot(data=list_of_errors_p, color=".25")
+# plt.xlabel('Known number of measurements')
+# plt.ylabel('Max absolute error in pu')
+# plt.title('Max Absolute Error Corresponding to known number of Measurements')
 
-# plot all error graph
-plt.figure()
-seaborn.boxplot(data=list_of_all_errors_p)
-# seaborn.swarmplot(data=list_of_all_errors_p, color=".25") 
-plt.xlabel('Known number of measurements')
-plt.ylabel(' absolute error in pu')
-plt.title('All Absolute Errors Corresponding to known number of Measurements')
+# # plot all error graph
+# plt.figure()
+# seaborn.boxplot(data=list_of_all_errors_p)
+# # seaborn.swarmplot(data=list_of_all_errors_p, color=".25") 
+# plt.xlabel('Known number of measurements')
+# plt.ylabel(' absolute error in pu')
+# plt.title('All Absolute Errors Corresponding to known number of Measurements')
 
-# plot known errors
-plt.figure()
-seaborn.boxplot(data=list_all_error_known_p)
-seaborn.swarmplot(data=list_of_errors_p, color=".25")
-plt.xlabel('Known number of measurements')
-plt.ylabel('absolute error in pu')
-plt.title('Absolute Error Corresponding to known Measurements Buses')
+# # plot known errors
+# plt.figure()
+# seaborn.boxplot(data=list_all_error_known_p)
+# seaborn.swarmplot(data=list_of_errors_p, color=".25")
+# plt.xlabel('Known number of measurements')
+# plt.ylabel('absolute error in pu')
+# plt.title('Absolute Error Corresponding to known Measurements Buses')
 
-# plot known errors
-plt.figure()
-seaborn.boxplot(data=list_all_error_unknown_p)
-seaborn.swarmplot(data=list_all_error_unknown_p, color=".25")
-plt.xlabel('Known number of measurements')
-plt.ylabel('absolute error in pu')
-plt.title('Absolute Error Corresponding to unknown Measurement Buses')
+# # plot known errors
+# plt.figure()
+# seaborn.boxplot(data=list_all_error_unknown_p)
+# seaborn.swarmplot(data=list_all_error_unknown_p, color=".25")
+# plt.xlabel('Known number of measurements')
+# plt.ylabel('absolute error in pu')
+# plt.title('Absolute Error Corresponding to unknown Measurement Buses')
 
 # check if max error is at pseudo buses
 # count = 0 
@@ -262,12 +275,27 @@ for i,val in enumerate(list_max_error_index_p):
             
 ##############################################################################
 ##############################################################################
+arr = np.arange(len(non_zib_index)) # used for combinations
+i = 2 # number of known measurements
+combs = list(combinations(arr,i)) # all for combination of buses with known number of i
 
 # run one scenario for different solvers
-vmag_perc_error = []
-p_perc_error, q_perc_error = [], []
-p_abs_error, q_abs_error = [], []
+vmag_perc_error = [] # abs vmag error
+p_perc_error, q_perc_error = [], [] # perc p q bus error
+p_abs_error, q_abs_error = [], [] # abs p q bus error
 for indices in combs:
+    # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+    # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
+    indices = np.asarray(( 2,  3,  4,  5,  6,  7,  8,  9)) # select manually
+    # see the known meas
+    if len(indices) !=0:
+        corresponding_nodes = non_zib_index_array[indices]
+    else:
+        corresponding_nodes = np.asarray(())
+    # unknown buses 
+    not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
+    not_considered_indices = np.setdiff1d(arr, indices)
+
     P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
             P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
             non_zib_index, zib_index, num_known_meas=len(indices), indices = np.asarray(indices))
@@ -300,20 +328,20 @@ for indices in combs:
     # get jacobain matrix
     jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
                                       meas_V, R_line, X_line, len(x_est), len(z))
-    
+
     # run WLS SE
     x_estn, emax, count, residuals_mat, delta_mat, results = se_wls(
         x_est, z, jacobian_matrix, W)
-    
+
     # Running the gradient Algorithm
     lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
-     
+
     # x_est=x_estb
     # Batch Gradient Descent
     print('Running BGD')
     x_estb, thetasb, costsb, countsb = batch_gradient_descent(
         jacobian_matrix, z, x_est, W, lr, iterations)
-    
+
     print('Running Pytorch Implementation')
     regr = WLeastSquaresRegressorTorch(n_iter=30000, eta=0.01, batch_size=len(z))
     xx = regr.fit(jacobian_matrix, z, W)
@@ -339,7 +367,7 @@ for indices in combs:
     vmag_perc_error.append(errperc_vector_vmag)
     p_perc_error.append(errperc_vectorp), q_perc_error.append(errperc_vectorq)
     p_abs_error.append(st_err_p), q_abs_error.append(st_err_q)
-    
+
     errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
     errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
     errperc_vector_vmag, mean_vmag_err, max_vmag_err, _, mean_abs_vmag_err, max_abs_vmag_err = \
@@ -353,19 +381,21 @@ for indices in combs:
 
 # plot V mag percentage error
 plt.figure()
-seaborn.boxplot(data=vmag_perc_error)
-seaborn.swarmplot(data=vmag_perc_error, color=".25")
-plt.xlabel('Different Solvers')
-plt.ylabel('Percentage Voltage Error')
+seaborn.boxplot(data=vmag_perc_error, orient='h')
+seaborn.swarmplot(data=vmag_perc_error, color=".25", orient='h')
+plt.ylabel('Different Solvers')
+plt.xlabel('Percentage Voltage Error')
 plt.title('Percentage Voltage Error for Different Solvers')
+plt.yticks([0, 1, 2], ['WLS', 'GD', 'Pytorch GD'])
 
 # plot P mag percentage error
 plt.figure()
-seaborn.boxplot(data=p_perc_error)
+seaborn.boxplot(data=p_perc_error, orient='h')
 # seaborn.swarmplot(data=p_perc_error, color=".25")
-plt.xlabel('Different Solvers')
-plt.ylabel('Percentage P Error')
+plt.ylabel('Different Solvers')
+plt.xlabel('Percentage P Error')
 plt.title('Percentage P Error for Different Solvers')
+plt.yticks([0, 1, 2], ['WLS', 'GD', 'Pytorch GD'])
 
 # plot P mag percentage error
 plt.figure()
@@ -374,3 +404,4 @@ seaborn.boxplot(data=p_abs_error)
 plt.xlabel('Different Solvers')
 plt.ylabel('Absolute P Error')
 plt.title('Absolute P Error for Different Solvers')
+plt.xticks([0, 1, 2], ['WLS', 'GD', 'Pytorch GD'])

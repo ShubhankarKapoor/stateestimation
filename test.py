@@ -89,6 +89,12 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 ##############################################################################
 
+# if any time you want to consider states other than nonzib states
+# modify non_zib_index
+# I think should work: needs testing
+##############################################################################
+##############################################################################
+
 # get subset of lineflow measurement set
 num_plow_meas = 1
 num_voltage_meas = 1
@@ -97,9 +103,9 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 9
+i = 2
 arr = np.arange(len(non_zib_index)) # used for combinations
-combs = list(combinations(arr,i)) 
+combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
 indices = np.asarray(combs[2])
@@ -119,11 +125,12 @@ indices = np.asarray(combs[2])
 # indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,   10,  11,  
 #                       12,  13,  14,  15,  16, 17, 18, 19, 20))
 
+# see the known meas
 if len(indices) !=0:
     corresponding_nodes = non_zib_index_array[indices]
 else:
     corresponding_nodes = np.asarray(())
-    
+# unknown buses    
 not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
 not_considered_indices = np.setdiff1d(arr, indices)
 
@@ -198,7 +205,7 @@ results = results.T
 ##############################################################################
 ##############################################################################
 # Running the gradient Algorithm
-lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
+lr, iterations = 1, 30000 # Learning Rate and Number of iterations
  
 # x_est=x_estb
 # Batch Gradient Descent
@@ -222,7 +229,7 @@ x_estb, thetasb, costsb, countsb = batch_gradient_descent(
 # can tune the lr below, dependent on your weights
 # can try different n_iters & batch size
 print('Running Pytorch Implementation')
-regr = WLeastSquaresRegressorTorch(n_iter=30000, eta=0.01, batch_size=len(z))
+regr = WLeastSquaresRegressorTorch(n_iter=30000, eta=lr, batch_size=len(z))
 xx = regr.fit(jacobian_matrix, z, W)
 # plt.figure()
 # plt.plot(regr.history, '.-') # plot the cost function
