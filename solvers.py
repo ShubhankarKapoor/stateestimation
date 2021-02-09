@@ -331,10 +331,10 @@ class WLeastSquaresRegressorTorch():
         # it needs to be told what parameters to optimize, and what learning rate (lr) to use
         # print(self.eta)
         # gradient descent algo
-        # optimizer = torch.optim.SGD([self.x_est], lr=self.eta, momentum =0.9)
+        optimizer = torch.optim.SGD([self.x_est], lr=self.eta) #, momentum =0.9)
         # adagrad descent
-        optimizer = torch.optim.Adagrad([self.x_est], lr=self.eta, 
-                                        lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
+        # optimizer = torch.optim.Adagrad([self.x_est], lr=self.eta, 
+        #                                 lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
         
         # optimizer = torch.optim.RMSprop([self.x_est], lr=self.eta, 
         #     alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
