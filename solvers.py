@@ -249,8 +249,8 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
         thetas = np.vstack((thetas, theta)) # store the result in a matrix
         emax = np.max(np.abs(thetas[count+1,:]-thetas[count,:]))
         count+=1
-        if count % 30000==0:
-            print(count, emax)
+        # if count % 30000==0:
+        #     print(count, emax)
     return theta, thetas, costs, count, emax
 
 def stochastic_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
@@ -329,11 +329,11 @@ class WLeastSquaresRegressorTorch():
         # self.x_est = torch.zeros(n_features, requires_grad=True, dtype=torch.float)
         if x_est is None:
             torch.manual_seed(0)
-            x_est = torch.rand(n_features, requires_grad=True)
-            print('None', x_est)
+            x_est = torch.rand(n_features, requires_grad=True).float()
+            # print('None', x_est)
         else:
             x_est = torch.tensor(x_est, requires_grad=True).float()
-            print(x_est)
+            # print(x_est)
 
         self.history = [] # to store the cost function
 
@@ -389,5 +389,5 @@ class WLeastSquaresRegressorTorch():
             emax = max(abs(x_est.grad))
             self.history.append(total_loss)
 
-        print('SGD-minibatch final loss: {:.4f}'.format(total_loss))
+        # print('SGD-minibatch final loss: {:.4f}'.format(total_loss))
         return x_est, emax
