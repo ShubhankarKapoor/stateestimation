@@ -321,18 +321,18 @@ class WLeastSquaresRegressorTorch():
         n_instances, n_features = H.shape
         
         # we need to "wrap" the NumPy arrays H and y as PyTorch tensors
-        Ht = torch.tensor(H, dtype=torch.float)
-        Yt = torch.tensor(y, dtype=torch.float)
-        Wt = torch.tensor(W, dtype=torch.float)
+        Ht = torch.tensor(H, dtype=torch.double)
+        Yt = torch.tensor(y, dtype=torch.double)
+        Wt = torch.tensor(W, dtype=torch.double)
 
         # initialize the weight vector to all zeros
         # self.x_est = torch.zeros(n_features, requires_grad=True, dtype=torch.float)
         if x_est is None:
             torch.manual_seed(0)
-            x_est = torch.rand(n_features, requires_grad=True).float()
+            x_est = torch.rand(n_features, requires_grad=True)
             # print('None', x_est)
         else:
-            x_est = torch.tensor(x_est, requires_grad=True).float()
+            x_est = torch.tensor(x_est, requires_grad=True)
             # print(x_est)
 
         self.history = [] # to store the cost function
