@@ -103,12 +103,12 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 9
+i = 6
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[0])
+indices = np.asarray(combs[9])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
@@ -205,8 +205,8 @@ results = results.T
 ##############################################################################
 ##############################################################################
 # Running the gradient Algorithm
-lr, iterations = 1, 30000 # Learning Rate and Number of iterations
- 
+lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
+
 # x_est=x_estb
 # Batch Gradient Descent
 # print('Running BGD')
@@ -234,6 +234,8 @@ regr = WLeastSquaresRegressorTorch(n_iter=countsb, eta=lr, batch_size=len(z))
 xx, emaxp = regr.fit(jacobian_matrix, z, W)
 plt.figure()
 plt.plot(regr.history, '.-') # plot the cost function
+plt.plot(costsb, '.-')
+print('Final Cost', costsn, costsb[-1], regr.history[-1])
 ##############################################################################
 ##############################################################################
 # Error Calculations

@@ -207,8 +207,6 @@ def cost(theta, H, y, W):
     # Calculating Cost
                     # Loss
     Error = H.dot(theta)-y
-    # loss_batch = torch.sum(Error**2) / len(Ybatch)
-    # loss_batch = torch.sum(Wbatch * (Error) ** 2) / len(Ybatch)
     c = (1/(2*m)) * np.sum(np.square(Error) * W)
     # c = np.sum(np.square(Error) * np.diag(W))/ (m)
     return c
