@@ -195,17 +195,22 @@ def se_rr(x_est, z, jacobian_matrix, W_rr, k = None, tol = None):
     
     return x_est, emax, count, residuals_mat, delta_mat, results
 
-def cost(theta, H, y):
+def cost(theta, H, y, W):
     '''
     (): shows the vars used in our code
     Calculates cost of the function.
     H & y(z) have their usual meaning.
     theta(xest) - vector of coefficients.
     '''
-    # m = len(y)
-    m = 1 # for SGD
+    m = len(y)
+    # m = 1 # for SGD
     # Calculating Cost
-    c = np.sum(np.square((H.dot(theta))-y))/(2 * m)
+                    # Loss
+    Error = H.dot(theta)-y
+    # loss_batch = torch.sum(Error**2) / len(Ybatch)
+    # loss_batch = torch.sum(Wbatch * (Error) ** 2) / len(Ybatch)
+    c = (1/(2*m)) * np.sum(np.square(Error) * W)
+    # c = np.sum(np.square(Error) * np.diag(W))/ (m)
     return c
 
 def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
@@ -231,6 +236,7 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     # for i in range(iterations):
     while emax > tol and count < iterations :
         # print(count)
+        costs.append(cost(theta, H, y, W))
         residuals = H.dot(theta) -y
         w_residuals = np.dot(W, residuals) # weighted residuals
         gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct
@@ -243,12 +249,11 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
         # print(gradient, gradient2)
         theta = theta - lr * gradient # new weights/ thetas
         thetas = np.vstack((thetas, theta)) # store the result in a matrix
-        costs.append(cost(theta, H, y))
         emax = np.max(np.abs(thetas[count+1,:]-thetas[count,:]))
         count+=1
         if count % 30000==0:
             print(count, emax)
-    return theta, thetas, costs, count
+    return theta, thetas, costs, count, emax
 
 def stochastic_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     ''' implements SGD '''
@@ -307,11 +312,12 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
 
 class WLeastSquaresRegressorTorch():
 
-    def __init__(self, n_iter=10, eta=0.1, batch_size=10):
+    def __init__(self, n_iter=10, eta=0.1, batch_size=10, tol = None):
         self.n_iter = n_iter
         self.eta = eta
         self.batch_size = batch_size
-        
+        self.tol = tol if tol is not None else 10e-12
+
     def fit(self, H, y, W):
 
         n_instances, n_features = H.shape
@@ -354,25 +360,29 @@ class WLeastSquaresRegressorTorch():
                 Wbatch = Wt[batch_start:batch_end,batch_start:batch_end]
                 # mv = matrix-vector multiplication in Torch
                 G = Hbatch.mv(self.x_est)
-                
+              
                 # Loss
-                Error = (G - Ybatch) * torch.diagonal(Wbatch)
-                loss_batch = torch.sum(Error**2) / len(Ybatch)
-                
+                Error = (G - Ybatch)
+                # loss_batch = torch.sum((Error**2) * torch.diagonal(Wbatch)) / len(Ybatch)
+                loss_batch = (1/(2*len(Ybatch))) * (torch.sum(Wbatch * (Error ** 2)))
+
                 # we sum up the loss values for all the batches.
                 # the item() here is to convert the tensor into a single number
                 total_loss += loss_batch.item()
-                
+
                 # reset all gradients
                 optimizer.zero_grad()                  
 
                 # compute the gradients for the loss for this batch
                 loss_batch.backward()
+                # print(max(abs(self.x_est.grad))) # prints the gradient
+                if max(abs(self.x_est.grad)) < self.tol:
+                    emax = max(abs(self.x_est.grad))
 
                 # for SGD, this is equivalent to x_est -= learning_rate * gradient as we saw before
                 optimizer.step()
-                          
+            emax = max(abs(self.x_est.grad))
             self.history.append(total_loss)
-
+            # break
         print('SGD-minibatch final loss: {:.4f}'.format(total_loss))
-        return self.x_est
+        return self.x_est, emax
