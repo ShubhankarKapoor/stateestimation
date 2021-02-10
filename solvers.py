@@ -310,13 +310,13 @@ def stochastic_gradient_descent2(H, y, theta, W, lr, iterations, tol = None):
 
 class WLeastSquaresRegressorTorch():
 
-    def __init__(self, n_iter=10, eta=0.1, batch_size=10, tol = None):
+    def __init__(self, n_iter=10, eta=0.1, batch_size=10, tol = None, x_est = None):
         self.n_iter = n_iter
         self.eta = eta
         self.batch_size = batch_size
         self.tol = tol if tol is not None else 10e-12
 
-    def fit(self, H, y, W):
+    def fit(self, H, y, W, x_est=None):
 
         n_instances, n_features = H.shape
         
@@ -324,18 +324,24 @@ class WLeastSquaresRegressorTorch():
         Ht = torch.tensor(H, dtype=torch.float)
         Yt = torch.tensor(y, dtype=torch.float)
         Wt = torch.tensor(W, dtype=torch.float)
+
         # initialize the weight vector to all zeros
         # self.x_est = torch.zeros(n_features, requires_grad=True, dtype=torch.float)
-        torch.manual_seed(0)
-        self.x_est = torch.rand(n_features, requires_grad=True)
+        if x_est is None:
+            torch.manual_seed(0)
+            x_est = torch.rand(n_features, requires_grad=True)
+            print('None', x_est)
+        else:
+            x_est = torch.tensor(x_est, requires_grad=True).float()
+            print(x_est)
 
-        self.history = []
+        self.history = [] # to store the cost function
 
         # we select an optimizer, in this case (minibatch) SGD.
         # it needs to be told what parameters to optimize, and what learning rate (lr) to use
         # print(self.eta)
         # gradient descent algo
-        optimizer = torch.optim.SGD([self.x_est], lr=self.eta) #, momentum =0.9)
+        optimizer = torch.optim.SGD([x_est], lr=self.eta) #, momentum =0.9)
         # adagrad descent
         # optimizer = torch.optim.Adagrad([self.x_est], lr=self.eta, 
         #                                 lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
@@ -357,7 +363,7 @@ class WLeastSquaresRegressorTorch():
                 Ybatch = Yt[batch_start:batch_end]
                 Wbatch = Wt[batch_start:batch_end,batch_start:batch_end]
                 # mv = matrix-vector multiplication in Torch
-                G = Hbatch.mv(self.x_est)
+                G = Hbatch.mv(x_est)
               
                 # Loss
                 Error = (G - Ybatch)
@@ -374,13 +380,14 @@ class WLeastSquaresRegressorTorch():
                 # compute the gradients for the loss for this batch
                 loss_batch.backward()
                 # print(max(abs(self.x_est.grad))) # prints the gradient
-                if max(abs(self.x_est.grad)) < self.tol:
-                    emax = max(abs(self.x_est.grad))
+                if max(abs(x_est.grad)) < self.tol:
+                    emax = max(abs(x_est.grad))
 
                 # for SGD, this is equivalent to x_est -= learning_rate * gradient as we saw before
                 optimizer.step()
-            emax = max(abs(self.x_est.grad))
+
+            emax = max(abs(x_est.grad))
             self.history.append(total_loss)
-            # break
+
         print('SGD-minibatch final loss: {:.4f}'.format(total_loss))
-        return self.x_est, emax
+        return x_est, emax
