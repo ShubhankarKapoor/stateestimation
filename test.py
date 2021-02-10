@@ -4,7 +4,7 @@ import numpy as np
 from jacobian_calc import create_jacobian
 from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
     stochastic_gradient_descent, stochastic_gradient_descent2, \
-    WLeastSquaresRegressorTorch
+    WLeastSquaresRegressorTorch, cost
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
@@ -103,12 +103,12 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 2
+i = 9
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[2])
+indices = np.asarray(combs[0])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
@@ -197,7 +197,7 @@ W_rr[-1] = w3
 
 x_estn, emax, count, residuals_mat, delta_mat, results = se_wls(
     x_est, z, jacobian_matrix, W)
-
+costsn = cost(x_estn, jacobian_matrix, z, W)
 ##############################################################################
 sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
 results = results.T
@@ -210,7 +210,7 @@ lr, iterations = 1, 30000 # Learning Rate and Number of iterations
 # x_est=x_estb
 # Batch Gradient Descent
 # print('Running BGD')
-x_estb, thetasb, costsb, countsb = batch_gradient_descent(
+x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
     jacobian_matrix, z, x_est, W, lr, iterations)
 
 # Running Stochastic Gradient Descent
@@ -229,10 +229,11 @@ x_estb, thetasb, costsb, countsb = batch_gradient_descent(
 # can tune the lr below, dependent on your weights
 # can try different n_iters & batch size
 print('Running Pytorch Implementation')
-regr = WLeastSquaresRegressorTorch(n_iter=30000, eta=lr, batch_size=len(z))
-xx = regr.fit(jacobian_matrix, z, W)
-# plt.figure()
-# plt.plot(regr.history, '.-') # plot the cost function
+# n_iter=countsb: to immitate the resuls from BGD
+regr = WLeastSquaresRegressorTorch(n_iter=countsb, eta=lr, batch_size=len(z))
+xx, emaxp = regr.fit(jacobian_matrix, z, W)
+plt.figure()
+plt.plot(regr.history, '.-') # plot the cost function
 ##############################################################################
 ##############################################################################
 # Error Calculations
