@@ -103,12 +103,12 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 6
+i = 9
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[9])
+indices = np.asarray(combs[7])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
@@ -231,7 +231,7 @@ x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
 print('Running Pytorch Implementation')
 # n_iter=countsb: to immitate the resuls from BGD
 regr = WLeastSquaresRegressorTorch(n_iter=countsb, eta=lr, batch_size=len(z))
-xx, emaxp = regr.fit(jacobian_matrix, z, W)
+xx, emaxp = regr.fit(jacobian_matrix, z, W, x_est)
 plt.figure()
 plt.plot(regr.history, '.-') # plot the cost function
 plt.plot(costsb, '.-')
