@@ -238,7 +238,8 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
         # thetas = theta # to see emax without storing results
         cur_cost = cost(theta, H, y, W)
         costs.append(cur_cost)
-        residuals = H.dot(theta) -y
+        estimates = H.dot(theta)
+        residuals = estimates -y
         w_residuals = np.dot(W, residuals) # weighted residuals
         gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct
         # another way to check grad, just to make more sense
