@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import torch
+from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     ''' Ordinary Least Square Estimate
@@ -239,6 +240,8 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
         cur_cost = cost(theta, H, y, W)
         costs.append(cur_cost)
         estimates = H.dot(theta)
+        # LinDistFlowBackwardForwardSweep(
+        #         P_Load_est, Q_Load_est, which, full_x_est[-1])
         residuals = estimates -y
         w_residuals = np.dot(W, residuals) # weighted residuals
         gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct

@@ -21,6 +21,12 @@ if which == 37:
 else:
     from Network906 import *
 
+'''
+    if any time you want to consider states other than nonzib states
+    modify non_zib_index values
+    I think everything should work without changing anything: needs testing
+'''
+
 data_lin = 1
 data_full_ac = 0
 est_lin = 1
@@ -86,12 +92,6 @@ x_est =  x_est.detach().cpu().numpy()
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
-##############################################################################
-##############################################################################
-
-# if any time you want to consider states other than nonzib states
-# modify non_zib_index
-# I think should work: needs testing
 ##############################################################################
 ##############################################################################
 
@@ -209,11 +209,12 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 
 # x_est=x_estb
 # Batch Gradient Descent
-# print('Running BGD')
+print('Running BGD')
 x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
     jacobian_matrix, z, x_est, W, lr, iterations)
 
-countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
+# countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
+
 # Running Stochastic Gradient Descent
 # start_time = time.time()
 # x_estt, thetas, costs, counts = stochastic_gradient_descent(
@@ -243,11 +244,11 @@ print('Final Cost', costsn, costsb[-1], regr.history[-1])
 # Error Calculations
 
 # the following function is used when the states are non zib buses
-error_calc_refactor(x, x_estn, non_zib_index, P_Load, est_lin, est_full_ac, 
+error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag) # for WLS
-error_calc_refactor(x, x_estb, non_zib_index, P_Load, est_lin, est_full_ac, 
+error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag) # for self GD
-error_calc_refactor(x, xx.detach().numpy(), non_zib_index, P_Load, est_lin, est_full_ac, 
+error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag) # for pytorch GD
 ##############################################################################
 ##############################################################################
