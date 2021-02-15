@@ -11,7 +11,7 @@ from itertools import combinations
 import seaborn, time
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
-                       error_calc_refactor    
+                       error_calc_refactor, countour_plot
 import torch
 import matplotlib.pyplot as plt
 which = 37 # IEEE 37-node or IEEE 906-node
@@ -103,12 +103,12 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 9
+i = 0
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[7])
+indices = np.asarray(combs[0])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
@@ -213,6 +213,7 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
     jacobian_matrix, z, x_est, W, lr, iterations)
 
+countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
 # Running Stochastic Gradient Descent
 # start_time = time.time()
 # x_estt, thetas, costs, counts = stochastic_gradient_descent(
@@ -232,11 +233,12 @@ print('Running Pytorch Implementation')
 # n_iter=countsb: to immitate the resuls from BGD
 regr = WLeastSquaresRegressorTorch(n_iter=countsb, eta=lr, batch_size=len(z))
 xx, emaxp = regr.fit(jacobian_matrix, z, W, x_est)
+x_estp = xx.detach().numpy()
 plt.figure()
 plt.plot(regr.history, '.-') # plot the cost function
 plt.plot(costsb, '.-')
 print('Final Cost', costsn, costsb[-1], regr.history[-1])
-##############################################################################
+# ##############################################################################
 ##############################################################################
 # Error Calculations
 

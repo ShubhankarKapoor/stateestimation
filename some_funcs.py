@@ -3,9 +3,11 @@ import pandas as pd
 import random
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
-
+from solvers import cost
+import matplotlib.pyplot as plt
 # error function
 def error_calc(ground_truth, estimated):
+    ''' function to calculate different types of errors '''
     # when gtruth is 0 it gives a warning in divide
     # this is to avoid the warning    
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -276,7 +278,51 @@ def bus_measurements_with_noise(P_Load, Q_Load, primary_branch_flow_p,
     
     return P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas
 
+def countour_plot(w1, w2, theta, thetas, y, W, jacobian_matrix):
+    '''
+    Parameters
+    ----------
+    w1 : state variable index number
+    w2 : state variable index number
+    theta : final estimated state vars
+    thetas : estimated state vars at each iteration
+    y : measurements
+    W : weight matrix
+    jacobian_matrix :
+
+    Returns
+    -------
+    None.
+
+    '''
+    levels = [0.0, 1.0, 2.0, 4.0, 8.0, 12.0, 14.0]
+    levels = [0.0, 0.0005, 0.05, 0.2, 0.4, 2.0, 3.0, 4.0, 5.0]
+    # different values of the state vars used for contour plot
+    w1_vec = np.linspace(-10, 10, 100)
+    w2_vec = np.linspace(-10, 10, 100)
+    # w1_vec = np.linspace(-np.max(x_true)*2, np.max(x_true)*2, 1000)
+    # w2_vec = np.linspace(-np.max(x_true)*2, np.max(x_true)*2, 1000)
+    # w1_vec = thetas[:,w1]
+    # w1_vec = w1_vec[::10]
+    # w2_vec = thetas[:,w2]
+    # w2_vec = w2_vec[::10]
+    weight_copy = np.zeros_like(theta)
+    weight_copy[:] = theta[:]
+    cost_func = np.zeros((len(w1_vec),len(w2_vec)))
+    for i, value1 in enumerate(w1_vec):
+        print(i)
+        for j, value2 in enumerate(w2_vec[i:]): # to avoid repitition
+            
+            weight_copy[w1] = value1
+            weight_copy[w2] = value2
+            cost_val = cost(weight_copy, jacobian_matrix, y, W)
+            cost_func[i, j+i] = cost_val
+            cost_func[j+i,i] = cost_val
+    plt.figure()
+    CS = plt.contour(w1_vec, w1_vec, cost_func, levels, colors='black', linestyles='dashed', linewidths=1)
+    plt.clabel(CS, inline=1, fontsize=10)
+    plt.contourf(w1_vec, w2_vec, cost_func, levels)
+
 def weight_vals(meas_P_line, c, abs_error):
     weight = np.mean(np.asarray(list(meas_P_line.values()))) * c + abs_error
     return weight
-

@@ -226,15 +226,18 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     tol = tol if tol is not None else 10e-12
     # Initializing cost and theta's arrays with zeroes.
     
-    thetas = theta
+    thetas = theta # to store result every iter
     costs = []
     count = 0
     emax = 100 # chosen higher than the tol
+    # grads = np.zeros((len(theta), iterations))
     # Calculating theta for every iteration.
     # for i in range(iterations):
     while emax > tol and count < iterations :
         # print(count)
-        costs.append(cost(theta, H, y, W))
+        # thetas = theta # to see emax without storing results
+        cur_cost = cost(theta, H, y, W)
+        costs.append(cur_cost)
         residuals = H.dot(theta) -y
         w_residuals = np.dot(W, residuals) # weighted residuals
         gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct
@@ -247,10 +250,12 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
         # print(gradient, gradient2)
         theta = theta - lr * gradient # new weights/ thetas
         thetas = np.vstack((thetas, theta)) # store the result in a matrix
-        emax = np.max(np.abs(thetas[count+1,:]-thetas[count,:]))
+        emax = np.max(np.abs(thetas[count+1,:]-thetas[count,:])) # when you store every result
+        # emax = np.max(np.abs(thetas-theta)) # without storing every result
+        # grads[:,count] = gradient
         count+=1
-        # if count % 30000==0:
-        #     print(count, emax)
+        if count % 30000==0:
+            print(count, emax, cur_cost)
     return theta, thetas, costs, count, emax
 
 def stochastic_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
