@@ -1,4 +1,4 @@
-def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None):
+def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None):
 
     import numpy as np
     import copy
@@ -7,6 +7,8 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None):
         from Network37 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase, R_line, X_line
     else:
         from Network906 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase, R_line, X_line
+
+    loss = 0 if loss is None else loss
 
     I_load = {}
     for i in BusNum:
@@ -49,11 +51,18 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None):
         for i in range(len(BusNum)-1,0,-1):
             P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
             Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
-            
-        #Forward sweep
-        for (i,j) in LineData_Z_pu.keys():
-            V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)])
         
+        # adding loss in voltage and not in p/q
+        if loss == 0:
+            #Forward sweep
+            for (i,j) in LineData_Z_pu.keys():
+                V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)])
+        else:
+            #Forward sweep
+            for (i,j) in LineData_Z_pu.keys():
+                loss_term = ((abs(LineData_Z_pu[(i,j)])**2) * (P_line[(i,j)]**2 + Q_line[(i,j)]**2)) * (1/V[i])
+                V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)]) + loss_term
+                
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
     Vmag = {key:np.sqrt(val) for key, val in V.items()} # sqrt of mag
