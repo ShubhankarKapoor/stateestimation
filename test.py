@@ -210,6 +210,7 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 # x_est=x_estb
 # Batch Gradient Descent
 print('Running BGD')
+lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys()}
 x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
     jacobian_matrix, z, x_est, W, lr, iterations)
 

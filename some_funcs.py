@@ -29,7 +29,7 @@ def error_calc(ground_truth, estimated):
     return perc_err, mean_perc_error, max_perc_error, abs_error, mean_abs_error, max_abs_error, max_index
 
 def refactor_estimates(num_all_state_vars, x_estn, non_zib_index, num_buses):
-    ''' tkaes the estimated states, state variables (non zib here): could be extended
+    ''' takes the estimated states, state variables (non zib here): could be extended
         returns full estimate array, separates P_Load/ Q_Load estimates
     '''
     full_x_est = np.zeros((num_all_state_vars))
