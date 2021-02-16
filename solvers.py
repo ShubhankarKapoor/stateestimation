@@ -2,6 +2,7 @@ import numpy as np
 import time
 import torch
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
+from some_funcs import refactor_estimates
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     ''' Ordinary Least Square Estimate
@@ -212,7 +213,7 @@ def cost(theta, H, y, W):
     # c = np.sum(np.square(Error) * np.diag(W))/ (m)
     return c
 
-def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
+def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None, loss = None, lossy_volt_est = None):
     '''
     returns array of thetas, cost of every iteration
     H - H matrix
@@ -225,6 +226,8 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
     #Getting number of observations.
     m = len(y)
     tol = tol if tol is not None else 10e-12
+    loss = loss if loss is not None else 0
+    lossy_volt_est = lossy_volt_est if lossy_volt_est is not None else {}
     # Initializing cost and theta's arrays with zeroes.
     
     thetas = theta # to store result every iter
@@ -240,8 +243,14 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None):
         cur_cost = cost(theta, H, y, W)
         costs.append(cur_cost)
         estimates = H.dot(theta)
-        # LinDistFlowBackwardForwardSweep(
-        #         P_Load_est, Q_Load_est, which, full_x_est[-1])
+        if loss == 1 and len(lossy_volt_est) == 5:
+            full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
+                                                                    theta, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
+            V_est, _, _, _, _, _, _ = LinDistFlowBackwardForwardSweep(
+                    P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1])
+
+            # update the voltage value for buses with measurements
+            V_known_meas = {k:V_est[k] for k in lossy_volt_est['vol_buses']} # get voltage vals for known measurements
         residuals = estimates -y
         w_residuals = np.dot(W, residuals) # weighted residuals
         gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct
