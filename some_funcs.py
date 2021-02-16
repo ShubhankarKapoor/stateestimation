@@ -3,7 +3,8 @@ import pandas as pd
 import random
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
-from solvers import cost
+# from solvers import cost
+import solvers
 import matplotlib.pyplot as plt
 # error function
 def error_calc(ground_truth, estimated):
@@ -197,16 +198,16 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     V_known_meas = {k:V[k] for k in known_meas1.keys()} # get voltage vals for known measurements
     
     # add some additional voltages
-    # V_known_meas[36] = V[36]
-    # V_known_meas[35] = V[35]
-    # V_known_meas[26] = V[26]
-    # V_known_meas[23] = V[23]
-    # V_known_meas[22] = V[22]
-    # V_known_meas[21] = V[21]
-    # V_known_meas[11] = V[11]
-    # V_known_meas[10] = V[10]
-    # V_known_meas[8] = V[8]
-    # V_known_meas[2] = V[2]
+    V_known_meas[36] = V[36]
+    V_known_meas[35] = V[35]
+    V_known_meas[26] = V[26]
+    V_known_meas[23] = V[23]
+    V_known_meas[22] = V[22]
+    V_known_meas[21] = V[21]
+    V_known_meas[11] = V[11]
+    V_known_meas[10] = V[10]
+    V_known_meas[8] = V[8]
+    V_known_meas[2] = V[2]
     # V_known_meas[817] = V[817]
     # V_known_meas[860] = V[860]
     # V_known_meas[861] = V[861]
