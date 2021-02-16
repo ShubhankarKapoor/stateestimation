@@ -27,10 +27,10 @@ else:
     I think everything should work without changing anything: needs testing
 '''
 
-data_lin = 1
-data_full_ac = 0
-est_lin = 1
-est_full_ac = 0
+data_lin = 0
+data_full_ac = 1
+est_lin = 0
+est_full_ac = 1
 comparison = 0
 
 if data_lin == 1:
@@ -195,24 +195,24 @@ W_rr[not_considered_indices] = w22 # weights on unknown p_buses
 W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_buses
 W_rr[-1] = w3
 
-x_estn, emax, count, residuals_mat, delta_mat, results = se_wls(
+x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
     x_est, z, jacobian_matrix, W)
 costsn = cost(x_estn, jacobian_matrix, z, W)
 ##############################################################################
-sum_residuals = np.sum(abs(residuals_mat[:,count-1]))
+sum_residuals = np.sum(abs(residuals_mat[:,countsn-1]))
 results = results.T
 
 ##############################################################################
 ##############################################################################
 # Running the gradient Algorithm
-lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
+lr, iterations = 2, 30000 # Learning Rate and Number of iterations
 
 # x_est=x_estb
 # Batch Gradient Descent
 print('Running BGD')
 lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys()}
 x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
-    jacobian_matrix, z, x_est, W, lr, iterations)
+    jacobian_matrix, z, x_est, W, lr, iterations, loss = 1, lossy_volt_est = lossy_volt_est)
 
 # countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
 
@@ -233,14 +233,14 @@ x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
 # can try different n_iters & batch size
 print('Running Pytorch Implementation')
 # n_iter=countsb: to immitate the resuls from BGD
-regr = WLeastSquaresRegressorTorch(n_iter=countsb, eta=lr, batch_size=len(z))
-xx, emaxp = regr.fit(jacobian_matrix, z, W, x_est)
-x_estp = xx.detach().numpy()
-plt.figure()
-plt.plot(regr.history, '.-') # plot the cost function
-plt.plot(costsb, '.-')
-print('Final Cost', costsn, costsb[-1], regr.history[-1])
-# ##############################################################################
+# regr = WLeastSquaresRegressorTorch(n_iter=countsb, eta=lr, batch_size=len(z))
+# xx, emaxp = regr.fit(jacobian_matrix, z, W, x_est)
+# x_estp = xx.detach().numpy()
+# plt.figure()
+# plt.plot(regr.history, '.-') # plot the cost function
+# plt.plot(costsb, '.-')
+# print('Final Cost', costsn, costsb[-1], regr.history[-1])
+###############################################################################
 ##############################################################################
 # Error Calculations
 
@@ -249,8 +249,8 @@ error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac,
                         which, V, V_mag) # for WLS
 error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag) # for self GD
-error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag) # for pytorch GD
+# error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
+#                         which, V, V_mag) # for pytorch GD
 ##############################################################################
 ##############################################################################
 # error calc between lindistflow and full AC

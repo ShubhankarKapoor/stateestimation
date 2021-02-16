@@ -3,6 +3,7 @@ import time
 import torch
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from some_funcs import refactor_estimates
+# import some_funcs
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     ''' Ordinary Least Square Estimate
@@ -247,10 +248,11 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None, loss = No
             full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
                                                                     theta, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
             V_est, _, _, _, _, _, _ = LinDistFlowBackwardForwardSweep(
-                    P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1])
+                    P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss)
 
             # update the voltage value for buses with measurements
-            V_known_meas = {k:V_est[k] for k in lossy_volt_est['vol_buses']} # get voltage vals for known measurements
+            V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
+            estimates[-len(V_known_meas):]=list(V_known_meas.values()) # update values
         residuals = estimates -y
         w_residuals = np.dot(W, residuals) # weighted residuals
         gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct
