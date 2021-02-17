@@ -29,12 +29,12 @@ else:
 
 data_lin = 0
 data_full_ac = 1
-est_lin = 0
-est_full_ac = 1
+est_lin = 1
+est_full_ac = 0
 comparison = 0
 
-# if data_lin == 1:
-#     [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
+if data_lin == 1:
+    [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
 
 if data_full_ac == 1:
     [V_mag, V_ang, _, S_line, I_line, I_load, e_max, k] = BackwardForwardSweep(
@@ -210,9 +210,10 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 # x_est=x_estb
 # Batch Gradient Descent
 print('Running BGD')
+loss = 1
 lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys()}
 x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
-    jacobian_matrix, z, x_est, W, lr, iterations, loss = 1, lossy_volt_est = lossy_volt_est)
+    jacobian_matrix, z, x_est, W, lr, iterations, loss = loss, lossy_volt_est = lossy_volt_est)
 
 # countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
 
@@ -248,7 +249,7 @@ print('Final Cost', costsn, costsb[-1], regr.history[-1])
 error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag) # for WLS
 error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag) # for self GD
+                        which, V, V_mag, loss = loss) # for self GD
 error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag) # for pytorch GD
 ##############################################################################

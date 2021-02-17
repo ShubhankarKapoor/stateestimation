@@ -46,13 +46,14 @@ def refactor_estimates(num_all_state_vars, x_estn, non_zib_index, num_buses):
     return full_x_est, P_Load_est, Q_Load_est
 
 def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_ac, 
-                        which, V, V_mag, state_err= None, V_err = None):
+                        which, V, V_mag, loss = None, state_err= None, V_err = None):
     ''' Takes the non zib estiates states and returns the complete error
         x: true state values
         x_estn: estimated state values
     '''
     state_err = state_err if state_err is not None else True
     V_err = V_err if V_err is not None else True
+    loss = 0 if loss is None else loss # term to reconstruct v using the loss term
 
     if state_err == True: # error between states
         # get the following for compatibility for error and power flow calc
@@ -75,8 +76,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # Regenerated measurements using the estimated states
         if est_lin == 1:
             [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
-                P_Load_est, Q_Load_est, which, full_x_est[-1]) # using lindistflow
-
+                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, max_iter=1) # using lindistflow
+ 
         # using Full AC Network
         if est_full_ac == 1:
             [V_mag_con,_,_,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est,
