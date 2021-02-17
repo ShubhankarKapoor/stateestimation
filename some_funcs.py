@@ -68,13 +68,14 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, _ = error_calc(x[num_buses:2*num_buses], full_x_est[num_buses:2*num_buses])
 
         # print some results
-        print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
-        print('p bus err:', mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p) 
-        print('q bus err:', mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q)
+        # print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
+        # print('p bus err:', mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p) 
+        # print('q bus err:', mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q)
 
     if V_err == True: # error between measurements
         # Regenerated measurements using the estimated states
         if est_lin == 1:
+            print('loss', loss)
             [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
                 P_Load_est, Q_Load_est, which, full_x_est[-1], loss, max_iter=1) # using lindistflow
  
@@ -98,12 +99,12 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # pflow and qflow error
         # _, mean_pflow_err, max_pflow_err, mean_abs_pflow_err, max_abs_pflow_err, _ = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
         # _, mean_qflow_err, max_qflow_err, mean_abs_qflow_err, max_abs_qflow_err, _ = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
-        return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
-               errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
-               errperc_vector_vmag, mean_vmag_err, max_vmag_err, _, mean_abs_vmag_err, max_abs_vmag_err
-    else:
-        return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
-               errperc_vectorp, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
+    #     return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
+    #            errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
+    #            errperc_vector_vmag, mean_vmag_err, max_vmag_err, _, mean_abs_vmag_err, max_abs_vmag_err
+    # else:
+    #     return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
+    #            errperc_vectorp, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
 
 def noise_addition(z, sd, mu = None):
 
@@ -199,16 +200,16 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     V_known_meas = {k:V[k] for k in known_meas1.keys()} # get voltage vals for known measurements
     
     # add some additional voltages
-    # V_known_meas[36] = V[36]
-    # V_known_meas[35] = V[35]
-    # V_known_meas[26] = V[26]
-    # V_known_meas[23] = V[23]
-    # V_known_meas[22] = V[22]
-    # V_known_meas[21] = V[21]
-    # V_known_meas[11] = V[11]
-    # V_known_meas[10] = V[10]
-    # V_known_meas[8] = V[8]
-    # V_known_meas[2] = V[2]
+    V_known_meas[36] = V[36]
+    V_known_meas[35] = V[35]
+    V_known_meas[26] = V[26]
+    V_known_meas[23] = V[23]
+    V_known_meas[22] = V[22]
+    V_known_meas[21] = V[21]
+    V_known_meas[11] = V[11]
+    V_known_meas[10] = V[10]
+    V_known_meas[8] = V[8]
+    V_known_meas[2] = V[2]
     # V_known_meas[817] = V[817]
     # V_known_meas[860] = V[860]
     # V_known_meas[861] = V[861]
