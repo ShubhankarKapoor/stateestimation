@@ -1,7 +1,10 @@
-def BackwardForwardSweep(P_Load,Q_Load,which, V0=None):
+def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
 
     import numpy as np
     import copy
+
+    # giving an insanely high number below so it converges with tol when max_iters are missing
+    max_iter = 10e12 if max_iter is None else max_iter # max iterations without considering tolerance  
     
     if which == 37:
         from Network37 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase
@@ -28,7 +31,7 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None):
     e_max = 1
     tolerance = 0.000000000001 
 
-    while e_max > tolerance:
+    while e_max > tolerance and k<max_iter:
         #Number of iteration
         k = k+1 
 

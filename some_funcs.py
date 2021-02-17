@@ -81,7 +81,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # using Full AC Network
         if est_full_ac == 1:
             [V_mag_con,_,_,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est,
-                    Q_Load_est, which, full_x_est[-1])
+                    Q_Load_est, which, full_x_est[-1], max_iter=1)
             Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
             V_con = Vsq_con
 
