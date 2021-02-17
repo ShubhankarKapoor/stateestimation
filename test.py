@@ -27,8 +27,10 @@ else:
     I think everything should work without changing anything: needs testing
 '''
 
+# measurement set
 data_lin = 0
 data_full_ac = 1
+# reconstruction set
 est_lin = 1
 est_full_ac = 0
 comparison = 0
@@ -103,12 +105,12 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 9
+i = 6
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[0])
+indices = np.asarray(combs[35])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]

@@ -54,7 +54,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, ma
             P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
             Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
 
-        # adding loss in voltage and not in p/q
+        # adding loss in voltage and not in p/q atm
         if loss == 0:
             #Forward sweep
             for (i,j) in LineData_Z_pu.keys():
