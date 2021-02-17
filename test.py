@@ -33,8 +33,8 @@ est_lin = 0
 est_full_ac = 1
 comparison = 0
 
-if data_lin == 1:
-    [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
+# if data_lin == 1:
+#     [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
 
 if data_full_ac == 1:
     [V_mag, V_ang, _, S_line, I_line, I_load, e_max, k] = BackwardForwardSweep(
@@ -53,7 +53,7 @@ gt_V = V[0]
 x = np.asarray(gt_P_load + gt_Q_load) # ground truth for states
 x = np.insert(x, len(x), gt_V) # ground truth for states
 
-# ground truth for measurements
+# ground truth for all measurements
 z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) + 
                     list(P_Load.values()) + list(Q_Load.values()) + list(V.values())) # ground truth for meas
 
@@ -103,7 +103,7 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 0
+i = 9
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
@@ -205,7 +205,7 @@ results = results.T
 ##############################################################################
 ##############################################################################
 # Running the gradient Algorithm
-lr, iterations = 2, 30000 # Learning Rate and Number of iterations
+lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 
 # x_est=x_estb
 # Batch Gradient Descent
@@ -233,13 +233,13 @@ x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
 # can try different n_iters & batch size
 print('Running Pytorch Implementation')
 # n_iter=countsb: to immitate the resuls from BGD
-# regr = WLeastSquaresRegressorTorch(n_iter=countsb, eta=lr, batch_size=len(z))
-# xx, emaxp = regr.fit(jacobian_matrix, z, W, x_est)
-# x_estp = xx.detach().numpy()
-# plt.figure()
-# plt.plot(regr.history, '.-') # plot the cost function
-# plt.plot(costsb, '.-')
-# print('Final Cost', costsn, costsb[-1], regr.history[-1])
+regr = WLeastSquaresRegressorTorch(n_iter=countsb, eta=lr, batch_size=len(z))
+xx, emaxp = regr.fit(jacobian_matrix, z, W, x_est)
+x_estp = xx.detach().numpy()
+plt.figure()
+plt.plot(regr.history, '.-') # plot the cost function
+plt.plot(costsb, '.-')
+print('Final Cost', costsn, costsb[-1], regr.history[-1])
 ###############################################################################
 ##############################################################################
 # Error Calculations
@@ -249,8 +249,8 @@ error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac,
                         which, V, V_mag) # for WLS
 error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag) # for self GD
-# error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
-#                         which, V, V_mag) # for pytorch GD
+error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag) # for pytorch GD
 ##############################################################################
 ##############################################################################
 # error calc between lindistflow and full AC

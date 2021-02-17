@@ -231,7 +231,7 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None, loss = No
     lossy_volt_est = lossy_volt_est if lossy_volt_est is not None else {}
     # Initializing cost and theta's arrays with zeroes.
     
-    thetas = theta # to store result every iter
+    # thetas = theta # to store result every iter
     costs = []
     count = 0
     emax = 100 # chosen higher than the tol
@@ -240,33 +240,29 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None, loss = No
     # for i in range(iterations):
     while emax > tol and count < iterations :
         # print(count)
-        # thetas = theta # to see emax without storing results
+        thetas = theta # to see emax without storing results
         cur_cost = cost(theta, H, y, W)
         costs.append(cur_cost)
         estimates = H.dot(theta)
-        if loss == 1 and len(lossy_volt_est) == 5:
+        if loss == 1 and len(lossy_volt_est) == 5: # voltage feedback using non linear estimates
             full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
                                                                     theta, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
-            V_est, _, _, _, _, _, _ = LinDistFlowBackwardForwardSweep(
-                    P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss)
+            V_est, _, _, _, _, _, k = LinDistFlowBackwardForwardSweep(
+                    P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, max_iter=1)
 
             # update the voltage value for buses with measurements
             V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
+            # print('max volt diff', max(abs(np.asarray(estimates[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
             estimates[-len(V_known_meas):]=list(V_known_meas.values()) # update values
+
         residuals = estimates -y
         w_residuals = np.dot(W, residuals) # weighted residuals
         gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct
-        # another way to check grad, just to make more sense
-        # w_residuals = w_residuals.reshape((m,1))
-        # gradient2 = H * w_residuals
-        # gradient2 = 1/m*np.sum(gradient2, axis = 0)
-        # another way
-        # # gradient = 1/m*(np.matmul(np.matmul(np.matmul(H.T, W), H), theta) - np.matmul(np.matmul(H.T, W), y))
-        # print(gradient, gradient2)
+
         theta = theta - lr * gradient # new weights/ thetas
-        thetas = np.vstack((thetas, theta)) # store the result in a matrix
-        emax = np.max(np.abs(thetas[count+1,:]-thetas[count,:])) # when you store every result
-        # emax = np.max(np.abs(thetas-theta)) # without storing every result
+        # thetas = np.vstack((thetas, theta)) # store the result in a matrix
+        # emax = np.max(np.abs(thetas[count+1,:]-thetas[count,:])) # when you store every result
+        emax = np.max(np.abs(thetas-theta)) # without storing every result
         # grads[:,count] = gradient
         count+=1
         if count % 30000==0:
