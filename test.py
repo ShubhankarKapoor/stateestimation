@@ -105,12 +105,12 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 6
+i = 0
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[35])
+indices = np.asarray(combs[0])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
@@ -187,6 +187,10 @@ path_to_all_nodes = path_to_nodes(which)
 jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
+# to include non linear voltage feedback
+loss = 0
+lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys()}
+
 # run WLS/OLS SE
 k_range = np.arange(1,1.6,0.1)
 # for coeff in k_range:
@@ -198,7 +202,7 @@ W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_b
 W_rr[-1] = w3
 
 x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
-    x_est, z, jacobian_matrix, W)
+    x_est, z, jacobian_matrix, W, loss = loss, lossy_volt_est = lossy_volt_est)
 costsn = cost(x_estn, jacobian_matrix, z, W)
 ##############################################################################
 sum_residuals = np.sum(abs(residuals_mat[:,countsn-1]))
@@ -212,8 +216,6 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 # x_est=x_estb
 # Batch Gradient Descent
 print('Running BGD')
-loss = 1
-lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys()}
 x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
     jacobian_matrix, z, x_est, W, lr, iterations, loss = loss, lossy_volt_est = lossy_volt_est)
 
@@ -249,7 +251,7 @@ print('Final Cost', costsn, costsb[-1], regr.history[-1])
 
 # the following function is used when the states are non zib buses
 error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag) # for WLS
+                        which, V, V_mag, loss = loss) # for WLS
 error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss) # for self GD
 error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 

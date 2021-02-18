@@ -63,15 +63,18 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
 def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, lossy_volt_est = None):
     ''' Weighted Least Square Estimate'''
 
+    tol = tol if tol is not None else 10e-12
+    loss = loss if loss is not None else 0
+    lossy_volt_est = lossy_volt_est if lossy_volt_est is not None else {}
+
     # some preprocessing for time saving during iterative newton method
     G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
     # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
     Ginv = np.linalg.inv(G)
-    
+
     count = 0
     delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
     residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
-    tol = tol if tol is not None else 10e-12
     results = x_est
     emax = 100 # chosen higher than the tol
 
@@ -85,16 +88,16 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, lossy_volt_est
         hx = np.matmul(jacobian_matrix, x_est)
 
         # voltage loss feedback
-        # if loss == 1 and len(lossy_volt_est) == 5: # voltage feedback using non linear estimates
-        #     full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
-        #                                                             theta, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
-        #     V_est, _, _, _, _, _, k = LinDistFlowBackwardForwardSweep(
-        #             P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, max_iter=1)
+        if loss == 1 and len(lossy_volt_est) == 5: # voltage feedback using non linear estimates
+            full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
+                                                                    x_est, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
+            V_est, _, _, _, _, _, k = LinDistFlowBackwardForwardSweep(
+                    P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, max_iter=1)
 
-        #     # update the voltage value for buses with measurements
-        #     V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
-        #     # print('max volt diff', max(abs(np.asarray(estimates[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
-        #     estimates[-len(V_known_meas):]=list(V_known_meas.values()) # update values
+            # update the voltage value for buses with measurements
+            V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
+            # print('max volt diff', max(abs(np.asarray(estimates[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
+            hx[-len(V_known_meas):]=list(V_known_meas.values()) # update values
 
         # calculate measurement residuals
         residuals = z - hx
