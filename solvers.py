@@ -66,7 +66,6 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, lossy_volt_est
     tol = tol if tol is not None else 10e-12
     loss = loss if loss is not None else 0
     lossy_volt_est = lossy_volt_est if lossy_volt_est is not None else {}
-
     # some preprocessing for time saving during iterative newton method
     G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
     # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS

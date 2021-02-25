@@ -49,19 +49,35 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, ma
         # for i in BusNum:
         #     I_load[i] = np.conj(P_Load[i]/Sbase+1j*Q_Load[i]/Sbase)/np.conj(V[i])
 
-        #Backward sweep
-        for i in range(len(BusNum)-1,0,-1):
-            P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
-            Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
+        #Backward sweep: no loss
+        # for i in range(len(BusNum)-1,0,-1):
+        #     P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
+        #     Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
 
         # adding loss in voltage and not in p/q atm
         if loss == 0:
+            #Backward sweep
+            for i in range(len(BusNum)-1,0,-1):
+                P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
+                Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
+
             #Forward sweep
             for (i,j) in LineData_Z_pu.keys():
                 V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)])
         else:
+            #Backward sweep
+            for i in range(len(BusNum)-1,0,-1): # trying to include loss term in pflow/qflow as well
+
+                P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
+                Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
+                # can have another if here to make pflow/qflow loss optional
+                # current_sq = (P_line[bus_arcs[i]["To"][0]]**2 + Q_line[bus_arcs[i]["To"][0]]**2)* (1/V[i])
+                # loss_term_p = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].real
+                # loss_term_q = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].imag
+                # P_line[bus_arcs[i]["To"][0]] = P_line[bus_arcs[i]["To"][0]] + loss_term_p
+                # Q_line[bus_arcs[i]["To"][0]] = Q_line[bus_arcs[i]["To"][0]] + loss_term_q                
+
             #Forward sweep
-            # print('Including loss')
             for (i,j) in LineData_Z_pu.keys():
                 loss_term = ((abs(LineData_Z_pu[(i,j)])**2) * (P_line[(i,j)]**2 + Q_line[(i,j)]**2)) * (1/V[i])
                 V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)]) + loss_term
