@@ -188,8 +188,9 @@ jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_t
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
 # to include non linear voltage feedback
-loss = 0
-lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys()}
+loss = 1
+lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
+                  'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys()}
 
 # run WLS/OLS SE
 k_range = np.arange(1,1.6,0.1)
