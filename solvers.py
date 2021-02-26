@@ -103,7 +103,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
 
                 # update the voltage value for buses with measurements
                 V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
-                # print('max volt diff', max(abs(np.asarray(estimates[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
+                # print('max volt diff', max(abs(np.asarray(hx[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
                 hx[-len(V_known_meas):]=list(V_known_meas.values()) # update values
             else:
                 raise ValueError('Length of lossy_volt_est should be 6')
