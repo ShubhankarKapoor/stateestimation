@@ -87,14 +87,20 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
         # calculate h(x)    
         hx = np.matmul(jacobian_matrix, x_est)
 
-        # voltage loss feedback
+        # voltage/ pflow loss feedback
         if loss == 1 or pflow == 1: # voltage feedback using non linear estimates
             if len(lossy_volt_est) == 6:
                 full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
                                                                         x_est, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
-                V_est, _, _, _, _, _, k = LinDistFlowBackwardForwardSweep(
+                V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
                         P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow, max_iter=1)
-    
+
+                # update the pline/qline
+                Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
+                Qline_known_meas = {k:Qline_est[k] for k in lossy_volt_est['plines']} # get qflow vals for known measurements
+                hx[0:len(Pline_known_meas)]=list(Pline_known_meas.values()) # update values
+                hx[len(Pline_known_meas):2*len(Pline_known_meas)]=list(Qline_known_meas.values()) # update values
+
                 # update the voltage value for buses with measurements
                 V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
                 # print('max volt diff', max(abs(np.asarray(estimates[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
