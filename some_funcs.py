@@ -69,7 +69,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, _ = error_calc(x[num_buses:2*num_buses], full_x_est[num_buses:2*num_buses])
 
         # print some results
-        print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
+        # print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
         print('p bus err:', mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p) 
         print('q bus err:', mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q)
 
@@ -201,16 +201,16 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     V_known_meas = {k:V[k] for k in known_meas1.keys()} # get voltage vals for known measurements
     
     # add some additional voltages
-    V_known_meas[36] = V[36]
-    V_known_meas[35] = V[35]
-    V_known_meas[26] = V[26]
-    V_known_meas[23] = V[23]
-    V_known_meas[22] = V[22]
-    V_known_meas[21] = V[21]
-    V_known_meas[11] = V[11]
-    V_known_meas[10] = V[10]
-    V_known_meas[8] = V[8]
-    V_known_meas[2] = V[2]
+    # V_known_meas[36] = V[36]
+    # V_known_meas[35] = V[35]
+    # V_known_meas[26] = V[26]
+    # V_known_meas[23] = V[23]
+    # V_known_meas[22] = V[22]
+    # V_known_meas[21] = V[21]
+    # V_known_meas[11] = V[11]
+    # V_known_meas[10] = V[10]
+    # V_known_meas[8] = V[8]
+    # V_known_meas[2] = V[2]
     # V_known_meas[817] = V[817]
     # V_known_meas[860] = V[860]
     # V_known_meas[861] = V[861]

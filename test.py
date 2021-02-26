@@ -98,14 +98,14 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 2
+num_plow_meas = 1
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 0
+i = 5
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
@@ -188,7 +188,7 @@ jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_t
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
 # to include non linear voltage feedback and pflow/qflow
-loss, pflow = 1, 0
+loss, pflow = 1, 1
 lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
                   'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys(),
                   'plines':meas_P_line.keys()}
