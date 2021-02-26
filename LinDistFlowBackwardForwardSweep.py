@@ -1,4 +1,4 @@
-def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, max_iter= None):
+def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pflow = None, max_iter= None):
 
     import numpy as np
     import copy
@@ -8,7 +8,8 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, ma
     else:
         from Network906 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase, R_line, X_line
 
-    loss = 0 if loss is None else loss
+    loss = 0 if loss is None else loss # for voltage term
+    pflow = 0 if pflow is None else pflow # for pflow/qflow term
     # giving an insanely high number below so it converges with tol when max_iters are missing
     max_iter = 10e12 if max_iter is None else max_iter # max iterations without considering tolerance  
 
@@ -49,13 +50,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, ma
         # for i in BusNum:
         #     I_load[i] = np.conj(P_Load[i]/Sbase+1j*Q_Load[i]/Sbase)/np.conj(V[i])
 
-        #Backward sweep: no loss
-        # for i in range(len(BusNum)-1,0,-1):
-        #     P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
-        #     Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
-
-        # adding loss in voltage and not in p/q atm
-        if loss == 0:
+        if loss == 0 and pflow == 0: # lindistflow
             #Backward sweep
             for i in range(len(BusNum)-1,0,-1):
                 P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
@@ -64,24 +59,30 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, ma
             #Forward sweep
             for (i,j) in LineData_Z_pu.keys():
                 V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)])
-        else:
+        else: # adding loss in voltage and in p/q atm
+
             #Backward sweep
             for i in range(len(BusNum)-1,0,-1): # trying to include loss term in pflow/qflow as well
 
                 P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
                 Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
                 # can have another if here to make pflow/qflow loss optional
-                # current_sq = (P_line[bus_arcs[i]["To"][0]]**2 + Q_line[bus_arcs[i]["To"][0]]**2)* (1/V[i])
-                # loss_term_p = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].real
-                # loss_term_q = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].imag
-                # P_line[bus_arcs[i]["To"][0]] = P_line[bus_arcs[i]["To"][0]] + loss_term_p
-                # Q_line[bus_arcs[i]["To"][0]] = Q_line[bus_arcs[i]["To"][0]] + loss_term_q                
-
+                if pflow == 1: # pflow/qflow loss term
+                    current_sq = (P_line[bus_arcs[i]["To"][0]]**2 + Q_line[bus_arcs[i]["To"][0]]**2)* (1/V[i])
+                    loss_term_p = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].real
+                    loss_term_q = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].imag
+                    P_line[bus_arcs[i]["To"][0]] = P_line[bus_arcs[i]["To"][0]] + loss_term_p
+                    Q_line[bus_arcs[i]["To"][0]] = Q_line[bus_arcs[i]["To"][0]] + loss_term_q                
+            
             #Forward sweep
-            for (i,j) in LineData_Z_pu.keys():
-                loss_term = ((abs(LineData_Z_pu[(i,j)])**2) * (P_line[(i,j)]**2 + Q_line[(i,j)]**2)) * (1/V[i])
-                V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)]) + loss_term
-
+            if loss == 1: # voltage loss term
+                for (i,j) in LineData_Z_pu.keys():
+                    loss_term = ((abs(LineData_Z_pu[(i,j)])**2) * (P_line[(i,j)]**2 + Q_line[(i,j)]**2)) * (1/V[i])
+                    V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)]) + loss_term
+            else:
+                for (i,j) in LineData_Z_pu.keys():
+                    V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)])
+        
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
     Vmag = {key:np.sqrt(val) for key, val in V.items()} # sqrt of mag

@@ -187,10 +187,11 @@ path_to_all_nodes = path_to_nodes(which)
 jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
-# to include non linear voltage feedback
-loss = 1
+# to include non linear voltage feedback and pflow/qflow
+loss, pflow = 1, 0
 lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
-                  'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys()}
+                  'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys(),
+                  'plines':meas_P_line.keys()}
 
 # run WLS/OLS SE
 k_range = np.arange(1,1.6,0.1)
@@ -203,7 +204,7 @@ W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_b
 W_rr[-1] = w3
 
 x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
-    x_est, z, jacobian_matrix, W, loss = loss, lossy_volt_est = lossy_volt_est)
+    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 costsn = cost(x_estn, jacobian_matrix, z, W)
 ##############################################################################
 sum_residuals = np.sum(abs(residuals_mat[:,countsn-1]))
@@ -218,7 +219,7 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 # Batch Gradient Descent
 print('Running BGD')
 x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
-    jacobian_matrix, z, x_est, W, lr, iterations, loss = loss, lossy_volt_est = lossy_volt_est)
+    jacobian_matrix, z, x_est, W, lr, iterations, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 
 # countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
 
@@ -252,11 +253,11 @@ print('Final Cost', costsn, costsb[-1], regr.history[-1])
 
 # the following function is used when the states are non zib buses
 error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = loss) # for WLS
+                        which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = loss) # for self GD
-error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag) # for pytorch GD
+                        which, V, V_mag, loss = loss, pflow = pflow) # for self GD
+# error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
+#                         which, V, V_mag) # for pytorch GD
 ##############################################################################
 ##############################################################################
 # error calc between lindistflow and full AC
