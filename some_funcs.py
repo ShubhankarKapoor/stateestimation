@@ -46,7 +46,7 @@ def refactor_estimates(num_all_state_vars, x_estn, non_zib_index, num_buses):
     return full_x_est, P_Load_est, Q_Load_est
 
 def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_ac, 
-                        which, V, V_mag, loss = None, state_err= None, V_err = None):
+                        which, V, V_mag, loss = None, pflow = None, state_err= None, V_err = None):
     ''' Takes the non zib estiates states and returns the complete error
         x: true state values
         x_estn: estimated state values
@@ -54,7 +54,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
     state_err = state_err if state_err is not None else True
     V_err = V_err if V_err is not None else True
     loss = 0 if loss is None else loss # term to reconstruct v using the loss term
-
+    pflow = 0 if pflow is None else pflow # term to reconstruct v using the loss term
+    
     if state_err == True: # error between states
         # get the following for compatibility for error and power flow calc
         full_x_est, P_Load_est, Q_Load_est = refactor_estimates(len(x), x_estn,
@@ -68,16 +69,16 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, _ = error_calc(x[num_buses:2*num_buses], full_x_est[num_buses:2*num_buses])
 
         # print some results
-        # print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
-        # print('p bus err:', mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p) 
-        # print('q bus err:', mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q)
+        print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
+        print('p bus err:', mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p) 
+        print('q bus err:', mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q)
 
     if V_err == True: # error between measurements
         # Regenerated measurements using the estimated states
         if est_lin == 1:
-            print('loss', loss)
+            print('loss', loss, 'pflow', pflow)
             [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
-                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, max_iter=1) # using lindistflow
+                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow, max_iter=1) # using lindistflow
  
         # using Full AC Network
         if est_full_ac == 1:
