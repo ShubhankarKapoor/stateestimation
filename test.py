@@ -98,7 +98,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 1
+num_plow_meas = 4 # 1
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -178,7 +178,7 @@ W = np.linalg.inv(W)
 ##############################################################################
 # state estimation
 # get paths from slack bus to all nodes
-path_to_all_nodes = path_to_nodes(which)
+path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 
 # get jacobain matrix
 # we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
