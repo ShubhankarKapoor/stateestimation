@@ -12,6 +12,7 @@ def create_loss_jacobian(P_Load_state, P_line_mes, Q_line_mes, P_Load_meas,
                          Pline_est, Qline_est, num_states, num_meas):
 
     ''' Loss based Jacobian'''
+
     jacobian_loss_matrix = np.zeros((num_meas, num_states))
 
     # jacobian for pline wrt p
