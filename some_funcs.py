@@ -55,7 +55,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
     V_err = V_err if V_err is not None else True
     loss = 0 if loss is None else loss # term to reconstruct v using the loss term
     pflow = 0 if pflow is None else pflow # term to reconstruct v using the loss term
-    
+    print('loss', loss, 'pflow', pflow)
+
     if state_err == True: # error between states
         # get the following for compatibility for error and power flow calc
         full_x_est, P_Load_est, Q_Load_est = refactor_estimates(len(x), x_estn,
@@ -75,8 +76,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
 
     if V_err == True: # error between measurements
         # Regenerated measurements using the estimated states
-        if est_lin == 1:
-            print('loss', loss, 'pflow', pflow)
+        if est_lin == 1: # reconstruction using lindist or distflow depending on loss and pflow vals
             [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
                 P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow, max_iter=1) # using lindistflow
  

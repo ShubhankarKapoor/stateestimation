@@ -8,7 +8,7 @@ Created on Fri Nov 27 13:44:59 2020
 import numpy as np
 
 def create_loss_jacobian(P_Load_state, P_line_mes, Q_line_mes, P_Load_meas, 
-                         Vsq_mes, path_to_all_nodes_list, R_line, X_line, LineData_Z_pu, V_est, 
+                         Vsq_mes, path_to_all_nodes_list, path_to_all_nodes, R_line, X_line, LineData_Z_pu, V_est, 
                          Pline_est, Qline_est, num_states, num_meas):
 
     ''' Loss based Jacobian'''
@@ -52,7 +52,7 @@ def create_loss_jacobian(P_Load_state, P_line_mes, Q_line_mes, P_Load_meas,
     grad_array, dict_for_v_derivatives = grad_pline_with_v0sq_loss(P_line_mes, 
                             Pline_est, Qline_est, R_line, LineData_Z_pu, V_est,  
                               path_to_all_nodes_list, dict_for_v_derivatives)
-
+    # grad_array = np.zeros((grad_array.shape))
     meas_rows = grad_array.shape[0]
     jacobian_loss_matrix[0:meas_rows, 2*state_cols:] = grad_array
     last_row_inserted = meas_rows
@@ -61,22 +61,26 @@ def create_loss_jacobian(P_Load_state, P_line_mes, Q_line_mes, P_Load_meas,
     grad_array, dict_for_v_derivatives = grad_pline_with_v0sq_loss(Q_line_mes, 
                             Pline_est, Qline_est, X_line, LineData_Z_pu, V_est,  
                               path_to_all_nodes_list, dict_for_v_derivatives)
-
+    # grad_array = np.zeros((grad_array.shape))
     jacobian_loss_matrix[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols:] = grad_array
     last_row_inserted = 2*meas_rows # didn't do -1 because then this can be used directly
     # below will help us to insert above calculated vals
     last_row_inserted = last_row_inserted + 2*len(V_est) # derivative of pbus and qbus is 0 wrt v0
-    
-    # jacobian for v^2 with p
+
+     # jacobian for v^2 with p
+    # grad_array = grad_vnode_with_p(Vsq_mes, P_Load_state, path_to_all_nodes, R_line)
+
     grad_array = grad_vnode_with_p_loss(Vsq_mes, P_Load_state, path_to_all_nodes_list, 
-                                   Pline_est, R_line, LineData_Z_pu, V_est, dict_for_pline_with_p_derivatives)
+                                    Pline_est, R_line, LineData_Z_pu, V_est, dict_for_pline_with_p_derivatives)
     meas_rows = grad_array.shape[0]
     state_cols = grad_array.shape[1]
     jacobian_loss_matrix[last_row_inserted:last_row_inserted + meas_rows, 0:state_cols] = grad_array
 
     # jacobian for v^2 with q
+    # grad_array = grad_vnode_with_p(Vsq_mes, P_Load_state, path_to_all_nodes, X_line)
     grad_array = grad_vnode_with_p_loss(Vsq_mes, P_Load_state, path_to_all_nodes_list, 
-                                   Qline_est, X_line, LineData_Z_pu, V_est, dict_for_qline_with_q_derivatives)
+                                    Qline_est, X_line, LineData_Z_pu, V_est, dict_for_qline_with_q_derivatives)
+
     jacobian_loss_matrix[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
 
     return jacobian_loss_matrix
