@@ -3,7 +3,7 @@ from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from some_funcs import refactor_estimates
 from jacobian_calc import create_loss_jacobian
 
-def se_wls(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_meas, path_to_all_nodes_list,
+def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_meas, path_to_all_nodes_list,
            Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None, 
            loss = None, pflow = None, lossy_volt_est = None):
     ''' Weighted Least Square Estimate'''

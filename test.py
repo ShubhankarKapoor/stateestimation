@@ -5,6 +5,7 @@ from jacobian_calc import create_jacobian
 from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
     stochastic_gradient_descent, stochastic_gradient_descent2, \
     WLeastSquaresRegressorTorch, cost
+from solvers_with_loss import se_wls_nonlin
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
@@ -98,7 +99,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 4 # 1
+num_plow_meas = 1 # 1
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -209,6 +210,11 @@ costsn = cost(x_estn, jacobian_matrix, z, W)
 ##############################################################################
 sum_residuals = np.sum(abs(residuals_mat[:,countsn-1]))
 results = results.T
+##############################################################################
+# a test for non linear based se
+x_estloss, emaxloss, countloss, residuals_matloss, delta_matloss, resultsloss = se_wls_nonlin(x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, path_to_all_nodes_list,
+           meas_V, R_line, X_line, LineData_Z_pu,  len(x_est), len(z), loss = loss, 
+           pflow = pflow, lossy_volt_est = lossy_volt_est)
 
 ##############################################################################
 ##############################################################################

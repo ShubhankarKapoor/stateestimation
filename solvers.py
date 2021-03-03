@@ -3,6 +3,7 @@ import time
 import torch
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from some_funcs import refactor_estimates
+from jacobian_calc import create_loss_jacobian
 # import some_funcs
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
