@@ -4,7 +4,7 @@ from some_funcs import refactor_estimates
 from jacobian_calc import create_loss_jacobian
 
 def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_meas, path_to_all_nodes_list,
-           Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None, 
+           path_to_all_nodes, Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None, 
            loss = None, pflow = None, lossy_volt_est = None):
     ''' Weighted Least Square Estimate'''
 
@@ -30,13 +30,13 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_mea
                                                                 x_est, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
         V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
                 P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow, max_iter=1)
-
+        # print(V_est[0])
         jacobian_matrix = create_loss_jacobian(P_Load_state, P_line_meas, 
-                    Q_line_mes, P_Load_meas, Vsq_mes, path_to_all_nodes_list, 
+                    Q_line_mes, P_Load_meas, Vsq_mes, path_to_all_nodes_list, path_to_all_nodes,
                     R_line, X_line, LineData_Z_pu, V_est, Pline_est, Qline_est, num_states, num_meas)
 
         G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
-        Ginv = np.linalg.inv(G)        
+        Ginv = np.linalg.inv(G)
 
         # calculate h(x)
         # some of these values should match fro, the above functions
@@ -45,23 +45,23 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_mea
 
         # calculate measurement residuals
         residuals = z - hx
-        residuals_mat[:,count] = residuals
+        # residuals_mat[:,count] = residuals
 
         # calculate deltax
         deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
         # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
-        delta_mat[:,count] = deltax
+        # delta_mat[:,count] = deltax
 
         # get tolerance
-        emax = np.max(deltax)
-
+        emax = np.max(np.abs(deltax))
+        # print(emax)
         # update values of state vars
         x_est = x_est + deltax
         results = np.vstack((results, x_est))
         count+=1
         # print(count)
 
-    return x_est, emax, count, residuals_mat, delta_mat, results
+    return x_est, emax, count, residuals_mat, delta_mat, results, jacobian_matrix
 
 # def cost(theta, H, y, W):
 #     '''
