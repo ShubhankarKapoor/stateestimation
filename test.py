@@ -111,7 +111,7 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[0])
+indices = np.asarray(combs[10])
 
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
@@ -133,7 +133,7 @@ if len(indices) !=0:
     corresponding_nodes = non_zib_index_array[indices]
 else:
     corresponding_nodes = np.asarray(())
-# unknown buses    
+# unknown buses
 not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
 not_considered_indices = np.setdiff1d(arr, indices)
 
