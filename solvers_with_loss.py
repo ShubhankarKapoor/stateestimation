@@ -4,7 +4,7 @@ from some_funcs import refactor_estimates
 from jacobian_calc import create_loss_jacobian
 
 def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_meas, path_to_all_nodes_list,
-           path_to_all_nodes, Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None, 
+           path_to_all_nodes, Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None,
            loss = None, pflow = None, lossy_volt_est = None):
     ''' Weighted Least Square Estimate'''
 
@@ -79,7 +79,7 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_mea
 #     # c = np.sum(np.square(Error) * np.diag(W))/ (m)
 #     return c
 
-# def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None, 
+# def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None,
 #                            loss = None, pflow = None, lossy_volt_est = None):
 #     '''
 #     returns array of thetas, cost of every iteration
