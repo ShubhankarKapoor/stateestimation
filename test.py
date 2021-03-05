@@ -213,7 +213,7 @@ results = results.T
 ##############################################################################
 # a test for non linear based se
 print('Implementing loss based')
-x_estloss, emaxloss, countloss, residuals_matloss, delta_matloss, resultsloss, jacobian_loss_matrix = se_wls_nonlin(
+x_estloss, emaxloss, countloss, residuals_mat_loss, delta_matloss, resultsloss, jacobian_loss_matrix = se_wls_nonlin(
     x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
     path_to_all_nodes_list, path_to_all_nodes, meas_V, R_line, X_line, 
     LineData_Z_pu,  len(x_est), len(z), loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)

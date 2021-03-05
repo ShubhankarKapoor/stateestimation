@@ -34,7 +34,7 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_mea
         jacobian_matrix = create_loss_jacobian(P_Load_state, P_line_meas, 
                     Q_line_mes, P_Load_meas, Vsq_mes, path_to_all_nodes_list, path_to_all_nodes,
                     R_line, X_line, LineData_Z_pu, V_est, Pline_est, Qline_est, num_states, num_meas)
-
+        # print(jacobian_matrix)
         G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
         Ginv = np.linalg.inv(G)
 
@@ -45,7 +45,7 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_mea
 
         # calculate measurement residuals
         residuals = z - hx
-        # residuals_mat[:,count] = residuals
+        residuals_mat[:,count] = residuals
 
         # calculate deltax
         deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
@@ -60,7 +60,7 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_mes, P_Load_state, P_Load_mea
         results = np.vstack((results, x_est))
         count+=1
         # print(count)
-
+        # break
     return x_est, emax, count, residuals_mat, delta_mat, results, jacobian_matrix
 
 # def cost(theta, H, y, W):
