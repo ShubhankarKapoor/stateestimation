@@ -166,20 +166,16 @@ def grad_pline_with_preceeding_v(pflow, qflow, lineres, v1):
     pflow/qflow : pflow/ qflow value
     lineres : resistance/ reactance of the line
     v1 : voltage of the preceeding node
-
     '''
 
-    return (lineres) * (pflow**2 + qflow**2) * (1/(v1**4))
-
-def grad_pline_with_v0sq_loss(P_line_meas, Pline_est, Qline_est, R_line, LineData_Z_pu, V_est,  
-                              path_to_all_nodes_list, dict_for_v_derivatives):
+    # double check this
 
     # val = -lineres * (pflow**2) * (1/(v1**2)) * grad_pline_with_succeeding_p(pflow, lineres, v1)
 
     # return val
     return (lineres) * (pflow**2 + qflow**2) * (1/(v1**4))
 
-def grad_pline_with_v0sq_loss(P_line_mes, Pline_est, Qline_est, R_line, LineData_Z_pu, V_est,  
+def grad_pline_with_v0sq_loss(P_line_meas, Pline_est, Qline_est, R_line, LineData_Z_pu, V_est,  
                               path_to_all_nodes_list, dict_for_v_derivatives, grad_var):
 
 
