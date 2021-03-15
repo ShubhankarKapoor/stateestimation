@@ -62,7 +62,7 @@ def create_loss_jacobian(P_Load_state, P_line_meas, Q_line_meas, P_Load_meas,
     # jacobain of qflow with v0^2
     grad_array, dict_for_v_derivatives = grad_pline_with_v0sq_loss(Q_line_meas, 
                             Pline_est, Qline_est, X_line, LineData_Z_pu, V_est,  
-                              path_to_all_nodes_list, dict_for_v_derivatives, grad_var = 'p')
+                              path_to_all_nodes_list, dict_for_v_derivatives, grad_var = 'q')
     # grad_array = np.zeros((grad_array.shape))
     jacobian_loss_matrix[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols:] = grad_array
     last_row_inserted = 2*meas_rows # didn't do -1 because then this can be used directly
@@ -234,7 +234,7 @@ def grad_pline_with_preceeding_pline(pflow, lineres, v1):
 
     '''
 
-    return 1 - (2*pflow*lineres)* (1/v1**2)
+    return 1 - (2*pflow*lineres)* (1/(v1**2))
 
 def grad_vnode_with_p_loss(Vsq_mes, P_Load_state, path_to_all_nodes_list,
                             Pline_est, R_line, LineData_Z_pu, V_est, dict_for_pline_with_p_derivatives):
