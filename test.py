@@ -36,6 +36,7 @@ est_lin = 1 # lindisflow or distflow depending on a few more params
 est_full_ac = 0
 comparison = 0
 
+# masurement set
 if data_lin == 1:
     [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
 
@@ -204,6 +205,7 @@ W_rr[not_considered_indices] = w22 # weights on unknown p_buses
 W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_buses
 W_rr[-1] = w3
 
+# GN-WLS
 x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 costsn = cost(x_estn, jacobian_matrix, z, W)
@@ -211,6 +213,7 @@ costsn = cost(x_estn, jacobian_matrix, z, W)
 sum_residuals = np.sum(abs(residuals_mat[:,countsn-1]))
 results = results.T
 ##############################################################################
+
 # a test for non linear based se
 print('Implementing loss based')
 x_estloss, emaxloss, countloss, residuals_matloss, delta_matloss, resultsloss, jacobian_loss_matrix = se_wls_nonlin(
