@@ -53,7 +53,7 @@ def create_loss_jacobian(P_Load_state, P_line_meas, Q_line_meas, P_Load_meas,
     # jacobain of pflow with v0^2
     grad_array, dict_for_v_derivatives = grad_pline_with_v0sq_loss(P_line_meas, 
                             Pline_est, Qline_est, R_line, LineData_Z_pu, V_est,  
-                              path_to_all_nodes_list, dict_for_v_derivatives)
+                              path_to_all_nodes_list, dict_for_v_derivatives, grad_var = 'p')
     # grad_array = np.zeros((grad_array.shape))
     meas_rows = grad_array.shape[0]
     jacobian_loss_matrix[0:meas_rows, 2*state_cols:] = grad_array
@@ -62,14 +62,14 @@ def create_loss_jacobian(P_Load_state, P_line_meas, Q_line_meas, P_Load_meas,
     # jacobain of qflow with v0^2
     grad_array, dict_for_v_derivatives = grad_pline_with_v0sq_loss(Q_line_meas, 
                             Pline_est, Qline_est, X_line, LineData_Z_pu, V_est,  
-                              path_to_all_nodes_list, dict_for_v_derivatives)
+                              path_to_all_nodes_list, dict_for_v_derivatives, grad_var = 'p')
     # grad_array = np.zeros((grad_array.shape))
     jacobian_loss_matrix[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols:] = grad_array
     last_row_inserted = 2*meas_rows # didn't do -1 because then this can be used directly
     # below will help us to insert above calculated vals
     last_row_inserted = last_row_inserted + 2*len(V_est) # derivative of pbus and qbus is 0 wrt v0
 
-     # jacobian for v^2 with p
+    # jacobian for v^2 with p
     # grad_array = grad_vnode_with_p(Vsq_mes, P_Load_state, path_to_all_nodes, R_line)
 
     grad_array = grad_vnode_with_p_loss(Vsq_mes, P_Load_state, path_to_all_nodes_list, 
@@ -93,7 +93,7 @@ def grad_pline_with_succeeding_p(lineflow, lineres, v1):
 
     lineflow : pflow/ qflow value
     lineres : resistance/ reactance of the line
-    v1 : voltage of the preceeding node
+    v1 : voltage sq of the preceeding node
 
     '''
     return 1/(1-(2*lineres*lineflow/v1))
@@ -107,7 +107,7 @@ def grad_pline_with_p_loss(P_line_meas, P_Load_state, path_to_all_nodes_list,
     for i , (k,v) in enumerate(P_line_meas.items()): # iterate over measurements line
         # break
         # print(i,k)
-        
+
         for j, node in enumerate(P_Load_state.keys()): # iterate over states node
             # print('Node:', node)
             if k in path_to_all_nodes_list[node]: # calculate the grad
@@ -134,14 +134,14 @@ def grad_v2_with_preceeding_v1(pflow, qflow, lineimp, v1):
 
     pflow/qflow : pflow/ qflow value
     lineimp : impedance of the line
-    v1 : voltage of the preceeding node
+    v1 : voltage sq of the preceeding node
 
     '''
-    return 1 + ((abs(lineimp)**2) * (pflow**2 + qflow**2) * (1/(v1**4)))
+    return 1 + ((abs(lineimp)**2) * (pflow**2 + qflow**2) * (1/(v1**2)))
 
 def grad_vsq_with_v0sq_loss(Vsq_mes, Pline_est, Qline_est, 
                                          LineData_Z_pu, V_est, path_to_all_nodes_list):
-    
+
     dict_for_v_derivatives = {} # so that don't have to recalculate
     grad_array = np.zeros((len(Vsq_mes),1))
     for i, (node,v) in enumerate(Vsq_mes.items()):
@@ -168,11 +168,21 @@ def grad_pline_with_preceeding_v(pflow, qflow, lineres, v1):
     v1 : voltage of the preceeding node
 
     '''
+<<<<<<< HEAD
 
     return (lineres) * (pflow**2 + qflow**2) * (1/(v1**4))
 
 def grad_pline_with_v0sq_loss(P_line_meas, Pline_est, Qline_est, R_line, LineData_Z_pu, V_est,  
                               path_to_all_nodes_list, dict_for_v_derivatives):
+=======
+    # val = -lineres * (pflow**2) * (1/(v1**2)) * grad_pline_with_succeeding_p(pflow, lineres, v1)
+
+    # return val
+    return (lineres) * (pflow**2 + qflow**2) * (1/(v1**4))
+
+def grad_pline_with_v0sq_loss(P_line_mes, Pline_est, Qline_est, R_line, LineData_Z_pu, V_est,  
+                              path_to_all_nodes_list, dict_for_v_derivatives, grad_var):
+>>>>>>> 8f2b98b8983d5c24f9be8fcfb13633a18ac78040
 
     grad_array = np.zeros((len(P_line_meas),1))
 
@@ -187,8 +197,12 @@ def grad_pline_with_v0sq_loss(P_line_meas, Pline_est, Qline_est, R_line, LineDat
             if pline_with_preceeding_v_flag == 0:
                 # print('only once',line)
                 pline_with_preceeding_v_flag = 1 # once the first grad is calculated differently
-                grad = grad *  grad_pline_with_preceeding_v(Pline_est[line], 
-                                Qline_est[line], R_line[line], V_est[line[0]])
+                if grad_var == 'p':
+                    grad = grad *  grad_pline_with_preceeding_v(Pline_est[line], Qline_est[line],
+                                 R_line[line], V_est[line[0]])
+                if grad_var == 'q':
+                    grad = grad *  grad_pline_with_preceeding_v(Pline_est[line], Qline_est[line],
+                                 R_line[line], V_est[line[0]])
             else:
                 try: # see if the voltage derivative val is already calculated
                     grad = grad * dict_for_v_derivatives[line]
@@ -208,11 +222,11 @@ def grad_vnode_with_preceeding_pline(pflow, lineres, lineimp, v1):
     pflow : pflow/ qflow value
     lineres : resistance/ reactance of the line
     lineimp : impedance of the line
-    v1 : voltage of the preceeding node (node i)
+    v1 : voltage sq of the preceeding node (node i)
 
     '''
     # grad vsq_j with pline_ij/ qline_ij
-    return -2*lineres + 2 * (abs(lineimp)**2) * pflow * (1/(v1**2))
+    return -2*lineres + 2 * (abs(lineimp)**2) * pflow * (1/v1)
 
 def grad_pline_with_preceeding_pline(pflow, lineres, v1):
     '''
@@ -221,10 +235,18 @@ def grad_pline_with_preceeding_pline(pflow, lineres, v1):
 
     pflow : pflow/qflow of ij (previous line)
     lineres : resistance/ reactance of the line
+<<<<<<< HEAD
     v1 : voltage of the preceeding node (node i)
     '''
 
     return 1 - (2*pflow*lineres)* (1/(v1**2))
+=======
+    v1 : voltage sq of the preceeding node (node i)
+
+    '''
+
+    return 1 - (2*pflow*lineres)* (1/v1**2)
+>>>>>>> 8f2b98b8983d5c24f9be8fcfb13633a18ac78040
 
 def grad_vnode_with_p_loss(Vsq_mes, P_Load_state, path_to_all_nodes_list,
                             Pline_est, R_line, LineData_Z_pu, V_est, dict_for_pline_with_p_derivatives):
@@ -236,7 +258,7 @@ def grad_vnode_with_p_loss(Vsq_mes, P_Load_state, path_to_all_nodes_list,
         for j, node_j in enumerate(P_Load_state.keys()): # state node
             # print(node_i, node_j)
             if len(reversed_ordered_path) == 0:
-                grad = 0 # it is 0 if for slack bus as there is no path
+                grad = 0 # it is 0 if for volt at slack bus as there is no path
             else: 
                 grad = 1
 
@@ -267,7 +289,7 @@ def grad_vnode_with_p_loss(Vsq_mes, P_Load_state, path_to_all_nodes_list,
                         grad = grad * dict_for_pline_with_preceeding_pline[line, preceding_line]
                     except KeyError: # when the voltage derivative value isn't in dict
                         grad_val = grad_pline_with_preceeding_pline(Pline_est[preceding_line], 
-                                                R_line[line], V_est[preceding_line[0]])
+                                                R_line[preceding_line], V_est[preceding_line[0]])
                         grad = grad * grad_val
                         dict_for_pline_with_preceeding_pline[line, preceding_line] = grad_val
             # print(node_i, node_j, grad)
