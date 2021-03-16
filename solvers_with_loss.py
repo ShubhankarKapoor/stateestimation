@@ -1,7 +1,7 @@
 import numpy as np
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from some_funcs import refactor_estimates
-from jacobian_calc import create_loss_jacobian
+from jacobian_calc import create_loss_jacobian, create_loss_jacobian_ass
 
 def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_meas, path_to_all_nodes_list,
            path_to_all_nodes, Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None,
@@ -67,7 +67,7 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
            path_to_all_nodes, Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None):
     ''' Weighted Least Square Estimate with assumptions on losses'''
 
-    tol = tol if tol is not None else 10e-12
+    tol = tol if tol is not None else 10e-15
 
     count = 0
     delta_mat = np.zeros((num_states, 1000)) # delta in states
@@ -87,9 +87,8 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
         # need sum of pbus and qbus for the meas line either here or in jacobian
         # I think good idea to do it here
         # print(V_est[0])
-        jacobian_matrix = create_loss_jacobian(P_Load_state, P_line_meas, 
-                    Q_line_meas, P_Load_meas, Vsq_mes, path_to_all_nodes_list, path_to_all_nodes,
-                    R_line, X_line, LineData_Z_pu, num_states, num_meas)
+        jacobian_matrix = create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
+                    Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas)
 
         G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
         Ginv = np.linalg.inv(G)
