@@ -8,8 +8,8 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
     else:
         from Network906 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase, R_line, X_line
 
-    loss = 0 if loss is None else loss # for voltage term
-    pflow = 0 if pflow is None else pflow # for pflow/qflow term
+    loss = 0 if loss is None else loss # for voltage loss term
+    pflow = 0 if pflow is None else pflow # for pflow/qflow loss term
     # giving an insanely high number below so it converges with tol when max_iters are missing
     max_iter = 10e12 if max_iter is None else max_iter # max iterations without considering tolerance  
 

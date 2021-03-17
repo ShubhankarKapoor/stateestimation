@@ -248,14 +248,19 @@ def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which,
     max_iter = 1 if max_iter is None else max_iter
     full_x_est, P_Load_est, Q_Load_est = refactor_estimates(tot_state_vars, x_est,
                                                                 non_zib_index, num_buses)
-    V_mag_con,_,_,S_line_con,_,_,e_max,k = BackwardForwardSweep(
-        P_Load_est,Q_Load_est,which, full_x_est[-1])
-    Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
+    est_full_ac =0 # manually assigning here for testing, get through func later
+    if est_full_ac == 1:
+        V_mag_con,_,_,S_line_con,_,_,e_max,k = BackwardForwardSweep(
+            P_Load_est,Q_Load_est,which, full_x_est[-1])
+        Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
+        P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
+        Q_line_con = {key:val.imag for key, val in S_line_con.items()}  
+    
+    est_lin = 1 # manually assigning here for testing, get through func later
+    if est_lin == 1:
+        Vsq_con, _, P_line_con, Q_line_con, _, e_max,k = LinDistFlowBackwardForwardSweep(
+            P_Load_est,Q_Load_est, which, full_x_est[-1], loss=1, pflow = 1)
 
-    # V_sq_est = dict(zip(meas_V.keys(), bbla[-10:])) # from h*x
-
-    P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
-    Q_line_con = {key:val.imag for key, val in S_line_con.items()}   
     meas_P_line_con = {k: P_line_con[k] for k in P_line_meas.keys()}
     meas_Q_line_con = {k: Q_line_con[k] for k in P_line_meas.keys()}
     meas_V_con = {k: Vsq_con[k] for k in Vsq_meas.keys()}
@@ -311,7 +316,7 @@ def bus_measurements_with_noise(P_Load, Q_Load, primary_branch_flow_p,
         Q_pseudo_meas = dict(sorted(Q_pseudo_meas.items()))
     else:
         P_pseudo_meas, Q_pseudo_meas = {}, {}
-    
+
     return P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas
 
 def countour_plot(w1, w2, theta, thetas, y, W, jacobian_matrix):
