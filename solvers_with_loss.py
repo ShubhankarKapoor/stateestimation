@@ -5,7 +5,7 @@ from jacobian_calc import create_loss_jacobian, create_loss_jacobian_ass
 from BackwardForwardSweep import BackwardForwardSweep
 
 def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_meas, path_to_all_nodes_list,
-           path_to_all_nodes, Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None,
+           path_to_all_nodes, Vsq_meas, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None,
            loss = None, pflow = None, lossy_volt_est = None):
     ''' Weighted Least Square Estimate'''
 
@@ -23,8 +23,9 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_me
     while emax > tol:
 
         # distflow backward sweep for calculating measurements
-
-        # distflow forward sweep for calculating measurements
+        # hx = measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, 
+        #                         which, non_zib_index, len(P_Load_meas), lossy_volt_est['tot_states'])
+        # # distflow forward sweep for calculating measurements
 
         # voltage/ pflow loss feedback
         full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
@@ -33,7 +34,7 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_me
                 P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow, max_iter=1)
         # print(V_est[0])
         jacobian_matrix = create_loss_jacobian(P_Load_state, P_line_meas, 
-                    Q_line_meas, P_Load_meas, Vsq_mes, path_to_all_nodes_list, path_to_all_nodes,
+                    Q_line_meas, P_Load_meas, Vsq_meas, path_to_all_nodes_list, path_to_all_nodes,
                     R_line, X_line, LineData_Z_pu, V_est, Pline_est, Qline_est, num_states, num_meas)
         # print(jacobian_matrix)
         G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
@@ -81,15 +82,17 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
     emax = 100 # chosen higher than the tol
 
     while emax > tol:
-        
-        P_Load_est = dict(zip(P_Load_state.keys(), x_est[0:len(P_Load_state)]))
-        Q_Load_est = dict(zip(P_Load_state.keys(), x_est[len(P_Load_state):2*len(P_Load_state)]))
 
+        # to reconstruct the measurement f(x)
         # distflow backward sweep for calculating measurements
         hx = measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, 
-                                which, non_zib_index, len(P_Load_meas), tot_state_vars, max_iter=1)
+                                which, non_zib_index, len(P_Load_meas), tot_state_vars)
         # distflow forward sweep for calculating measurements
 
+        # used in jacobian calc
+        P_Load_est = dict(zip(P_Load_state.keys(), x_est[0:len(P_Load_state)]))
+        Q_Load_est = dict(zip(P_Load_state.keys(), x_est[len(P_Load_state):2*len(P_Load_state)]))
+        
         jacobian_matrix = create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
                     Vsq_meas, R_line, X_line, LineData_Z_pu, num_states, num_meas)
 
