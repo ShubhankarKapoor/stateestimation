@@ -83,10 +83,10 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # using Full AC Network
         if est_full_ac == 1:
             [V_mag_con,_,_,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est,
-                    Q_Load_est, which, full_x_est[-1], max_iter=1)
+                    Q_Load_est, which, full_x_est[-1])
             Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
             V_con = Vsq_con
-
+            # V_sq_est = dict(zip(meas_V.keys(), bbla[-10:])) # from h*x
             # when running full network
             P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
             Q_line_con = {key:val.imag for key, val in S_line_con.items()} # reactancce of every line
@@ -241,6 +241,29 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
         P_pseudo_meas, Q_pseudo_meas = {}, {}
 
     return P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, V_known_meas
+
+def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which, 
+                                       non_zib_index, num_buses, tot_state_vars, max_iter=None):
+    
+    max_iter = 1 if max_iter is None else max_iter
+    full_x_est, P_Load_est, Q_Load_est = refactor_estimates(tot_state_vars, x_est,
+                                                                non_zib_index, num_buses)
+    V_mag_con,_,_,S_line_con,_,_,e_max,k = BackwardForwardSweep(
+        P_Load_est,Q_Load_est,which, full_x_est[-1])
+    Vsq_con =  {key:val**2 for key, val in V_mag_con.items()} # square of V_mag
+
+    # V_sq_est = dict(zip(meas_V.keys(), bbla[-10:])) # from h*x
+
+    P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
+    Q_line_con = {key:val.imag for key, val in S_line_con.items()}   
+    meas_P_line_con = {k: P_line_con[k] for k in P_line_meas.keys()}
+    meas_Q_line_con = {k: Q_line_con[k] for k in P_line_meas.keys()}
+    meas_V_con = {k: Vsq_con[k] for k in Vsq_meas.keys()}
+
+    hx = np.asarray(list(meas_P_line_con.values()) + list(meas_Q_line_con.values()) + 
+               list(P_Load_est.values()) + list(Q_Load_est.values()) + list(meas_V_con.values())) # meas set
+
+    return hx
 
 def bus_measurements_with_noise(P_Load, Q_Load, primary_branch_flow_p, 
                      primary_branch_flow_q, non_zib_index, zib_index, 
