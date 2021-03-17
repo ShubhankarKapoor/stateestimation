@@ -1,7 +1,8 @@
 import numpy as np
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
-from some_funcs import refactor_estimates
+from some_funcs import refactor_estimates, measurements_estimated_from_states
 from jacobian_calc import create_loss_jacobian, create_loss_jacobian_ass
+from BackwardForwardSweep import BackwardForwardSweep
 
 def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_meas, path_to_all_nodes_list,
            path_to_all_nodes, Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None,
@@ -64,8 +65,12 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_me
     return x_est, emax, count, residuals_mat, delta_mat, results, jacobian_matrix
 
 def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_meas, path_to_all_nodes_list,
-           path_to_all_nodes, Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, tol = None):
-    ''' Weighted Least Square Estimate with assumptions on losses'''
+           path_to_all_nodes, non_zib_index, Vsq_meas, R_line, X_line, LineData_Z_pu, 
+           num_states, num_meas, tot_state_vars, which, tol = None):
+    ''' Weighted Least Square Estimate with assumptions on losses
+        num_states: state vars being estimated
+        tot_state_vars: state vars being estimated + zib buses
+    '''
 
     tol = tol if tol is not None else 10e-15
 
@@ -76,19 +81,17 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
     emax = 100 # chosen higher than the tol
 
     while emax > tol:
-
-        # distflow backward sweep for calculating measurements
-
-        # distflow forward sweep for calculating measurements
         
         P_Load_est = dict(zip(P_Load_state.keys(), x_est[0:len(P_Load_state)]))
         Q_Load_est = dict(zip(P_Load_state.keys(), x_est[len(P_Load_state):2*len(P_Load_state)]))
 
-        # need sum of pbus and qbus for the meas line either here or in jacobian
-        # I think good idea to do it here
-        # print(V_est[0])
+        # distflow backward sweep for calculating measurements
+        hx = measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, 
+                                which, non_zib_index, len(P_Load_meas), tot_state_vars, max_iter=1)
+        # distflow forward sweep for calculating measurements
+
         jacobian_matrix = create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
-                    Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas)
+                    Vsq_meas, R_line, X_line, LineData_Z_pu, num_states, num_meas)
 
         G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
         Ginv = np.linalg.inv(G)
@@ -96,7 +99,7 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
         # calculate h(x)
         # some of these values should match fro, the above functions
         # good way to check it
-        hx = np.matmul(jacobian_matrix, x_est)
+        # hx = np.matmul(jacobian_matrix, x_est)
 
         # calculate measurement residuals
         residuals = z - hx

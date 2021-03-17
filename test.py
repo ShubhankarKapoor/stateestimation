@@ -222,10 +222,13 @@ x_estloss, emaxloss, countloss, residuals_mat_loss, delta_matloss, resultsloss, 
     LineData_Z_pu,  len(x_est), len(z), loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsloss = cost(x_estloss, jacobian_matrix, z, W)
 
+
+###############################################################################
+###############################################################################
 print('Implementing loss based with a few assumptions')
 x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
     x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, path_to_all_nodes_list,
-           path_to_all_nodes, meas_V, R_line, X_line, LineData_Z_pu,  len(x_est), len(z))
+           path_to_all_nodes, non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
 ##############################################################################
 ##############################################################################
 # Running the gradient Algorithm
