@@ -95,7 +95,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
                 full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
                                                                         x_est, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
                 V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
-                        P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow)
+                        P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow, max_iter=1)
 
                 # update the pline/qline
                 Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
