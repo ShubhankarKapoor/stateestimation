@@ -78,8 +78,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # Regenerated measurements using the estimated states
         if est_lin == 1: # reconstruction using lindist or distflow depending on loss and pflow vals
             [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
-                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow, max_iter=1) # using lindistflow
- 
+                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow) # using lindistflow
+            # print('lin')
         # using Full AC Network
         if est_full_ac == 1:
             [V_mag_con,_,_,S_line_con,_,_,e_max,k] = BackwardForwardSweep(P_Load_est,
@@ -90,7 +90,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
             # when running full network
             P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
             Q_line_con = {key:val.imag for key, val in S_line_con.items()} # reactancce of every line
-
+            # print('full')
         # error calc between measurements
         # V_mag^2 and V_mag error
         errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
