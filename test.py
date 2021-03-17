@@ -190,7 +190,7 @@ jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_t
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
 # to include non linear voltage feedback and pflow/qflow
-loss, pflow = 1, 0
+loss, pflow = 1, 1
 lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
                   'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys(),
                   'plines':meas_P_line.keys()}
@@ -215,11 +215,11 @@ results = results.T
 ##############################################################################
 
 # a test for non linear based se
-print('Implementing loss based')
-x_estloss, emaxloss, countloss, residuals_mat_loss, delta_matloss, resultsloss, jacobian_loss_matrix = se_wls_nonlin(
-    x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
-    path_to_all_nodes_list, path_to_all_nodes, meas_V, R_line, X_line, 
-    LineData_Z_pu,  len(x_est), len(z), loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+# print('Implementing loss based')
+# x_estloss, emaxloss, countloss, residuals_mat_loss, delta_matloss, resultsloss, jacobian_loss_matrix = se_wls_nonlin(
+#     x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
+#     path_to_all_nodes_list, path_to_all_nodes, meas_V, R_line, X_line, 
+#     LineData_Z_pu,  len(x_est), len(z), loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsloss = cost(x_estloss, jacobian_matrix, z, W)
 
 
@@ -272,14 +272,14 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 
 # the following function is used when the states are non zib buses
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), 1, 0, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-print('GN-WLS based on non-linear jacobian')
-error_calc_refactor(x, x_estloss, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = loss, pflow = pflow) # non linear GN WLS
+# print('GN-WLS based on non-linear jacobian')
+# error_calc_refactor(x, x_estloss, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+#                         which, V, V_mag, loss = loss, pflow = pflow) # non linear GN WLS
 print('GN-WLS based on non-linear with ass')
-error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = loss, pflow = pflow) # non linear GN with assumption
+error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), 1, 0, 
+                        which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
 # print('GD-WLS based on linear jacobian with no feedback/ feedback')
 # error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
 #                         which, V, V_mag, loss = loss, pflow = pflow) # for self GD
