@@ -268,7 +268,7 @@ def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which,
     hx = np.asarray(list(meas_P_line_con.values()) + list(meas_Q_line_con.values()) + 
                list(P_Load_est.values()) + list(Q_Load_est.values()) + list(meas_V_con.values())) # meas set
 
-    return hx
+    return hx, full_x_est, P_Load_est, Q_Load_est, Vsq_con, P_line_con, Q_line_con
 
 def bus_measurements_with_noise(P_Load, Q_Load, primary_branch_flow_p, 
                      primary_branch_flow_q, non_zib_index, zib_index, 

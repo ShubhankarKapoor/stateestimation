@@ -71,7 +71,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
     # some preprocessing for time saving during iterative newton method
     G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
     # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
-    Ginv = np.linalg.inv(G)
+    Ginv = np.linalg.inv(G) # constant because jacobian is constant
 
     count = 0
     delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
@@ -91,7 +91,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
 
         # voltage/ pflow loss feedback
         if loss == 1 or pflow == 1: # voltage feedback using non linear estimates
-            if len(lossy_volt_est) == 6:
+            if len(lossy_volt_est) == 6: # to make sure lossy_volt_est has all info
                 full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
                                                                         x_est, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
                 V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
