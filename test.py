@@ -28,12 +28,12 @@ else:
     I think everything should work without changing anything: needs testing
 '''
 
-# measurement set
+# model for measurement set
 data_lin = 0
 data_full_ac = 1
-# reconstruction set
-est_lin = 0 # lindisflow or distflow depending on a few more params
-est_full_ac = 1
+# model used for reconstruction set
+est_lin = 1 # lindisflow or distflow depending on a few more params
+est_full_ac = 0
 comparison = 0
 
 # masurement set
@@ -113,8 +113,10 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[8])
-
+indices = np.asarray(combs[9])
+# ----->>> full loss based system works most of the cases.
+# ----->>> might be a small bug in code or jacobian calc. worth checking
+# ----->>> an example when i = 8,  combs=5
 # 37
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
@@ -216,11 +218,11 @@ results = results.T
 ##############################################################################
 
 # a test for non linear based se
-# print('Implementing loss based')
-# x_estloss, emaxloss, countloss, residuals_mat_loss, delta_matloss, resultsloss, jacobian_loss_matrix = se_wls_nonlin(
-#     x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
-#     path_to_all_nodes_list, path_to_all_nodes, meas_V, R_line, X_line, 
-#     LineData_Z_pu,  len(x_est), len(z), loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+print('Implementing loss based')
+x_estloss, emaxloss, countloss, residuals_mat_loss, delta_matloss, resultsloss, jacobian_loss_matrix = se_wls_nonlin(
+    x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
+    path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
+    X_line, LineData_Z_pu,  len(x_est), len(z), which, lossy_volt_est = lossy_volt_est)
 # costsloss = cost(x_estloss, jacobian_matrix, z, W)
 
 
@@ -269,17 +271,17 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 # print('Final Cost', costsn, costsb[-1], regr.history[-1])
 ###############################################################################
 ##############################################################################
-# Error Calculations
+# Error Calculations with reconstructing meas
 
 # the following function is used when the states are non zib buses
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), 1, 0, 
+error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-# print('GN-WLS based on non-linear jacobian')
-# error_calc_refactor(x, x_estloss, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-#                         which, V, V_mag, loss = loss, pflow = pflow) # non linear GN WLS
+print('GN-WLS based on non-linear jacobian')
+error_calc_refactor(x, x_estloss, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = 1, pflow = 1) # non linear GN WLS
 print('GN-WLS based on non-linear with ass')
-error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), 1, 0, 
+error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
 # print('GD-WLS based on linear jacobian with no feedback/ feedback')
 # error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 

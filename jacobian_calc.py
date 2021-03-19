@@ -18,8 +18,8 @@ def create_loss_jacobian(P_Load_state, P_line_meas, Q_line_meas, P_Load_meas,
     jacobian_loss_matrix = np.zeros((num_meas, num_states))
 
     # jacobian for pline wrt p
-    grad_array, grad_array2, dict_for_pline_with_p_derivatives = grad_pline_with_p_loss(P_line_meas, P_Load_state, path_to_all_nodes_list, 
-                           R_line, Pline_est, V_est)
+    grad_array, grad_array2, dict_for_pline_with_p_derivatives = grad_pline_with_p_loss(P_line_meas, 
+                    P_Load_state, path_to_all_nodes_list, R_line, Pline_est, V_est)
     meas_rows = grad_array.shape[0]
     state_cols = grad_array.shape[1]
     jacobian_loss_matrix[0:meas_rows, 0:state_cols] = grad_array
@@ -173,7 +173,7 @@ def grad_pline_with_preceeding_v(pflow, qflow, lineres, v1):
     # val = -lineres * (pflow**2) * (1/(v1**2)) * grad_pline_with_succeeding_p(pflow, lineres, v1)
 
     # return val
-    return (lineres) * (pflow**2 + qflow**2) * (1/(v1**4))
+    return (lineres) * (pflow**2 + qflow**2) * (1/(v1**2))
 
 def grad_pline_with_v0sq_loss(P_line_meas, Pline_est, Qline_est, R_line, LineData_Z_pu, V_est,  
                               path_to_all_nodes_list, dict_for_v_derivatives, grad_var):
@@ -268,6 +268,7 @@ def grad_vnode_with_p_loss(Vsq_mes, P_Load_state, path_to_all_nodes_list,
                     # print('pl with p')
                     # grad pline with pbus, use the previous values calculated
                     # all the keys should exist
+                    # all the keys will only exist if you have pflow in your meas else not
                     grad = grad * dict_for_pline_with_p_derivatives[(line),node_j]
                 else: # gradient of pline with preceeding line
                     # print('pl with pl')    

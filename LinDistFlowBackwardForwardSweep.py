@@ -66,14 +66,14 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
                 # if no loss included in pflow/ qflow
                 P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
                 Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
-                # can have another if here to make pflow/qflow loss optional
+
                 if pflow == 1: # pflow/qflow loss term
                     current_sq = (P_line[bus_arcs[i]["To"][0]]**2 + Q_line[bus_arcs[i]["To"][0]]**2)* (1/V[i])
                     loss_term_p = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].real
                     loss_term_q = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].imag
                     P_line[bus_arcs[i]["To"][0]] = P_line[bus_arcs[i]["To"][0]] + loss_term_p
                     Q_line[bus_arcs[i]["To"][0]] = Q_line[bus_arcs[i]["To"][0]] + loss_term_q                
-            
+
             #Forward sweep
             if loss == 1: # voltage loss term
                 for (i,j) in LineData_Z_pu.keys():
@@ -82,7 +82,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
             else: # no loss term in voltagw
                 for (i,j) in LineData_Z_pu.keys():
                     V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)])
-        
+
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
     Vmag = {key:np.sqrt(val) for key, val in V.items()} # sqrt of mag
