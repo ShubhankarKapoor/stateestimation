@@ -126,7 +126,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
         results = np.vstack((results, x_est))
         count+=1
         # print(count)
-    
+
     return x_est, emax, count, residuals_mat, delta_mat, results
 
 def se_wrr(x_est, z, jacobian_matrix, W, k, tol = None):
@@ -134,12 +134,12 @@ def se_wrr(x_est, z, jacobian_matrix, W, k, tol = None):
         Weighted Ridge Regression
     '''
     k = k if k is not None else 0 # 0 makes it wls
-    
+
     # some preprocessing for time saving during iterative newton method
     G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix) + k * np.diag(np.ones((len(x_est))))
     # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
     Ginv = np.linalg.inv(G)
-    
+
     count = 0
     delta_mat = np.zeros((jacobian_matrix.shape[1], 5000)) # delta in states
     residuals_mat = np.zeros((jacobian_matrix.shape[0], 5000)) # meas residuals
@@ -173,7 +173,7 @@ def se_wrr(x_est, z, jacobian_matrix, W, k, tol = None):
         results = np.vstack((results, x_est))
         count+=1
         # print(count)
-    
+
     return x_est, emax, count, residuals_mat, delta_mat, results
 
 def se_rr(x_est, z, jacobian_matrix, W_rr, k = None, tol = None):
@@ -220,7 +220,7 @@ def se_rr(x_est, z, jacobian_matrix, W_rr, k = None, tol = None):
         x_est = x_est + deltax
         results = np.vstack((results, x_est))
         count+=1
-    
+
     return x_est, emax, count, residuals_mat, delta_mat, results
 
 def cost(theta, H, y, W):
@@ -233,7 +233,7 @@ def cost(theta, H, y, W):
     m = len(y)
     # m = 1 # for SGD
     # Calculating Cost
-                    # Loss
+    # Loss
     Error = H.dot(theta)-y
     c = (1/(2*m)) * np.sum(np.square(Error) * W)
     # c = np.sum(np.square(Error) * np.diag(W))/ (m)
@@ -257,7 +257,7 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None,
     pflow = pflow if pflow is not None else 0
     lossy_volt_est = lossy_volt_est if lossy_volt_est is not None else {}
     # Initializing cost and theta's arrays with zeroes.
-    
+
     # thetas = theta # to store result every iter
     costs = []
     count = 0
@@ -277,20 +277,20 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None,
                                                                         theta, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
                 V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
                         P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow, max_iter=1)
-    
+
                 # update the pline/qline
                 Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
                 Qline_known_meas = {k:Qline_est[k] for k in lossy_volt_est['plines']} # get qflow vals for known measurements
                 estimates[0:len(Pline_known_meas)]=list(Pline_known_meas.values()) # update values
                 estimates[len(Pline_known_meas):2*len(Pline_known_meas)]=list(Qline_known_meas.values()) # update values
-                
+
                 # update the voltage value for buses with measurements
                 V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements            
                 # print('max volt diff', max(abs(np.asarray(estimates[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
                 estimates[-len(V_known_meas):]=list(V_known_meas.values()) # update values
             else:
                 raise ValueError('Length of lossy_volt_est should be 6')
-                
+
         residuals = estimates -y
         w_residuals = np.dot(W, residuals) # weighted residuals
         gradient = 1/m*(np.dot(H.T, w_residuals)) # this is correct
@@ -371,7 +371,7 @@ class WLeastSquaresRegressorTorch():
     def fit(self, H, y, W, x_est=None):
 
         n_instances, n_features = H.shape
-        
+
         # we need to "wrap" the NumPy arrays H and y as PyTorch tensors
         Ht = torch.tensor(H, dtype=torch.double)
         Yt = torch.tensor(y, dtype=torch.double)
@@ -397,16 +397,16 @@ class WLeastSquaresRegressorTorch():
         # adagrad descent
         # optimizer = torch.optim.Adagrad([self.x_est], lr=self.eta, 
         #                                 lr_decay=0, weight_decay=0, initial_accumulator_value=0, eps=1e-10)
-        
+
         # optimizer = torch.optim.RMSprop([self.x_est], lr=self.eta, 
         #     alpha=0.99, eps=1e-08, weight_decay=0, momentum=0, centered=False)
         # adam decent
         # optimizer = torch.optim.Adam([self.x_est], lr=self.eta)
-        
+
         for i in range(self.n_iter):
-            
+
             total_loss = 0
-            
+
             for batch_start in range(0, n_instances, self.batch_size):
                 batch_end = batch_start + self.batch_size
 
@@ -416,7 +416,7 @@ class WLeastSquaresRegressorTorch():
                 Wbatch = Wt[batch_start:batch_end,batch_start:batch_end]
                 # mv = matrix-vector multiplication in Torch
                 G = Hbatch.mv(x_est)
-              
+
                 # Loss
                 Error = (G - Ybatch)
                 # loss_batch = torch.sum((Error**2) * torch.diagonal(Wbatch)) / len(Ybatch)
