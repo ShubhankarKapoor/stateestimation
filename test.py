@@ -92,6 +92,7 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 # random initialization of state vars instead of above
 torch.manual_seed(0)
 x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
+x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
