@@ -92,7 +92,7 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 # random initialization of state vars instead of above
 torch.manual_seed(0)
 x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
-x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
+# x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
@@ -121,7 +121,7 @@ indices = np.asarray(combs[8])
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
 
-# indices = np.asarray(()) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+# indices = np.asarray((0,   1,  2,  3,  4,  5,  6,  7,  8,  9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 
 # 906
 # [ 34, 70, 73, 74, 225, 289, 349, 387, 388, 502, 562, 563, 611, 629, 817, 860, 861, 896, 898, 900, 906]
@@ -192,12 +192,6 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
                                   meas_V, R_line, X_line, len(x_est), len(z))
 
-# to include non linear voltage feedback and pflow/qflow
-loss, pflow = 1, 1
-lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
-                  'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys(),
-                  'plines':meas_P_line.keys()}
-
 # run WLS/OLS SE
 k_range = np.arange(1,1.6,0.1)
 # for coeff in k_range:
@@ -209,6 +203,41 @@ W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_b
 W_rr[-1] = w3
 
 # GN-WLS
+lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
+                  'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys(),
+                  'plines':meas_P_line.keys()}
+###############################################################################
+###############################################################################
+# to include non linear voltage feedback and pflow/qflow
+loss, pflow = 0, 0
+# LinDist
+x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
+    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+costsn = cost(x_estn, jacobian_matrix, z, W)
+print('GN-WLS based on linear jacobian with no feedback/ feedback')
+error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+###############################################################################
+loss, pflow = 1, 0
+# LinDist + Voltage Feedback
+x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
+    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+costsn = cost(x_estn, jacobian_matrix, z, W)
+print('GN-WLS based on linear jacobian with no feedback/ feedback')
+error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+###############################################################################
+loss, pflow = 0, 1
+# LinDist + Pflow Feedback
+x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
+    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+costsn = cost(x_estn, jacobian_matrix, z, W)
+print('GN-WLS based on linear jacobian with no feedback/ feedback')
+error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+###############################################################################
+loss, pflow = 1, 1
+# LinDist + Voltage & Pflow Feedback
 x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 costsn = cost(x_estn, jacobian_matrix, z, W)
@@ -218,11 +247,11 @@ results = results.T
 ##############################################################################
 
 # a test for non linear based se
-print('Implementing loss based')
-x_estloss, emaxloss, countloss, residuals_mat_loss, delta_matloss, resultsloss, jacobian_loss_matrix = se_wls_nonlin(
-    x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
-    path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
-    X_line, LineData_Z_pu,  len(x_est), len(z), which, lossy_volt_est = lossy_volt_est)
+# print('Implementing loss based')
+# x_estloss, emaxloss, countloss, residuals_mat_loss, delta_matloss, resultsloss, jacobian_loss_matrix = se_wls_nonlin(
+#     x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
+#     path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
+#     X_line, LineData_Z_pu,  len(x_est), len(z), which, lossy_volt_est = lossy_volt_est)
 # costsloss = cost(x_estloss, jacobian_matrix, z, W)
 
 
@@ -275,13 +304,13 @@ lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
 
 # the following function is used when the states are non zib buses
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+vec_v_n, vec_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-print('GN-WLS based on non-linear jacobian')
-error_calc_refactor(x, x_estloss, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = 1, pflow = 1) # non linear GN WLS
+# print('GN-WLS based on non-linear jacobian')
+# error_calc_refactor(x, x_estloss, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+#                         which, V, V_mag, loss = 1, pflow = 1) # non linear GN WLS
 print('GN-WLS based on non-linear with ass')
-error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+vec_v_la, vec_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
 # print('GD-WLS based on linear jacobian with no feedback/ feedback')
 # error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
@@ -290,6 +319,16 @@ error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_a
 #                         which, V, V_mag) # for pytorch GD
 ##############################################################################
 ##############################################################################
+# plt.figure()
+# plt.plot(dist_vec_v_n, label = 'percentage error with feedback')
+# plt.plot(dist_vec_v_la, label = 'percentage error with loss')
+# plt.title('Voltage error for one missing meas for all nodes')
+# plt.legend()
+# plt.figure()
+# plt.plot(dist_vec_p_n, label = 'percentage error with feedback')
+# plt.plot(dist_vec_p_la, label = 'percentage error with loss')
+# plt.title('P Bus error for one missing meas for all nodes')
+# plt.legend()
 # error calc between lindistflow and full AC
 if comparison == 1:
     p_err, p_mean_err, p_max_err, p_max_err_abs, _ = error_calc(np.array(list(P_line2.values())), np.array(list(P_line.values())))
