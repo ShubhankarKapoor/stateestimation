@@ -109,6 +109,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
                 hx[-len(V_known_meas):]=list(V_known_meas.values()) # update values
             else:
                 raise ValueError('Length of lossy_volt_est should be 6')
+            # print(k)
         # calculate measurement residuals
         residuals = z - hx
         residuals_mat[:,count] = residuals

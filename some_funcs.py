@@ -106,7 +106,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
     # else:
     #     return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
     #            errperc_vectorp, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
-
+    return errperc_vector_vmag, errperc_vectorp
 def noise_addition(z, sd, mu = None):
 
     mu = mu if mu is not None else 0
@@ -259,7 +259,7 @@ def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which,
     est_lin = 1 # manually assigning here for testing, get through func later
     if est_lin == 1:
         Vsq_con, _, P_line_con, Q_line_con, _, e_max,k = LinDistFlowBackwardForwardSweep(
-            P_Load_est,Q_Load_est, which, full_x_est[-1], loss=1, pflow = 1)
+            P_Load_est,Q_Load_est, which, full_x_est[-1], loss=1, pflow = 1, max_iter = 10e12)
 
     meas_P_line_con = {k: P_line_con[k] for k in P_line_meas.keys()}
     meas_Q_line_con = {k: Q_line_con[k] for k in P_line_meas.keys()}
