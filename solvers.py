@@ -73,6 +73,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
     # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
     Ginv = np.linalg.inv(G) # constant because jacobian is constant
 
+    costs = []
     count = 0
     delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
     residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
@@ -80,7 +81,9 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
     emax = 100 # chosen higher than the tol
 
     while emax > tol:
-
+        
+        cur_cost = cost(x_est, jacobian_matrix, z, W)
+        costs.append(cur_cost)
         # distflow backward sweep for calculating measurements
 
         # distflow forward sweep for calculating measurements
@@ -120,7 +123,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
         delta_mat[:,count] = deltax
 
         # get tolerance
-        emax = np.max(deltax)
+        emax = np.max(np.abs(deltax))
 
         # update values of state vars
         x_est = x_est + deltax
@@ -128,7 +131,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
         count+=1
         # print(count)
 
-    return x_est, emax, count, residuals_mat, delta_mat, results
+    return x_est, emax, count, residuals_mat, delta_mat, results, costs
 
 def se_wrr(x_est, z, jacobian_matrix, W, k, tol = None):
     ''' Weighted Least Square Estimate with L2 regularisation OR
@@ -277,7 +280,7 @@ def batch_gradient_descent(H, y, theta, W, lr, iterations, tol = None,
                 full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
                                                                         theta, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
                 V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
-                        P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow, max_iter=1)
+                        P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow, max_iter=10e12)
 
                 # update the pline/qline
                 Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
