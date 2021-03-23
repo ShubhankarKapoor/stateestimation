@@ -101,7 +101,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 1 # 1
+num_plow_meas = 0 # 1
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -278,8 +278,8 @@ costsb.extend(costsbb)
 print('final cost', costsn[-1], costsb[-1])
 print('BGD-WLS based on linear jacobian with no feedback/ feedback')
 
-# _, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-#                         which, V, V_mag, loss = loss, pflow = pflow) # for self GD
+_, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = loss, pflow = pflow) # for self GD
 # countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
 
 # Running Stochastic Gradient Descent
