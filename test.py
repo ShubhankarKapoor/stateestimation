@@ -92,7 +92,7 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 # random initialization of state vars instead of above
 torch.manual_seed(0)
 x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
-# x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
+x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
@@ -121,7 +121,7 @@ indices = np.asarray(combs[8])
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
 
-# indices = np.asarray((0,   1,  2,  3,  4,  5,  6,  7,  8,  9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+# indices = np.asarray((   3,  4,    6,  7,   9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 
 # 906
 # [ 34, 70, 73, 74, 225, 289, 349, 387, 388, 502, 562, 563, 611, 629, 817, 860, 861, 896, 898, 900, 906]
@@ -211,36 +211,36 @@ lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index,
 # to include non linear voltage feedback and pflow/qflow
 loss, pflow = 0, 0
 # LinDist
-x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
+x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-costsn = cost(x_estn, jacobian_matrix, z, W)
+# costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
 error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 ###############################################################################
 loss, pflow = 1, 0
 # LinDist + Voltage Feedback
-x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
+x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-costsn = cost(x_estn, jacobian_matrix, z, W)
+# costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
 error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 ###############################################################################
 loss, pflow = 0, 1
 # LinDist + Pflow Feedback
-x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
+x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-costsn = cost(x_estn, jacobian_matrix, z, W)
+# costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
 error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 ###############################################################################
 loss, pflow = 1, 1
 # LinDist + Voltage & Pflow Feedback
-x_estn, emax, countsn, residuals_mat, delta_mat, results = se_wls(
+x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-costsn = cost(x_estn, jacobian_matrix, z, W)
+# costsn = cost(x_estn, jacobian_matrix, z, W)
 ##############################################################################
 sum_residuals = np.sum(abs(residuals_mat[:,countsn-1]))
 results = results.T
@@ -264,14 +264,22 @@ x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobia
 ##############################################################################
 ##############################################################################
 # Running the gradient Algorithm
-lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
+costsb, tot_iters = [], 0
+##############################################################################
+lr, iterations, = 0.1, 300 # Learning Rate and Number of iterations
 
 # x_est=x_estb
 # Batch Gradient Descent
-# print('Running BGD')
-# x_estb, thetasb, costsb, countsb, emaxb = batch_gradient_descent(
-#     jacobian_matrix, z, x_est, W, lr, iterations, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+print('Running BGD')
+x_estb, thetasb, costsbb, countsb, emaxb = batch_gradient_descent(
+    jacobian_matrix, z, x_est, W, lr, iterations, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+tot_iters+=iterations
+costsb.extend(costsbb)
+print('final cost', costsn[-1], costsb[-1])
+print('BGD-WLS based on linear jacobian with no feedback/ feedback')
 
+# _, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+#                         which, V, V_mag, loss = loss, pflow = pflow) # for self GD
 # countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
 
 # Running Stochastic Gradient Descent
@@ -313,10 +321,20 @@ print('GN-WLS based on non-linear with ass')
 vec_v_la, vec_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
 # print('GD-WLS based on linear jacobian with no feedback/ feedback')
-# error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-#                         which, V, V_mag, loss = loss, pflow = pflow) # for self GD
+print('BGD-WLS based on linear jacobian with no feedback/ feedback')
+_, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = loss, pflow = pflow) # for self GD
 # error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
 #                         which, V, V_mag) # for pytorch GD
+##############################################################################
+##############################################################################
+# plt.figure()
+# plt.plot(costsn, label = 'GN method')
+# plt.plot(costsb, label = 'GD method')
+# plt.title('cost func value for diff solvers')
+# plt.xlabel('Number of iterations')
+# plt.ylabel('cost val')
+
 ##############################################################################
 ##############################################################################
 # plt.figure()
