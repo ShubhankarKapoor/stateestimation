@@ -248,7 +248,7 @@ def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which,
     max_iter = 1 if max_iter is None else max_iter
     full_x_est, P_Load_est, Q_Load_est = refactor_estimates(tot_state_vars, x_est,
                                                                 non_zib_index, num_buses)
-    est_full_ac =0 # manually assigning here for testing, get through func later
+    est_full_ac =1 # manually assigning here for testing, get through func later
     if est_full_ac == 1:
         V_mag_con,_,_,S_line_con,_,_,e_max,k = BackwardForwardSweep(
             P_Load_est,Q_Load_est,which, full_x_est[-1])
@@ -256,7 +256,7 @@ def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which,
         P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
         Q_line_con = {key:val.imag for key, val in S_line_con.items()}  
     
-    est_lin = 1 # manually assigning here for testing, get through func later
+    est_lin = 0 # manually assigning here for testing, get through func later
     if est_lin == 1:
         Vsq_con, _, P_line_con, Q_line_con, _, e_max,k = LinDistFlowBackwardForwardSweep(
             P_Load_est,Q_Load_est, which, full_x_est[-1], loss=1, pflow = 1, max_iter = 10e12)
