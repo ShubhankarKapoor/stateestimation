@@ -201,16 +201,16 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     V_known_meas = {k:V[k] for k in known_meas1.keys()} # get voltage vals for known measurements
     
     # add some additional voltages
-    # V_known_meas[36] = V[36]
-    # V_known_meas[35] = V[35]
-    # V_known_meas[26] = V[26]
-    # V_known_meas[23] = V[23]
-    # V_known_meas[22] = V[22]
-    # V_known_meas[21] = V[21]
-    # V_known_meas[11] = V[11]
-    # V_known_meas[10] = V[10]
-    # V_known_meas[8] = V[8]
-    # V_known_meas[2] = V[2]
+    V_known_meas[36] = V[36]
+    V_known_meas[35] = V[35]
+    V_known_meas[26] = V[26]
+    V_known_meas[23] = V[23]
+    V_known_meas[22] = V[22]
+    V_known_meas[21] = V[21]
+    V_known_meas[11] = V[11]
+    V_known_meas[10] = V[10]
+    V_known_meas[8] = V[8]
+    V_known_meas[2] = V[2]
     # V_known_meas[817] = V[817]
     # V_known_meas[860] = V[860]
     # V_known_meas[861] = V[861]
@@ -248,7 +248,7 @@ def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which,
     max_iter = 1 if max_iter is None else max_iter
     full_x_est, P_Load_est, Q_Load_est = refactor_estimates(tot_state_vars, x_est,
                                                                 non_zib_index, num_buses)
-    est_full_ac =1 # manually assigning here for testing, get through func later
+    est_full_ac =0 # manually assigning here for testing, get through func later
     if est_full_ac == 1:
         V_mag_con,_,_,S_line_con,_,_,e_max,k = BackwardForwardSweep(
             P_Load_est,Q_Load_est,which, full_x_est[-1])
@@ -256,7 +256,7 @@ def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which,
         P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
         Q_line_con = {key:val.imag for key, val in S_line_con.items()}  
     
-    est_lin = 0 # manually assigning here for testing, get through func later
+    est_lin = 1 # manually assigning here for testing, get through func later
     if est_lin == 1:
         Vsq_con, _, P_line_con, Q_line_con, _, e_max,k = LinDistFlowBackwardForwardSweep(
             P_Load_est,Q_Load_est, which, full_x_est[-1], loss=1, pflow = 1, max_iter = 10e12)
