@@ -75,7 +75,7 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
         tot_state_vars: state vars being estimated + zib buses
     '''
 
-    tol = tol if tol is not None else 10e-14
+    tol = tol if tol is not None else 10e-12 #10e-14
 
     count = 0
     delta_mat = np.zeros((num_states, 1000)) # delta in states
