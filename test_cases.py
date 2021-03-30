@@ -123,132 +123,160 @@ meas_P_line, meas_Q_line = subset_of_measurements(
 
 # get paths from slack bus to all nodes
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
-
+num_known = [8, 5, 3] # known number of measurements
 # number of known measurements
-i = 8
-arr = np.arange(len(non_zib_index)) # used for combinations
-combs = list(combinations(arr,i))
+# i = 8
+# arr = np.arange(len(non_zib_index)) # used for combinations
+# combs = list(combinations(arr,i))
 
-l_no_feed_perc_v, l_no_feed_perc_p, l_no_feed_abs_v, l_no_feed_abs_p = [], [], [], []
-l_v_feed_perc_v, l_v_feed_perc_p, l_v_feed_abs_v, l_v_feed_abs_p = [], [], [], []
-l_p_feed_perc_v, l_p_feed_perc_p, l_p_feed_abs_v, l_p_feed_abs_p = [], [], [], []
-l_both_feed_perc_v, l_both_feed_perc_p, l_both_feed_abs_v, l_both_feed_abs_p = [], [], [], []
-l_la_perc_v, l_la_perc_p, l_la_abs_v, l_la_abs_p = [], [], [], []
+ll_no_feed_perc_v, ll_no_feed_perc_p, ll_no_feed_abs_v, ll_no_feed_abs_p = [], [], [], []
+ll_v_feed_perc_v, ll_v_feed_perc_p, ll_v_feed_abs_v, ll_v_feed_abs_p = [], [], [], []
+ll_p_feed_perc_v, ll_p_feed_perc_p, ll_p_feed_abs_v, ll_p_feed_abs_p = [], [], [], []
+ll_both_feed_perc_v, ll_both_feed_perc_p, ll_both_feed_abs_v, ll_both_feed_abs_p = [], [], [], []
+ll_la_perc_v, ll_la_perc_p, ll_la_abs_v, ll_la_abs_p = [], [], [], []
 
-# different combs for known number of meas
-for indices in combs:
-    indices = np.asarray(indices)
-    # see the known meas
-    if len(indices) !=0:
-        corresponding_nodes = non_zib_index_array[indices]
-    else:
-        corresponding_nodes = np.asarray(())
-    # unknown buses
-    not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
-    not_considered_indices = np.setdiff1d(arr, indices)
-    
-    P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
-        P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
-        non_zib_index, zib_index, num_known_meas=len(indices), indices = indices)    
-    
-    meas_P_load = {**P_known_meas, **P_pseudo_meas}
-    meas_P_load = dict(sorted(meas_P_load.items()))
-    meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
-    meas_Q_load = dict(sorted(meas_Q_load.items()))
-    
-    z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
-                   list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
-    
-    # static weights but different for pseudo and known measurements
-    w1 = 1 # weight value for pflow, qflow
-    w21 = 1 # known measurements for p,q at buses
-    w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
-    w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
-    print(w1, w21, w22, w3)
-    
-    weight_array1 = np.ones((len(meas_P_line)*2))*w1 # for pline and qline
-    weight_array2 = np.ones((len(meas_P_load)))
-    weight_array2[list(P_known_meas.keys())] = weight_array2[list(P_known_meas.keys())]*w21 # for known p meas
-    weight_array2[list(P_pseudo_meas.keys())] = weight_array2[list(P_pseudo_meas.keys())]*w22# for unknown p meas
-    weight_array2 = np.concatenate((weight_array2, weight_array2)) # for p and q bus
-    weight_array3 = np.ones((len(meas_V)))*w3 # for v mag
-    weight_array = np.concatenate((weight_array1, weight_array2,weight_array3)) # entire weight vector
-    
-    W = np.diag(weight_array) # Weight mat
-    W = np.linalg.inv(W)
-    
-    jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-                                      meas_V, R_line, X_line, len(x_est), len(z))
-    
-    # GN-WLS
-    lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
-                      'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys(),
-                      'plines':meas_P_line.keys()}
-    
-    # to include non linear voltage feedback and pflow/qflow
-    loss, pflow = 0, 0
-    # LinDist
-    x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-        x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-    # costsn = cost(x_estn, jacobian_matrix, z, W)
-    print('GN-WLS based on linear jacobian with no feedback/ feedback') 
-    perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                            which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-    l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
-    l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
-    ###############################################################################
-    loss, pflow = 1, 0
-    # LinDist + Voltage Feedback
-    x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-        x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-    # costsn = cost(x_estn, jacobian_matrix, z, W)
-    print('GN-WLS based on linear jacobian with no feedback/ feedback')
-    perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                            which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-    l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
-    l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
-    ###############################################################################
-    loss, pflow = 0, 1
-    # LinDist + Pflow Feedback
-    x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-        x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-    # costsn = cost(x_estn, jacobian_matrix, z, W)
-    print('GN-WLS based on linear jacobian with no feedback/ feedback')
-    perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                            which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-    l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
-    l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
-    ###############################################################################
-    loss, pflow = 1, 1
-    # LinDist + Voltage & Pflow Feedback
-    x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-        x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-    # costsn = cost(x_estn, jacobian_matrix, z, W)   
-    ###############################################################################
-    print('Implementing loss based with a few assumptions')
-    x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
-        x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
-        path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
-        X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
-    
-    ###############################################################################
-    ###############################################################################
-    
-    print('GN-WLS based on linear jacobian with no feedback/ feedback')
-    perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                            which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-    l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
-    l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n) 
-    print('GN-WLS based on non-linear with ass')
-    perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                            which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
-    l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
-    l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la) 
+for i in num_known:
+    arr = np.arange(len(non_zib_index)) # used for combinations
+    combs = list(combinations(arr,i))
 
+    l_no_feed_perc_v, l_no_feed_perc_p, l_no_feed_abs_v, l_no_feed_abs_p = [], [], [], []
+    l_v_feed_perc_v, l_v_feed_perc_p, l_v_feed_abs_v, l_v_feed_abs_p = [], [], [], []
+    l_p_feed_perc_v, l_p_feed_perc_p, l_p_feed_abs_v, l_p_feed_abs_p = [], [], [], []
+    l_both_feed_perc_v, l_both_feed_perc_p, l_both_feed_abs_v, l_both_feed_abs_p = [], [], [], []
+    l_la_perc_v, l_la_perc_p, l_la_abs_v, l_la_abs_p = [], [], [], []
+    
+    # different combs for known number of meas
+    for indices in combs:
+        indices = np.asarray(indices)
+        # see the known meas
+        if len(indices) !=0:
+            corresponding_nodes = non_zib_index_array[indices]
+        else:
+            corresponding_nodes = np.asarray(())
+        # unknown buses
+        not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
+        not_considered_indices = np.setdiff1d(arr, indices)
+        
+        P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
+            P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
+            non_zib_index, zib_index, num_known_meas=len(indices), indices = indices)    
+        
+        meas_P_load = {**P_known_meas, **P_pseudo_meas}
+        meas_P_load = dict(sorted(meas_P_load.items()))
+        meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
+        meas_Q_load = dict(sorted(meas_Q_load.items()))
+        
+        z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
+                       list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
+        
+        # static weights but different for pseudo and known measurements
+        w1 = 1 # weight value for pflow, qflow
+        w21 = 1 # known measurements for p,q at buses
+        w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
+        w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
+        print(w1, w21, w22, w3)
+        
+        weight_array1 = np.ones((len(meas_P_line)*2))*w1 # for pline and qline
+        weight_array2 = np.ones((len(meas_P_load)))
+        weight_array2[list(P_known_meas.keys())] = weight_array2[list(P_known_meas.keys())]*w21 # for known p meas
+        weight_array2[list(P_pseudo_meas.keys())] = weight_array2[list(P_pseudo_meas.keys())]*w22# for unknown p meas
+        weight_array2 = np.concatenate((weight_array2, weight_array2)) # for p and q bus
+        weight_array3 = np.ones((len(meas_V)))*w3 # for v mag
+        weight_array = np.concatenate((weight_array1, weight_array2,weight_array3)) # entire weight vector
+        
+        W = np.diag(weight_array) # Weight mat
+        W = np.linalg.inv(W)
+        
+        jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+                                          meas_V, R_line, X_line, len(x_est), len(z))
+        
+        # GN-WLS
+        lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
+                          'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys(),
+                          'plines':meas_P_line.keys()}
+        
+        # to include non linear voltage feedback and pflow/qflow
+        loss, pflow = 0, 0
+        # LinDist
+        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        # costsn = cost(x_estn, jacobian_matrix, z, W)
+        print('GN-WLS based on linear jacobian with no feedback/ feedback') 
+        perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+        l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
+        l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
+        ###############################################################################
+        loss, pflow = 1, 0
+        # LinDist + Voltage Feedback
+        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        # costsn = cost(x_estn, jacobian_matrix, z, W)
+        print('GN-WLS based on linear jacobian with no feedback/ feedback')
+        perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+        l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
+        l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
+        ###############################################################################
+        loss, pflow = 0, 1
+        # LinDist + Pflow Feedback
+        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        # costsn = cost(x_estn, jacobian_matrix, z, W)
+        print('GN-WLS based on linear jacobian with no feedback/ feedback')
+        perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+        l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
+        l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
+        ###############################################################################
+        loss, pflow = 1, 1
+        # LinDist + Voltage & Pflow Feedback
+        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        # costsn = cost(x_estn, jacobian_matrix, z, W)   
+        ###############################################################################
+        print('Implementing loss based with a few assumptions')
+        x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
+            x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
+            path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
+            X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+        
+        ###############################################################################
+        ###############################################################################
+        
+        print('GN-WLS based on linear jacobian with no feedback/ feedback')
+        perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+        l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
+        l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
+        print('GN-WLS based on non-linear with ass')
+        perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                                which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
+        l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
+        l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
+
+    ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
+    ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
+    ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
+    ll_v_feed_abs_v.append(l_v_feed_abs_v), ll_v_feed_abs_p.append(l_v_feed_abs_p)
+    ll_p_feed_perc_v.append(l_p_feed_perc_v), ll_p_feed_perc_p.append(l_p_feed_perc_p), 
+    ll_p_feed_abs_v.append(l_p_feed_abs_v), ll_p_feed_abs_p.append(l_p_feed_abs_p)
+    ll_both_feed_perc_v.append(l_both_feed_perc_v), ll_both_feed_perc_p.append(l_both_feed_perc_p), 
+    ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
+    ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
+    ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
 # plot histogram
 
 # plot histogram for different methods but same number of missing nodes on 1 graph
-
+plt.figure()
+bins = np.linspace(0, 2, 500)
+plt.hist(ll_no_feed_perc_v[1], bins, alpha=0.5, label='n')
+plt.hist(ll_v_feed_perc_v[1], bins, alpha=0.5, label='v')
+plt.hist(ll_p_feed_perc_v[1], bins, alpha=0.5, label='p')
+plt.hist(ll_both_feed_perc_v[1], bins, alpha=0.5, label='b')
+plt.hist(ll_la_perc_v[1], bins, alpha=0.5, label='l')
+plt.legend(loc='upper right')
+plt.show()
 # plot histogram for same method but different number of missing nodes on 1 graph
 
 '''
