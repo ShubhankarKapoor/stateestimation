@@ -80,7 +80,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
     results = x_est
     emax = 100 # chosen higher than the tol
 
-    while emax > tol:
+    while emax > tol and count<1000: # added the count to avoid error in some cases
         
         cur_cost = cost(x_est, jacobian_matrix, z, W)
         costs.append(cur_cost)

@@ -75,7 +75,7 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
         tot_state_vars: state vars being estimated + zib buses
     '''
 
-    tol = tol if tol is not None else 10e-14
+    tol = tol if tol is not None else 10e-12 #10e-14
 
     count = 0
     delta_mat = np.zeros((num_states, 1000)) # delta in states
@@ -127,3 +127,75 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
         # print(count)
 
     return x_est, emax, count, residuals_mat, delta_mat, results, jacobian_matrix
+
+def cost(estimates, y, W):
+    '''
+    (): shows the vars used in our code
+    Calculates cost of the function.
+    H & y(z) have their usual meaning.
+    theta(xest) - vector of coefficients.
+    '''
+    m = len(y)
+    # m = 1 # for SGD
+    # Calculating Cost
+    # Loss
+    Error = estimates-y
+    c = (1/(2*m)) * np.sum(np.square(Error) * W)
+    # c = np.sum(np.square(Error) * np.diag(W))/ (m)
+    return c
+
+def se_wls_la_bgd(x_est, z, W, lr, iterations, P_line_meas, Q_line_meas, P_Load_state, 
+        P_Load_meas, path_to_all_nodes_list, path_to_all_nodes, non_zib_index, 
+        Vsq_meas, R_line, X_line, LineData_Z_pu, num_states, num_meas, 
+        tot_state_vars, which, tol = None):
+    
+    '''
+    returns array of thetas, cost of every iteration
+    H - H matrix
+    y - target variable matrix
+    theta - matrix of regression coefficients
+    W - diagonal matrix for weights
+    lr - learning rate
+    iteration - number of iteration to be run
+    '''
+    #Getting number of observations.
+    m = len(z)
+    tol = tol if tol is not None else 10e-14
+    # Initializing cost and theta's arrays with zeroes.
+
+
+
+    # thetas = theta # to store result every iter
+    costs = []
+    count = 0
+    emax = 100 # chosen higher than the tol
+
+    while emax > tol and count < iterations :
+        # print(count)
+        x_ests = x_est # to see emax without storing results
+
+        # these are your estimates here
+        hx, _, _, _, _, _, _ = measurements_estimated_from_states(x_est, P_line_meas, 
+                Vsq_meas, which, non_zib_index, len(P_Load_meas), tot_state_vars)
+        
+        # used in jacobian calc
+        P_Load_est = dict(zip(P_Load_state.keys(), x_est[0:len(P_Load_state)]))
+        Q_Load_est = dict(zip(P_Load_state.keys(), x_est[len(P_Load_state):2*len(P_Load_state)]))
+        
+        jacobian_matrix = create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
+                    Vsq_meas, R_line, X_line, LineData_Z_pu, num_states, num_meas)
+        cur_cost = cost(hx, z, W)
+        costs.append(cur_cost)
+        residuals = hx -z
+        w_residuals = np.dot(W, residuals) # weighted residuals
+        gradient = 1/m*(np.dot(jacobian_matrix.T, w_residuals)) # this is correct
+
+        x_est = x_est - lr * gradient # new weights/ thetas
+        # thetas = np.vstack((thetas, theta)) # store the result in a matrix
+        # emax = np.max(np.abs(thetas[count+1,:]-thetas[count,:])) # when you store every result
+        emax = np.max(np.abs(x_ests-x_est)) # without storing every result
+        # grads[:,count] = gradient
+        count+=1
+        if count % 30000==0:
+            print(count, emax, cur_cost)
+    return x_est, x_ests, costs, count, emax, jacobian_matrix

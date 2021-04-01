@@ -5,7 +5,7 @@ from jacobian_calc import create_jacobian
 from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
     stochastic_gradient_descent, stochastic_gradient_descent2, \
     WLeastSquaresRegressorTorch, cost
-from solvers_with_loss import se_wls_nonlin, se_wls_nonlin_ass
+from solvers_with_loss import se_wls_nonlin, se_wls_nonlin_ass, se_wls_la_bgd
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
@@ -113,7 +113,7 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[8])
+indices = np.asarray(combs[9])
 # ----->>> full loss based system works most of the cases.
 # ----->>> might be a small bug in code or jacobian calc. worth checking
 # ----->>> an example when i = 8,  combs=5
@@ -259,8 +259,25 @@ results = results.T
 ###############################################################################
 print('Implementing loss based with a few assumptions')
 x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
-    x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, path_to_all_nodes_list,
-           path_to_all_nodes, non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+    x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
+    path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
+    X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+###############################################################################
+###############################################################################
+costs_lagd, tot_iters_la = [], 0
+
+lr, iterations, = 0.1, 300 # Learning Rate and Number of iterations
+# x_est=x_est_lagd
+print('Implementing LA based with GD')
+x_est_lagd, _, costs_labb, count_lagd, emax_lagd, jacobian_matrix_lagd = se_wls_la_bgd(
+    x_est, z, W, lr, iterations,  meas_P_line, meas_Q_line, P_Load_state, 
+    meas_P_load, path_to_all_nodes_list, path_to_all_nodes, non_zib_index, 
+    meas_V, R_line, X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+
+tot_iters_la+=iterations
+costs_lagd.extend(costs_labb)
+_, _, _, _ = error_calc_refactor(x, x_est_lagd, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = loss, pflow = pflow) # for self GD
 ##############################################################################
 ##############################################################################
 # Running the gradient Algorithm
@@ -278,7 +295,7 @@ costsb.extend(costsbb)
 print('final cost', costsn[-1], costsb[-1])
 print('BGD-WLS based on linear jacobian with no feedback/ feedback')
 
-_, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+_, _, _, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for self GD
 # countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
 
@@ -312,17 +329,17 @@ _, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_f
 
 # the following function is used when the states are non zib buses
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-vec_v_n, vec_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+print('GN-WLS based on non-linear with ass')
+perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
 # print('GN-WLS based on non-linear jacobian')
 # error_calc_refactor(x, x_estloss, non_zib_index, len(P_Load), est_lin, est_full_ac, 
 #                         which, V, V_mag, loss = 1, pflow = 1) # non linear GN WLS
-print('GN-WLS based on non-linear with ass')
-vec_v_la, vec_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
 # print('GD-WLS based on linear jacobian with no feedback/ feedback')
 print('BGD-WLS based on linear jacobian with no feedback/ feedback')
-_, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+_, _, _, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for self GD
 # error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
 #                         which, V, V_mag) # for pytorch GD
