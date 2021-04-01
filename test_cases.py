@@ -115,7 +115,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
+num_plow_meas = 1
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -123,7 +123,7 @@ meas_P_line, meas_Q_line = subset_of_measurements(
 
 # get paths from slack bus to all nodes
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
-num_known = [9, 5, 3] # known number of measurements
+num_known = [8, 5, 3] # known number of measurements
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
