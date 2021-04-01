@@ -115,7 +115,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 1
+num_plow_meas = 0
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -123,7 +123,7 @@ meas_P_line, meas_Q_line = subset_of_measurements(
 
 # get paths from slack bus to all nodes
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
-num_known = [8, 5, 3] # known number of measurements
+num_known = [9, 5, 3] # known number of measurements
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
@@ -530,6 +530,92 @@ plt.xlabel('(l) Absolute P Error')
 # plt.title('Absolute P Error for Different SE Models')
 plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.tight_layout()
+
+###############################################################################
+# Comparing Results with and without pflow
+###############################################################################
+
+plt.figure(100)
+# data = [ll_no_feed_perc_v[0],
+#         ll_both_feed_perc_v[0], ll_la_perc_v[0]]
+# plt.subplot(2,4,1)
+# seaborn.boxplot(data=data, orient="h")
+# # seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# # plt.ylabel('Different SE Models')
+# plt.xlabel('(a) Percentage V Error')
+# # plt.title('Percentage V Error for Different SE Models')
+# plt.yticks([0, 1, 2,], ['N', 'LB','LA'])
+
+# plt.subplot(2,4,2)
+# data = [ll_no_feed_perc_p[0],
+#         ll_both_feed_perc_p[0], ll_la_perc_p[0]]
+# seaborn.boxplot(data=data, orient="h")
+# # seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# # plt.ylabel('Different SE Models')
+# plt.xlabel('(b) Percentage P Error')
+# # plt.title('Percentage P Error for Different SE Models')
+# plt.yticks([0, 1, 2,], ['N', 'LB', 'LA'])
+
+# plt.subplot(2,4,3)
+# data = [ll_no_feed_abs_v[0],
+#         ll_both_feed_abs_v[0], ll_la_abs_v[0]]
+# seaborn.boxplot(data=data, orient="h")
+# # seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# # plt.ylabel('Different SE Models')
+# plt.xlabel('(c) Absolute V Error')
+# # plt.title('Absolute V Error for Different SE Models')
+# plt.yticks([0, 1, 2,], ['N', 'LB', 'LA'])
+
+# plt.subplot(2,4,4)
+# data = [ll_no_feed_abs_p[0],
+#         ll_both_feed_abs_p[0], ll_la_abs_p[0]]
+# seaborn.boxplot(data=data, orient="h")
+# # seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# # plt.ylabel('Different SE Models')
+# plt.xlabel('(d) Absolute P Error')
+# # plt.title('Absolute P Error for Different SE Models')
+# plt.yticks([0, 1, 2,], ['N', 'LB', 'LA'])
+
+# plt.figure(100)
+data = [ll_no_feed_perc_v[0],
+        ll_both_feed_perc_v[0], ll_la_perc_v[0]]
+plt.subplot(2,4,5)
+seaborn.boxplot(data=data, orient="h")
+# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# plt.ylabel('Different SE Models')
+plt.xlabel('(e) Percentage V Error')
+# plt.title('Percentage V Error for Different SE Models')
+plt.yticks([0, 1, 2,], ['N', 'LB','LA'])
+
+plt.subplot(2,4,6)
+data = [ll_no_feed_perc_p[0],
+        ll_both_feed_perc_p[0], ll_la_perc_p[0]]
+seaborn.boxplot(data=data, orient="h")
+# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# plt.ylabel('Different SE Models')
+plt.xlabel('(f) Percentage P Error')
+# plt.title('Percentage P Error for Different SE Models')
+plt.yticks([0, 1, 2,], ['N', 'LB', 'LA'])
+
+plt.subplot(2,4,7)
+data = [ll_no_feed_abs_v[0],
+        ll_both_feed_abs_v[0], ll_la_abs_v[0]]
+seaborn.boxplot(data=data, orient="h")
+# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# plt.ylabel('Different SE Models')
+plt.xlabel('(g) Absolute V Error')
+# plt.title('Absolute V Error for Different SE Models')
+plt.yticks([0, 1, 2,], ['N', 'LB', 'LA'])
+
+plt.subplot(2,4,8)
+data = [ll_no_feed_abs_p[0],
+        ll_both_feed_abs_p[0], ll_la_abs_p[0]]
+seaborn.boxplot(data=data, orient="h")
+# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# plt.ylabel('Different SE Models')
+plt.xlabel('(h) Absolute P Error')
+# plt.title('Absolute P Error for Different SE Models')
+plt.yticks([0, 1, 2,], ['N', 'LB', 'LA'])
 '''
 # saving different errors
 list_of_errors_p, list_of_errors_q, list_of_errors_v = [], [], [] # max abs error
