@@ -94,7 +94,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # error calc between measurements
         # V_mag^2 and V_mag error
         errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
-        errperc_vector_vmag, mean_vmag_err, max_vmag_err, _, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+        errperc_vector_vmag, mean_vmag_err, max_vmag_err, st_err_vmag, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
         print('vmag bus err:', mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err)
 
         # pflow and qflow error
@@ -106,7 +106,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
     # else:
     #     return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
     #            errperc_vectorp, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
-    return errperc_vector_vmag, errperc_vectorp
+    return errperc_vector_vmag, errperc_vectorp, st_err_p, st_err_vmag
+
 def noise_addition(z, sd, mu = None):
 
     mu = mu if mu is not None else 0
@@ -248,7 +249,7 @@ def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which,
     max_iter = 1 if max_iter is None else max_iter
     full_x_est, P_Load_est, Q_Load_est = refactor_estimates(tot_state_vars, x_est,
                                                                 non_zib_index, num_buses)
-    est_full_ac =1 # manually assigning here for testing, get through func later
+    est_full_ac =0 # manually assigning here for testing, get through func later
     if est_full_ac == 1:
         V_mag_con,_,_,S_line_con,_,_,e_max,k = BackwardForwardSweep(
             P_Load_est,Q_Load_est,which, full_x_est[-1])
@@ -256,7 +257,7 @@ def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which,
         P_line_con = {key:val.real for key, val in S_line_con.items()} # resistance of every line
         Q_line_con = {key:val.imag for key, val in S_line_con.items()}  
     
-    est_lin = 0 # manually assigning here for testing, get through func later
+    est_lin = 1 # manually assigning here for testing, get through func later
     if est_lin == 1:
         Vsq_con, _, P_line_con, Q_line_con, _, e_max,k = LinDistFlowBackwardForwardSweep(
             P_Load_est,Q_Load_est, which, full_x_est[-1], loss=1, pflow = 1, max_iter = 10e12)
