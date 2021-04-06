@@ -101,19 +101,19 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 0 # 1
+num_plow_meas = 1 # 1
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 9
+i = 5
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[9])
+indices = np.asarray(combs[0])
 # ----->>> full loss based system works most of the cases.
 # ----->>> might be a small bug in code or jacobian calc. worth checking
 # ----->>> an example when i = 8,  combs=5
@@ -215,7 +215,7 @@ x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+_,_,_,p3error1 = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 ###############################################################################
 loss, pflow = 1, 0

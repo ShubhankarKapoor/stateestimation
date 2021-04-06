@@ -129,6 +129,7 @@ num_known = [8, 5, 3] # known number of measurements
 # arr = np.arange(len(non_zib_index)) # used for combinations
 # combs = list(combinations(arr,i))
 
+# holds errors for different number of known measurements
 ll_no_feed_perc_v, ll_no_feed_perc_p, ll_no_feed_abs_v, ll_no_feed_abs_p = [], [], [], []
 ll_v_feed_perc_v, ll_v_feed_perc_p, ll_v_feed_abs_v, ll_v_feed_abs_p = [], [], [], []
 ll_p_feed_perc_v, ll_p_feed_perc_p, ll_p_feed_abs_v, ll_p_feed_abs_p = [], [], [], []
@@ -139,6 +140,7 @@ for i in num_known:
     arr = np.arange(len(non_zib_index)) # used for combinations
     combs = list(combinations(arr,i))
 
+    # to hold all eroors for all combinations for a fixed num of missing meass 
     l_no_feed_perc_v, l_no_feed_perc_p, l_no_feed_abs_v, l_no_feed_abs_p = [], [], [], []
     l_v_feed_perc_v, l_v_feed_perc_p, l_v_feed_abs_v, l_v_feed_abs_p = [], [], [], []
     l_p_feed_perc_v, l_p_feed_perc_p, l_p_feed_abs_v, l_p_feed_abs_p = [], [], [], []
@@ -254,7 +256,8 @@ for i in num_known:
                                 which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
         l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
         l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
-
+        
+        # break
     ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
     ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
     ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
@@ -404,7 +407,7 @@ plt.title('Absolute P Error for Different SE Models')
 plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 
 ###############################################################################
-# SUBPLOT #
+# SUBPLOT FOR 3 CASES #
 ###############################################################################
 
 plt.figure()
