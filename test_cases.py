@@ -92,6 +92,7 @@ for k,v in P_Load.items():
         # non_zib_index.append(k) # included to consider all nodes
         zib_index.append(k)
 
+all_index_array = np.asarray(list(P_Load.keys()))
 non_zib_index_array = np.asarray(non_zib_index)
 # remove p0 = 0 and the rest have values equally divided from p_ij
 p_distributed = P_line[(0,1)]/(len(P_Load_state))
@@ -146,37 +147,48 @@ def max_val(A, current_calc_error, non_zib_index):
     A[B>A] = B[B>A]
     return A
 
-def plot_heatmap(array_2d):
-    plt.figure()
-    ax = sns.heatmap(array_2d)
-    plt.xlabel('Node Number')
-    plt.ylabel('Number of Missing Measurements')
+def subplot_heatmap(array_2d, vmin, vmax, cbar = None, cbar_ax = None, ax = None):
+    cbar = 0 if cbar is None else cbar
+    cbar_ax = 0 if cbar_ax is None else cbar_ax
+    ax = 0 if ax is None else ax
+    # plt.figure()
+    ax = sns.heatmap(array_2d, vmin, vmax, cbar = cbar, cbar_ax = cbar_ax)
+    # plt.xlabel('Node Number')
+    # plt.ylabel('Number of Missing Measurements')
     plt.yticks(np.arange(len(num_known))+0.5, num_known)
+
+def plot_heatmap(array_2d):
+    # plt.figure()
+    ax = sns.heatmap(array_2d)
+    # plt.xlabel('Node Number')
+    # plt.ylabel('Number of Missing Measurements')
+    plt.yticks(np.arange(len(num_known))+0.5, num_known)
+
 # heatmap array
 # num missing meas * num nodes
-heatmap_volt_abs_no_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_abs_no_feed = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_abs_no_feed = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_no_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_no_feed = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_perc_no_feed = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
-heatmap_volt_abs_v_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_abs_v_feed = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_abs_v_feed = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_v_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_v_feed = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_perc_v_feed = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
-heatmap_volt_abs_p_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_abs_p_feed = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_abs_p_feed = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_p_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_p_feed = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_perc_p_feed = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
-heatmap_volt_abs_both_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_abs_both_feed = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_abs_both_feed = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_both_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_both_feed = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_perc_both_feed = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
-heatmap_volt_abs_la = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_abs_la = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_abs_la = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_la = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_la = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_perc_la = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
 
@@ -185,17 +197,17 @@ for row, i in enumerate(num_known):
     combs = list(combinations(arr,i))
 
     # stores the max abs voltage error for each node
-    volt_max_abs_nofeed, p_max_abs_nofeed = np.zeros((len(non_zib_index))),  np.zeros((len(non_zib_index)))
-    volt_max_perc_nofeed = np.zeros((len(non_zib_index)))
+    volt_max_abs_nofeed, p_max_abs_nofeed = np.zeros((len(P_Load))),  np.zeros((len(non_zib_index)))
+    volt_max_perc_nofeed = np.zeros((len(P_Load)))
     p_max_perc_nofeed = np.zeros((len(non_zib_index)))
 
-    volt_max_perc_vfeed, p_max_perc_vfeed, volt_max_abs_vfeed, p_max_abs_vfeed = np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index)))
+    volt_max_perc_vfeed, p_max_perc_vfeed, volt_max_abs_vfeed, p_max_abs_vfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
 
-    volt_max_perc_pfeed, p_max_perc_pfeed, volt_max_abs_pfeed, p_max_abs_pfeed = np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index)))
+    volt_max_perc_pfeed, p_max_perc_pfeed, volt_max_abs_pfeed, p_max_abs_pfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
 
-    volt_max_perc_bothfeed, p_max_perc_bothfeed, volt_max_abs_bothfeed, p_max_abs_bothfeed = np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index)))
+    volt_max_perc_bothfeed, p_max_perc_bothfeed, volt_max_abs_bothfeed, p_max_abs_bothfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
     
-    volt_max_perc_la, p_max_perc_la, volt_max_abs_la, p_max_abs_la = np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index)))
+    volt_max_perc_la, p_max_perc_la, volt_max_abs_la, p_max_abs_la = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
     # to hold all eroors for all combinations for a fixed num of missing meass 
     l_no_feed_perc_v, l_no_feed_perc_p, l_no_feed_abs_v, l_no_feed_abs_p = [], [], [], []
     l_v_feed_perc_v, l_v_feed_perc_p, l_v_feed_abs_v, l_v_feed_abs_p = [], [], [], []
@@ -265,11 +277,12 @@ for row, i in enumerate(num_known):
         l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
         l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
         ################### HEATMAP ##########################################
-        volt_max_perc_nofeed = max_val(volt_max_perc_nofeed, perc_v_nofeed, non_zib_index)
+        volt_max_perc_nofeed = max_val(volt_max_perc_nofeed, perc_v_nofeed, all_index_array)
         p_max_perc_nofeed = max_val(p_max_perc_nofeed, perc_p_nofeed, non_zib_index)       
-        volt_max_abs_nofeed = max_val(volt_max_abs_nofeed, abs_v_nofeed, non_zib_index)
+        volt_max_abs_nofeed = max_val(volt_max_abs_nofeed, abs_v_nofeed, all_index_array)
         p_max_abs_nofeed = max_val(p_max_abs_nofeed, abs_p_nofeed, non_zib_index)
         #######################################################################
+
         loss, pflow = 1, 0
         # LinDist + Voltage Feedback
         x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
@@ -281,9 +294,9 @@ for row, i in enumerate(num_known):
         l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
         l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
         ################### HEATMAP ##########################################
-        volt_max_perc_vfeed = max_val(volt_max_perc_vfeed, perc_v_vfeed, non_zib_index)
+        volt_max_perc_vfeed = max_val(volt_max_perc_vfeed, perc_v_vfeed, all_index_array)
         p_max_perc_vfeed = max_val(p_max_perc_vfeed, perc_p_vfeed, non_zib_index)       
-        volt_max_abs_vfeed = max_val(volt_max_abs_vfeed, abs_v_vfeed, non_zib_index)
+        volt_max_abs_vfeed = max_val(volt_max_abs_vfeed, abs_v_vfeed, all_index_array)
         p_max_abs_vfeed = max_val(p_max_abs_vfeed, abs_p_vfeed, non_zib_index)
         #######################################################################
 
@@ -298,9 +311,9 @@ for row, i in enumerate(num_known):
         l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
         l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
         ################### HEATMAP ##########################################
-        volt_max_perc_pfeed = max_val(volt_max_perc_pfeed, perc_v_pfeed, non_zib_index)
+        volt_max_perc_pfeed = max_val(volt_max_perc_pfeed, perc_v_pfeed, all_index_array)
         p_max_perc_pfeed = max_val(p_max_perc_pfeed, perc_p_pfeed, non_zib_index)       
-        volt_max_abs_pfeed = max_val(volt_max_abs_pfeed, abs_v_pfeed, non_zib_index)
+        volt_max_abs_pfeed = max_val(volt_max_abs_pfeed, abs_v_pfeed, all_index_array)
         p_max_abs_pfeed = max_val(p_max_abs_pfeed, abs_p_pfeed, non_zib_index)
         #######################################################################
 
@@ -315,9 +328,9 @@ for row, i in enumerate(num_known):
         l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
         l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
         ################### HEATMAP ##########################################
-        volt_max_perc_bothfeed = max_val(volt_max_perc_bothfeed, perc_v_n, non_zib_index)
+        volt_max_perc_bothfeed = max_val(volt_max_perc_bothfeed, perc_v_n, all_index_array)
         p_max_perc_bothfeed = max_val(p_max_perc_bothfeed, perc_p_n, non_zib_index)       
-        volt_max_abs_bothfeed = max_val(volt_max_abs_bothfeed, abs_v_n, non_zib_index)
+        volt_max_abs_bothfeed = max_val(volt_max_abs_bothfeed, abs_v_n, all_index_array)
         p_max_abs_bothfeed = max_val(p_max_abs_bothfeed, abs_p_n, non_zib_index)
 
         #######################################################################
@@ -334,9 +347,9 @@ for row, i in enumerate(num_known):
         l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
         l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
         ################### HEATMAP ##########################################
-        volt_max_perc_la = max_val(volt_max_perc_la, perc_v_la, non_zib_index)
+        volt_max_perc_la = max_val(volt_max_perc_la, perc_v_la, all_index_array)
         p_max_perc_la = max_val(p_max_perc_la, perc_p_la, non_zib_index)       
-        volt_max_abs_la = max_val(volt_max_abs_la, abs_v_la, non_zib_index)
+        volt_max_abs_la = max_val(volt_max_abs_la, abs_v_la, all_index_array)
         p_max_abs_la = max_val(p_max_abs_la, abs_p_la, non_zib_index)
         # break
     
@@ -378,6 +391,48 @@ for row, i in enumerate(num_known):
     ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
     ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
     ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+
+# plot v percentage error
+
+
+# plot p percentage error
+
+# plot v abs error
+# plot heatmap with same colorbar values
+vmin = min(heatmap_volt_abs_no_feed.min(), heatmap_volt_abs_v_feed.min(), heatmap_volt_abs_p_feed.min(), heatmap_volt_abs_both_feed.min(), heatmap_volt_abs_la.min())
+vmax = max(heatmap_volt_abs_no_feed.max(), heatmap_volt_abs_v_feed.max(), heatmap_volt_abs_p_feed.max(), heatmap_volt_abs_both_feed.max(), heatmap_volt_abs_la.max())
+
+fig, axn = plt.subplots(3, 2, sharex=True, sharey=True)
+cbar_ax = fig.add_axes([.91, .3, .03, .4])
+plt.subplot(3,2,1)
+sns.heatmap(heatmap_volt_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax)
+plt.yticks(np.arange(len(num_known))+0.5, num_known)
+plt.subplot(3,2,2)
+subplot_heatmap(heatmap_volt_abs_v_feed, vmin=vmin, vmax=vmax)
+plt.subplot(3,2,3)
+subplot_heatmap(heatmap_volt_abs_p_feed, vmin=vmin, vmax=vmax)
+plt.subplot(3,2,4)
+subplot_heatmap(heatmap_volt_abs_both_feed, vmin=vmin, vmax=vmax)
+plt.subplot(3,2,5)
+subplot_heatmap(heatmap_volt_abs_la, vmin=vmin, vmax=vmax)
+# fig.tight_layout()
+
+# plot heatmap with different colorbar values
+fig2, axn2 = plt.subplots(3, 2, sharex=True, sharey=True)
+# cbar_ax = fig.add_axes([.91, .3, .03, .4])
+plt.subplot(3,2,1)
+plot_heatmap(heatmap_volt_abs_no_feed)
+plt.subplot(3,2,2)
+plot_heatmap(heatmap_volt_abs_v_feed)
+plt.subplot(3,2,3)
+plot_heatmap(heatmap_volt_abs_p_feed)
+plt.subplot(3,2,4)
+plot_heatmap(heatmap_volt_abs_both_feed)
+plt.subplot(3,2,5)
+plot_heatmap(heatmap_volt_abs_la)
+fig2.tight_layout()
+
+# plot p abs error
 
 # plot histogram
 
