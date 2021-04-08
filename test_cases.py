@@ -126,6 +126,7 @@ meas_P_line, meas_Q_line = subset_of_measurements(
 # get paths from slack bus to all nodes
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
+# num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
 # number of known measurements
 # i = 8
