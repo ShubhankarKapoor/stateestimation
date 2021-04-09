@@ -356,28 +356,28 @@ for row, i in enumerate(num_known):
         # break
     
     # insert the values for heatmap
-    heatmap_volt_abs_no_feed[row,:] = volt_max_abs_nofeed
-    heatmap_p_abs_no_feed[row,:] = p_max_abs_nofeed
+    heatmap_volt_abs_no_feed[row,:] = volt_max_abs_nofeed * Vbase
+    heatmap_p_abs_no_feed[row,:] = p_max_abs_nofeed * Sbase
     heatmap_volt_perc_no_feed[row,:] = volt_max_perc_nofeed
     heatmap_p_perc_no_feed[row,:] = p_max_perc_nofeed
     ###########################################################################
-    heatmap_volt_abs_v_feed[row,:] = volt_max_abs_vfeed
-    heatmap_p_abs_v_feed[row,:] = p_max_abs_vfeed
+    heatmap_volt_abs_v_feed[row,:] = volt_max_abs_vfeed * Vbase
+    heatmap_p_abs_v_feed[row,:] = p_max_abs_vfeed * Sbase
     heatmap_volt_perc_v_feed[row,:] = volt_max_perc_vfeed
     heatmap_p_perc_v_feed[row,:] = p_max_perc_vfeed
     ###########################################################################
-    heatmap_volt_abs_p_feed[row,:] = volt_max_abs_pfeed
-    heatmap_p_abs_p_feed[row,:] = p_max_abs_pfeed
+    heatmap_volt_abs_p_feed[row,:] = volt_max_abs_pfeed * Vbase
+    heatmap_p_abs_p_feed[row,:] = p_max_abs_pfeed * Sbase
     heatmap_volt_perc_p_feed[row,:] = volt_max_perc_pfeed
     heatmap_p_perc_p_feed[row,:] = p_max_perc_pfeed
     ###########################################################################
-    heatmap_volt_abs_both_feed[row,:] = volt_max_abs_bothfeed
-    heatmap_p_abs_both_feed[row,:] = p_max_abs_bothfeed
+    heatmap_volt_abs_both_feed[row,:] = volt_max_abs_bothfeed * Vbase
+    heatmap_p_abs_both_feed[row,:] = p_max_abs_bothfeed * Sbase
     heatmap_volt_perc_both_feed[row,:] = volt_max_perc_bothfeed
     heatmap_p_perc_both_feed[row,:] = p_max_perc_bothfeed
     ###########################################################################
-    heatmap_volt_abs_la[row,:] = volt_max_abs_la
-    heatmap_p_abs_la[row,:] = p_max_abs_la
+    heatmap_volt_abs_la[row,:] = volt_max_abs_la * Vbase
+    heatmap_p_abs_la[row,:] = p_max_abs_la * Sbase
     heatmap_volt_perc_la[row,:] = volt_max_perc_la
     heatmap_p_perc_la[row,:] = p_max_perc_la
     ###########################################################################
@@ -393,6 +393,15 @@ for row, i in enumerate(num_known):
     ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
     ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
     ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+
+###############################################################################
+# Adjusting the subplots
+left  = 0.125  # the left side of the subplots of the figure
+right = 0.9    # the right side of the subplots of the figure
+bottom = 0.12   # the bottom of the subplots of the figure
+top = 0.9      # the top of the subplots of the figure
+wspace = 0.2   # the amount of width reserved for blank space between subplots
+hspace = 0.6   # the amount of height reserved for white space between subplots
 
 ##################### plot v percentage error ###########################
 vmin = min(heatmap_volt_perc_no_feed.min(), heatmap_volt_perc_v_feed.min(), heatmap_volt_perc_p_feed.min(), heatmap_volt_perc_both_feed.min(), heatmap_volt_perc_la.min())
@@ -420,122 +429,125 @@ plt.xlabel('LB')
 plt.subplot(5, 1,5)
 subplot_heatmap(heatmap_volt_perc_la, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
-fig1.text(0.5, 0.04, 'Node Number', ha='center')
-fig1.text(0.04, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
-# fig1.delaxes(axn1[2][0])
-left  = 0.125  # the left side of the subplots of the figure
-right = 0.9    # the right side of the subplots of the figure
-bottom = 0.12   # the bottom of the subplots of the figure
-top = 0.9      # the top of the subplots of the figure
-wspace = 0.2   # the amount of width reserved for blank space between subplots
-hspace = 0.6   # the amount of height reserved for white space between subplots
+fig1.text(0.51, 0.02, 'Node Number', ha='center')
+fig1.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
 plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
-fig1.tight_layout()
+# fig1.delaxes(axn1[2][0])
+# fig1.tight_layout()
 # fig1.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 ##################### plot p percentage error ###########################
 vmin = min(heatmap_p_perc_no_feed.min(), heatmap_p_perc_v_feed.min(), heatmap_p_perc_p_feed.min(), heatmap_p_perc_both_feed.min(), heatmap_p_perc_la.min())
 vmax = max(heatmap_p_perc_no_feed.max(), heatmap_p_perc_v_feed.max(), heatmap_p_perc_p_feed.max(), heatmap_p_perc_both_feed.max(), heatmap_p_perc_la.max())
 
-fig2, axn2 = plt.subplots(3, 2, sharex=True, sharey=True)
+fig2, axn2 = plt.subplots(5, 1, sharex=True, sharey=True)
 fig2.suptitle("P Max Percentage Error for Each Node using Different Models")
-# cbar_ax = fig2.add_axes([.91, .3, .03, .4])
-cbar_ax = fig2.add_axes([.55, .2, .4, .03])
-plt.subplot(3,2,1)
-sns.heatmap(heatmap_p_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,
-                 cbar_kws={ "orientation": "horizontal" })
+cbar_ax = fig2.add_axes([.91, .3, .03, .4])
+# cbar_ax = fig2.add_axes([.55, .2, .4, .03])
+plt.subplot(5, 1,1)
+sns.heatmap(heatmap_p_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+                 # cbar_kws={ "orientation": "horizontal" })
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
 plt.xlabel('N')
-plt.subplot(3,2,2)
+plt.subplot(5, 1,2)
 subplot_heatmap(heatmap_p_perc_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
-plt.subplot(3,2,3)
+plt.subplot(5, 1,3)
 subplot_heatmap(heatmap_p_perc_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LP')
-plt.subplot(3,2,4)
+plt.subplot(5, 1,4)
 subplot_heatmap(heatmap_p_perc_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LB')
-plt.subplot(3,2,5)
+plt.subplot(5, 1,5)
 subplot_heatmap(heatmap_p_perc_la, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
-fig2.delaxes(axn2[2][1])
-fig2.tight_layout()
+fig2.text(0.51, 0.02, 'Node Number', ha='center')
+fig2.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
+# fig2.delaxes(axn2[2][1])
+# fig2.tight_layout()
 
 ########################### plot v abs error ###########################
 # plot heatmap with same colorbar values
 vmin = min(heatmap_volt_abs_no_feed.min(), heatmap_volt_abs_v_feed.min(), heatmap_volt_abs_p_feed.min(), heatmap_volt_abs_both_feed.min(), heatmap_volt_abs_la.min())
 vmax = max(heatmap_volt_abs_no_feed.max(), heatmap_volt_abs_v_feed.max(), heatmap_volt_abs_p_feed.max(), heatmap_volt_abs_both_feed.max(), heatmap_volt_abs_la.max())
 
-fig3, axn3 = plt.subplots(3, 2, sharex=True, sharey=True)
+fig3, axn3 = plt.subplots(5, 1, sharex=True, sharey=True)
 fig3.suptitle("V Max Absolute Error for Each Node using Different Models")
-# cbar_ax = fig3.add_axes([.91, .3, .03, .4])
-cbar_ax = fig3.add_axes([.55, .2, .4, .03])
-plt.subplot(3,2,1)
-sns.heatmap(heatmap_volt_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,
-                 cbar_kws={ "orientation": "horizontal" })
+cbar_ax = fig3.add_axes([.91, .3, .03, .4])
+# cbar_ax = fig3.add_axes([.55, .2, .4, .03])
+plt.subplot(5, 1,1)
+sns.heatmap(heatmap_volt_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+                 # cbar_kws={ "orientation": "horizontal" })
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(all_index_array))+0.5, all_index_array) # node number
 plt.xlabel('N')
-plt.subplot(3,2,2)
+plt.subplot(5, 1,2)
 subplot_heatmap(heatmap_volt_abs_v_feed, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
-plt.subplot(3,2,3)
+plt.subplot(5, 1,3)
 subplot_heatmap(heatmap_volt_abs_p_feed, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LP')
-plt.subplot(3,2,4)
+plt.subplot(5, 1,4)
 subplot_heatmap(heatmap_volt_abs_both_feed, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LB')
-plt.subplot(3,2,5)
+plt.subplot(5, 1,5)
 subplot_heatmap(heatmap_volt_abs_la, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
-fig3.delaxes(axn3[2][1])
-fig3.tight_layout()
+fig3.text(0.51, 0.02, 'Node Number', ha='center')
+fig3.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
+# fig3.delaxes(axn3[2][1])
+# fig3.tight_layout()
 
 # plot heatmap with different colorbar values
-fig0, axn0 = plt.subplots(3, 2, sharex=True, sharey=True)
+fig0, axn0 = plt.subplots(5, 1, sharex=True, sharey=True)
 # cbar_ax = fig0.add_axes([.91, .3, .03, .4])
-plt.subplot(3,2,1)
+plt.subplot(5, 1,1)
 plot_heatmap(heatmap_volt_abs_no_feed)
-plt.subplot(3,2,2)
+plt.subplot(5, 1,2)
 plot_heatmap(heatmap_volt_abs_v_feed)
-plt.subplot(3,2,3)
+plt.subplot(5, 1,3)
 plot_heatmap(heatmap_volt_abs_p_feed)
-plt.subplot(3,2,4)
+plt.subplot(5, 1,4)
 plot_heatmap(heatmap_volt_abs_both_feed)
-plt.subplot(3,2,5)
+plt.subplot(5, 1,5)
 plot_heatmap(heatmap_volt_abs_la)
-fig0.delaxes(axn0[2][1])
-fig0.tight_layout()
+# fig0.delaxes(axn0[2][1])
+# fig0.tight_layout()
 
 ########################## plot p abs error ###########################
 vmin = min(heatmap_p_abs_no_feed.min(), heatmap_p_abs_v_feed.min(), heatmap_p_abs_p_feed.min(), heatmap_p_abs_both_feed.min(), heatmap_p_abs_la.min())
 vmax = max(heatmap_p_abs_no_feed.max(), heatmap_p_abs_v_feed.max(), heatmap_p_abs_p_feed.max(), heatmap_p_abs_both_feed.max(), heatmap_p_abs_la.max())
 
-fig4, axn4 = plt.subplots(3, 2, sharex=True, sharey=True)
+fig4, axn4 = plt.subplots(5, 1, sharex=True, sharey=True)
 fig4.suptitle("P Max Absolute Error for Each Node using Different Models")
-# cbar_ax = fig4.add_axes([.91, .3, .03, .4])
-cbar_ax = fig4.add_axes([.55, .2, .4, .03])
-plt.subplot(3,2,1)
-sns.heatmap(heatmap_p_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,
-                 cbar_kws={ "orientation": "horizontal" })
+cbar_ax = fig4.add_axes([.91, .3, .03, .4])
+# cbar_ax = fig4.add_axes([.55, .2, .4, .03])
+plt.subplot(5, 1,1)
+sns.heatmap(heatmap_p_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+                 # cbar_kws={ "orientation": "horizontal" })
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
 plt.xlabel('N')
-plt.subplot(3,2,2)
+plt.subplot(5, 1,2)
 subplot_heatmap(heatmap_p_abs_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
-plt.subplot(3,2,3)
+plt.subplot(5, 1,3)
 subplot_heatmap(heatmap_p_abs_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LP')
-plt.subplot(3,2,4)
+plt.subplot(5, 1,4)
 subplot_heatmap(heatmap_p_abs_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LB')
-plt.subplot(3,2,5)
+plt.subplot(5, 1,5)
 subplot_heatmap(heatmap_p_abs_la, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
-fig4.delaxes(axn4[2][1])
-fig4.tight_layout()
+fig4.text(0.51, 0.02, 'Node Number', ha='center')
+fig4.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
+# fig4.delaxes(axn4[2][1])
+# fig4.tight_layout()
 
 # plot histogram
 
