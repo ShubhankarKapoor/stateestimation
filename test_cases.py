@@ -16,10 +16,11 @@ from solvers_with_loss import se_wls_nonlin, se_wls_nonlin_ass, se_wls_la_bgd
 from path_to_nodes import path_to_nodes
 import pandas as pd
 from itertools import combinations
-import seaborn, time
+import seaborn as sns
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
                        error_calc_refactor, countour_plot
+import time
 import torch
 import matplotlib.pyplot as plt
 
@@ -27,7 +28,7 @@ SMALL_SIZE = 8
 MEDIUM_SIZE = 15
 BIGGER_SIZE = 22
 
-plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('font', size=MEDIUM_SIZE)          # controls default text sizes
 plt.rc('axes', titlesize=BIGGER_SIZE)     # fontsize of the axes title
 plt.rc('axes', labelsize=BIGGER_SIZE)    # fontsize of the x and y labels
 plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
@@ -91,6 +92,7 @@ for k,v in P_Load.items():
         # non_zib_index.append(k) # included to consider all nodes
         zib_index.append(k)
 
+all_index_array = np.asarray(list(P_Load.keys()))
 non_zib_index_array = np.asarray(non_zib_index)
 # remove p0 = 0 and the rest have values equally divided from p_ij
 p_distributed = P_line[(0,1)]/(len(P_Load_state))
@@ -123,28 +125,98 @@ meas_P_line, meas_Q_line = subset_of_measurements(
 
 # get paths from slack bus to all nodes
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
-num_known = [8, 5, 3] # known number of measurements
+# num_known = [8, 5, 3] # known number of measurements
+# num_known = [9,] # known number of measurements
+num_known = np.arange(len(non_zib_index))[::-1]
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
 # combs = list(combinations(arr,i))
 
+# holds errors for different number of known measurements
 ll_no_feed_perc_v, ll_no_feed_perc_p, ll_no_feed_abs_v, ll_no_feed_abs_p = [], [], [], []
 ll_v_feed_perc_v, ll_v_feed_perc_p, ll_v_feed_abs_v, ll_v_feed_abs_p = [], [], [], []
 ll_p_feed_perc_v, ll_p_feed_perc_p, ll_p_feed_abs_v, ll_p_feed_abs_p = [], [], [], []
 ll_both_feed_perc_v, ll_both_feed_perc_p, ll_both_feed_abs_v, ll_both_feed_abs_p = [], [], [], []
 ll_la_perc_v, ll_la_perc_p, ll_la_abs_v, ll_la_abs_p = [], [], [], []
 
-for i in num_known:
+# function used to get max vals for each node
+def max_val(A, current_calc_error, non_zib_index):
+    # A prev_max_error for non zib buses
+    B = current_calc_error[non_zib_index]
+    # B = current_calc_error
+    A[B>A] = B[B>A]
+    return A
+
+def subplot_heatmap(array_2d, indices, vmin, vmax, cbar = None, cbar_ax = None, ax = None):
+    cbar = 0 if cbar is None else cbar
+    cbar_ax = 0 if cbar_ax is None else cbar_ax
+    ax = 0 if ax is None else ax
+    # plt.figure()
+    ax = sns.heatmap(array_2d, vmin, vmax, cbar = cbar, cbar_ax = cbar_ax)
+    # plt.xlabel('Node Number')
+    # plt.ylabel('Number of Missing Measurements')
+    plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
+    plt.xticks(np.arange(len(indices))+0.5, indices) # node number
+
+def plot_heatmap(array_2d):
+    # plt.figure()
+    ax = sns.heatmap(array_2d)
+    # plt.xlabel('Node Number')
+    # plt.ylabel('Number of Missing Measurements')
+    plt.yticks(np.arange(len(num_known))+0.5, num_known)
+
+# heatmap array
+# num missing meas * num nodes
+heatmap_volt_abs_no_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_abs_no_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_no_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_perc_no_feed = np.zeros((len(num_known), len(non_zib_index)))
+###############################################################################
+heatmap_volt_abs_v_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_abs_v_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_v_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_perc_v_feed = np.zeros((len(num_known), len(non_zib_index)))
+###############################################################################
+heatmap_volt_abs_p_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_abs_p_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_p_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_perc_p_feed = np.zeros((len(num_known), len(non_zib_index)))
+###############################################################################
+heatmap_volt_abs_both_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_abs_both_feed = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_both_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_perc_both_feed = np.zeros((len(num_known), len(non_zib_index)))
+###############################################################################
+heatmap_volt_abs_la = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_abs_la = np.zeros((len(num_known), len(non_zib_index)))
+heatmap_volt_perc_la = np.zeros((len(num_known), len(P_Load)))
+heatmap_p_perc_la = np.zeros((len(num_known), len(non_zib_index)))
+###############################################################################
+
+for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
     combs = list(combinations(arr,i))
 
+    # stores the max abs voltage error for each node
+    volt_max_abs_nofeed, p_max_abs_nofeed = np.zeros((len(P_Load))),  np.zeros((len(non_zib_index)))
+    volt_max_perc_nofeed = np.zeros((len(P_Load)))
+    p_max_perc_nofeed = np.zeros((len(non_zib_index)))
+
+    volt_max_perc_vfeed, p_max_perc_vfeed, volt_max_abs_vfeed, p_max_abs_vfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+
+    volt_max_perc_pfeed, p_max_perc_pfeed, volt_max_abs_pfeed, p_max_abs_pfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+
+    volt_max_perc_bothfeed, p_max_perc_bothfeed, volt_max_abs_bothfeed, p_max_abs_bothfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+    
+    volt_max_perc_la, p_max_perc_la, volt_max_abs_la, p_max_abs_la = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+    # to hold all eroors for all combinations for a fixed num of missing meass 
     l_no_feed_perc_v, l_no_feed_perc_p, l_no_feed_abs_v, l_no_feed_abs_p = [], [], [], []
     l_v_feed_perc_v, l_v_feed_perc_p, l_v_feed_abs_v, l_v_feed_abs_p = [], [], [], []
     l_p_feed_perc_v, l_p_feed_perc_p, l_p_feed_abs_v, l_p_feed_abs_p = [], [], [], []
     l_both_feed_perc_v, l_both_feed_perc_p, l_both_feed_abs_v, l_both_feed_abs_p = [], [], [], []
     l_la_perc_v, l_la_perc_p, l_la_abs_v, l_la_abs_p = [], [], [], []
-    
+
     # different combs for known number of meas
     for indices in combs:
         indices = np.asarray(indices)
@@ -156,26 +228,26 @@ for i in num_known:
         # unknown buses
         not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
         not_considered_indices = np.setdiff1d(arr, indices)
-        
+
         P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
             P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
             non_zib_index, zib_index, num_known_meas=len(indices), indices = indices)    
-        
+
         meas_P_load = {**P_known_meas, **P_pseudo_meas}
         meas_P_load = dict(sorted(meas_P_load.items()))
         meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
         meas_Q_load = dict(sorted(meas_Q_load.items()))
-        
+
         z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
                        list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
-        
+
         # static weights but different for pseudo and known measurements
         w1 = 1 # weight value for pflow, qflow
         w21 = 1 # known measurements for p,q at buses
         w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
         w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
         print(w1, w21, w22, w3)
-        
+
         weight_array1 = np.ones((len(meas_P_line)*2))*w1 # for pline and qline
         weight_array2 = np.ones((len(meas_P_load)))
         weight_array2[list(P_known_meas.keys())] = weight_array2[list(P_known_meas.keys())]*w21 # for known p meas
@@ -183,18 +255,18 @@ for i in num_known:
         weight_array2 = np.concatenate((weight_array2, weight_array2)) # for p and q bus
         weight_array3 = np.ones((len(meas_V)))*w3 # for v mag
         weight_array = np.concatenate((weight_array1, weight_array2,weight_array3)) # entire weight vector
-        
+
         W = np.diag(weight_array) # Weight mat
         W = np.linalg.inv(W)
-        
+
         jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
                                           meas_V, R_line, X_line, len(x_est), len(z))
-        
+
         # GN-WLS
         lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
                           'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys(),
                           'plines':meas_P_line.keys()}
-        
+
         # to include non linear voltage feedback and pflow/qflow
         loss, pflow = 0, 0
         # LinDist
@@ -206,7 +278,13 @@ for i in num_known:
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
         l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
-        ###############################################################################
+        ################### HEATMAP ##########################################
+        volt_max_perc_nofeed = max_val(volt_max_perc_nofeed, perc_v_nofeed, all_index_array)
+        p_max_perc_nofeed = max_val(p_max_perc_nofeed, perc_p_nofeed, non_zib_index)       
+        volt_max_abs_nofeed = max_val(volt_max_abs_nofeed, abs_v_nofeed, all_index_array)
+        p_max_abs_nofeed = max_val(p_max_abs_nofeed, abs_p_nofeed, non_zib_index)
+        #######################################################################
+
         loss, pflow = 1, 0
         # LinDist + Voltage Feedback
         x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
@@ -217,7 +295,13 @@ for i in num_known:
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
         l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
-        ###############################################################################
+        ################### HEATMAP ##########################################
+        volt_max_perc_vfeed = max_val(volt_max_perc_vfeed, perc_v_vfeed, all_index_array)
+        p_max_perc_vfeed = max_val(p_max_perc_vfeed, perc_p_vfeed, non_zib_index)       
+        volt_max_abs_vfeed = max_val(volt_max_abs_vfeed, abs_v_vfeed, all_index_array)
+        p_max_abs_vfeed = max_val(p_max_abs_vfeed, abs_p_vfeed, non_zib_index)
+        #######################################################################
+
         loss, pflow = 0, 1
         # LinDist + Pflow Feedback
         x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
@@ -228,33 +312,77 @@ for i in num_known:
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
         l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
-        ###############################################################################
+        ################### HEATMAP ##########################################
+        volt_max_perc_pfeed = max_val(volt_max_perc_pfeed, perc_v_pfeed, all_index_array)
+        p_max_perc_pfeed = max_val(p_max_perc_pfeed, perc_p_pfeed, non_zib_index)       
+        volt_max_abs_pfeed = max_val(volt_max_abs_pfeed, abs_v_pfeed, all_index_array)
+        p_max_abs_pfeed = max_val(p_max_abs_pfeed, abs_p_pfeed, non_zib_index)
+        #######################################################################
+
         loss, pflow = 1, 1
         # LinDist + Voltage & Pflow Feedback
         x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         # costsn = cost(x_estn, jacobian_matrix, z, W)   
-        ###############################################################################
-        print('Implementing loss based with a few assumptions')
-        x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
-            x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
-            path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
-            X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
-        
-        ###############################################################################
-        ###############################################################################
-        
         print('GN-WLS based on linear jacobian with no feedback/ feedback')
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
         l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
+        ################### HEATMAP ##########################################
+        volt_max_perc_bothfeed = max_val(volt_max_perc_bothfeed, perc_v_n, all_index_array)
+        p_max_perc_bothfeed = max_val(p_max_perc_bothfeed, perc_p_n, non_zib_index)       
+        volt_max_abs_bothfeed = max_val(volt_max_abs_bothfeed, abs_v_n, all_index_array)
+        p_max_abs_bothfeed = max_val(p_max_abs_bothfeed, abs_p_n, non_zib_index)
+
+        #######################################################################
+        print('Implementing loss based with a few assumptions')
+        x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
+            x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
+            path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
+            X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+
+        #######################################################################
         print('GN-WLS based on non-linear with ass')
         perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
         l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
         l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
-
+        ################### HEATMAP ##########################################
+        volt_max_perc_la = max_val(volt_max_perc_la, perc_v_la, all_index_array)
+        p_max_perc_la = max_val(p_max_perc_la, perc_p_la, non_zib_index)       
+        volt_max_abs_la = max_val(volt_max_abs_la, abs_v_la, all_index_array)
+        p_max_abs_la = max_val(p_max_abs_la, abs_p_la, non_zib_index)
+        # break
+    
+    # insert the values for heatmap
+    heatmap_volt_abs_no_feed[row,:] = volt_max_abs_nofeed * Vbase
+    heatmap_p_abs_no_feed[row,:] = p_max_abs_nofeed * Sbase
+    heatmap_volt_perc_no_feed[row,:] = volt_max_perc_nofeed
+    heatmap_p_perc_no_feed[row,:] = p_max_perc_nofeed
+    ###########################################################################
+    heatmap_volt_abs_v_feed[row,:] = volt_max_abs_vfeed * Vbase
+    heatmap_p_abs_v_feed[row,:] = p_max_abs_vfeed * Sbase
+    heatmap_volt_perc_v_feed[row,:] = volt_max_perc_vfeed
+    heatmap_p_perc_v_feed[row,:] = p_max_perc_vfeed
+    ###########################################################################
+    heatmap_volt_abs_p_feed[row,:] = volt_max_abs_pfeed * Vbase
+    heatmap_p_abs_p_feed[row,:] = p_max_abs_pfeed * Sbase
+    heatmap_volt_perc_p_feed[row,:] = volt_max_perc_pfeed
+    heatmap_p_perc_p_feed[row,:] = p_max_perc_pfeed
+    ###########################################################################
+    heatmap_volt_abs_both_feed[row,:] = volt_max_abs_bothfeed * Vbase
+    heatmap_p_abs_both_feed[row,:] = p_max_abs_bothfeed * Sbase
+    heatmap_volt_perc_both_feed[row,:] = volt_max_perc_bothfeed
+    heatmap_p_perc_both_feed[row,:] = p_max_perc_bothfeed
+    ###########################################################################
+    heatmap_volt_abs_la[row,:] = volt_max_abs_la * Vbase
+    heatmap_p_abs_la[row,:] = p_max_abs_la * Sbase
+    heatmap_volt_perc_la[row,:] = volt_max_perc_la
+    heatmap_p_perc_la[row,:] = p_max_perc_la
+    ###########################################################################
+    
+    # values for all errors
     ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
     ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
     ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
@@ -265,6 +393,162 @@ for i in num_known:
     ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
     ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
     ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+
+###############################################################################
+# Adjusting the subplots
+left  = 0.125  # the left side of the subplots of the figure
+right = 0.9    # the right side of the subplots of the figure
+bottom = 0.12   # the bottom of the subplots of the figure
+top = 0.9      # the top of the subplots of the figure
+wspace = 0.2   # the amount of width reserved for blank space between subplots
+hspace = 0.6   # the amount of height reserved for white space between subplots
+
+##################### plot v percentage error ###########################
+vmin = min(heatmap_volt_perc_no_feed.min(), heatmap_volt_perc_v_feed.min(), heatmap_volt_perc_p_feed.min(), heatmap_volt_perc_both_feed.min(), heatmap_volt_perc_la.min())
+vmax = max(heatmap_volt_perc_no_feed.max(), heatmap_volt_perc_v_feed.max(), heatmap_volt_perc_p_feed.max(), heatmap_volt_perc_both_feed.max(), heatmap_volt_perc_la.max())
+
+fig1, axn1 = plt.subplots(5, 1, sharex=True, sharey=True)
+fig1.suptitle("V Max Percentage Error for Each Node using Different Models")
+cbar_ax = fig1.add_axes([.91, .3, .03, .4])
+# cbar_ax = fig1.add_axes([.068, .2, .42, .03])
+plt.subplot(5, 1,1)
+sns.heatmap(heatmap_volt_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+                 # cbar_kws={ "orientation": "horizontal" }) # for horizontal cbar
+plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
+plt.xticks(np.arange(len(all_index_array))+0.5, all_index_array) # node number
+plt.xlabel('N')
+plt.subplot(5, 1,2)
+subplot_heatmap(heatmap_volt_perc_v_feed, all_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LV')
+plt.subplot(5, 1,3)
+subplot_heatmap(heatmap_volt_perc_p_feed, all_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LP')
+plt.subplot(5, 1,4)
+subplot_heatmap(heatmap_volt_perc_both_feed, all_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LB')
+plt.subplot(5, 1,5)
+subplot_heatmap(heatmap_volt_perc_la, all_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LA')
+fig1.text(0.51, 0.02, 'Node Number', ha='center')
+fig1.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
+# fig1.delaxes(axn1[2][0])
+# fig1.tight_layout()
+# fig1.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+##################### plot p percentage error ###########################
+vmin = min(heatmap_p_perc_no_feed.min(), heatmap_p_perc_v_feed.min(), heatmap_p_perc_p_feed.min(), heatmap_p_perc_both_feed.min(), heatmap_p_perc_la.min())
+vmax = max(heatmap_p_perc_no_feed.max(), heatmap_p_perc_v_feed.max(), heatmap_p_perc_p_feed.max(), heatmap_p_perc_both_feed.max(), heatmap_p_perc_la.max())
+
+fig2, axn2 = plt.subplots(5, 1, sharex=True, sharey=True)
+fig2.suptitle("P Max Percentage Error for Each Node using Different Models")
+cbar_ax = fig2.add_axes([.91, .3, .03, .4])
+# cbar_ax = fig2.add_axes([.55, .2, .4, .03])
+plt.subplot(5, 1,1)
+sns.heatmap(heatmap_p_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+                 # cbar_kws={ "orientation": "horizontal" })
+plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
+plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
+plt.xlabel('N')
+plt.subplot(5, 1,2)
+subplot_heatmap(heatmap_p_perc_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LV')
+plt.subplot(5, 1,3)
+subplot_heatmap(heatmap_p_perc_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LP')
+plt.subplot(5, 1,4)
+subplot_heatmap(heatmap_p_perc_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LB')
+plt.subplot(5, 1,5)
+subplot_heatmap(heatmap_p_perc_la, non_zib_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LA')
+fig2.text(0.51, 0.02, 'Node Number', ha='center')
+fig2.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
+# fig2.delaxes(axn2[2][1])
+# fig2.tight_layout()
+
+########################### plot v abs error ###########################
+# plot heatmap with same colorbar values
+vmin = min(heatmap_volt_abs_no_feed.min(), heatmap_volt_abs_v_feed.min(), heatmap_volt_abs_p_feed.min(), heatmap_volt_abs_both_feed.min(), heatmap_volt_abs_la.min())
+vmax = max(heatmap_volt_abs_no_feed.max(), heatmap_volt_abs_v_feed.max(), heatmap_volt_abs_p_feed.max(), heatmap_volt_abs_both_feed.max(), heatmap_volt_abs_la.max())
+
+fig3, axn3 = plt.subplots(5, 1, sharex=True, sharey=True)
+fig3.suptitle("V Max Absolute Error for Each Node using Different Models")
+cbar_ax = fig3.add_axes([.91, .3, .03, .4])
+# cbar_ax = fig3.add_axes([.55, .2, .4, .03])
+plt.subplot(5, 1,1)
+sns.heatmap(heatmap_volt_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+                 # cbar_kws={ "orientation": "horizontal" })
+plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
+plt.xticks(np.arange(len(all_index_array))+0.5, all_index_array) # node number
+plt.xlabel('N')
+plt.subplot(5, 1,2)
+subplot_heatmap(heatmap_volt_abs_v_feed, all_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LV')
+plt.subplot(5, 1,3)
+subplot_heatmap(heatmap_volt_abs_p_feed, all_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LP')
+plt.subplot(5, 1,4)
+subplot_heatmap(heatmap_volt_abs_both_feed, all_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LB')
+plt.subplot(5, 1,5)
+subplot_heatmap(heatmap_volt_abs_la, all_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LA')
+fig3.text(0.51, 0.02, 'Node Number', ha='center')
+fig3.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
+# fig3.delaxes(axn3[2][1])
+# fig3.tight_layout()
+
+# plot heatmap with different colorbar values
+fig0, axn0 = plt.subplots(5, 1, sharex=True, sharey=True)
+# cbar_ax = fig0.add_axes([.91, .3, .03, .4])
+plt.subplot(5, 1,1)
+plot_heatmap(heatmap_volt_abs_no_feed)
+plt.subplot(5, 1,2)
+plot_heatmap(heatmap_volt_abs_v_feed)
+plt.subplot(5, 1,3)
+plot_heatmap(heatmap_volt_abs_p_feed)
+plt.subplot(5, 1,4)
+plot_heatmap(heatmap_volt_abs_both_feed)
+plt.subplot(5, 1,5)
+plot_heatmap(heatmap_volt_abs_la)
+# fig0.delaxes(axn0[2][1])
+# fig0.tight_layout()
+
+########################## plot p abs error ###########################
+vmin = min(heatmap_p_abs_no_feed.min(), heatmap_p_abs_v_feed.min(), heatmap_p_abs_p_feed.min(), heatmap_p_abs_both_feed.min(), heatmap_p_abs_la.min())
+vmax = max(heatmap_p_abs_no_feed.max(), heatmap_p_abs_v_feed.max(), heatmap_p_abs_p_feed.max(), heatmap_p_abs_both_feed.max(), heatmap_p_abs_la.max())
+
+fig4, axn4 = plt.subplots(5, 1, sharex=True, sharey=True)
+fig4.suptitle("P Max Absolute Error for Each Node using Different Models")
+cbar_ax = fig4.add_axes([.91, .3, .03, .4])
+# cbar_ax = fig4.add_axes([.55, .2, .4, .03])
+plt.subplot(5, 1,1)
+sns.heatmap(heatmap_p_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+                 # cbar_kws={ "orientation": "horizontal" })
+plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
+plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
+plt.xlabel('N')
+plt.subplot(5, 1,2)
+subplot_heatmap(heatmap_p_abs_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LV')
+plt.subplot(5, 1,3)
+subplot_heatmap(heatmap_p_abs_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LP')
+plt.subplot(5, 1,4)
+subplot_heatmap(heatmap_p_abs_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LB')
+plt.subplot(5, 1,5)
+subplot_heatmap(heatmap_p_abs_la, non_zib_index_array, vmin=vmin, vmax=vmax)
+plt.xlabel('LA')
+fig4.text(0.51, 0.02, 'Node Number', ha='center')
+fig4.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
+# fig4.delaxes(axn4[2][1])
+# fig4.tight_layout()
+
 # plot histogram
 
 # plot histogram for different methods but same number of missing nodes on 1 graph
@@ -281,138 +565,140 @@ for i in num_known:
 
 # plots for manuscripts
 # box and whisker plot for same method with different number of meas(s)
-plt.figure()
-data = [ll_no_feed_perc_v[0], ll_v_feed_perc_v[0], ll_p_feed_perc_v[0], 
-        ll_both_feed_perc_v[0], ll_la_perc_v[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Percentage V Error')
-plt.title('Percentage V Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-plt.figure()
-data = [ll_no_feed_perc_p[0], ll_v_feed_perc_p[0], ll_p_feed_perc_p[0], 
-        ll_both_feed_perc_p[0], ll_la_perc_p[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Percentage P Error')
-plt.title('Percentage P Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-plt.figure()
-data = [ll_no_feed_abs_v[0], ll_v_feed_abs_v[0], ll_p_feed_abs_v[0], 
-        ll_both_feed_abs_v[0], ll_la_abs_v[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Absolute V Error')
-plt.title('Absolute V Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-plt.figure()
-data = [ll_no_feed_abs_p[0], ll_v_feed_abs_p[0], ll_p_feed_abs_p[0], 
-        ll_both_feed_abs_p[0], ll_la_abs_p[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Absolute P Error')
-plt.title('Absolute P Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+separate_plots = 0
+if separate_plots == 1:
+    plt.figure()
+    data = [ll_no_feed_perc_v[0], ll_v_feed_perc_v[0], ll_p_feed_perc_v[0], 
+            ll_both_feed_perc_v[0], ll_la_perc_v[0]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Percentage V Error')
+    plt.title('Percentage V Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    plt.figure()
+    data = [ll_no_feed_perc_p[0], ll_v_feed_perc_p[0], ll_p_feed_perc_p[0], 
+            ll_both_feed_perc_p[0], ll_la_perc_p[0]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Percentage P Error')
+    plt.title('Percentage P Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    plt.figure()
+    data = [ll_no_feed_abs_v[0], ll_v_feed_abs_v[0], ll_p_feed_abs_v[0], 
+            ll_both_feed_abs_v[0], ll_la_abs_v[0]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Absolute V Error')
+    plt.title('Absolute V Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    plt.figure()
+    data = [ll_no_feed_abs_p[0], ll_v_feed_abs_p[0], ll_p_feed_abs_p[0], 
+            ll_both_feed_abs_p[0], ll_la_abs_p[0]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Absolute P Error')
+    plt.title('Absolute P Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    ###############################################################################
+    plt.figure()
+    data = [ll_no_feed_perc_v[1], ll_v_feed_perc_v[1], ll_p_feed_perc_v[1], 
+            ll_both_feed_perc_v[1], ll_la_perc_v[1]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Percentage V Error')
+    plt.title('Percentage V Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    plt.figure()
+    data = [ll_no_feed_perc_p[1], ll_v_feed_perc_p[1], ll_p_feed_perc_p[1], 
+            ll_both_feed_perc_p[1], ll_la_perc_p[1]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Percentage P Error')
+    plt.title('Percentage P Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    plt.figure()
+    data = [ll_no_feed_abs_v[1], ll_v_feed_abs_v[1], ll_p_feed_abs_v[1], 
+            ll_both_feed_abs_v[1], ll_la_abs_v[1]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Absolute V Error')
+    plt.title('Absolute V Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    plt.figure()
+    data = [ll_no_feed_abs_p[1], ll_v_feed_abs_p[1], ll_p_feed_abs_p[1], 
+            ll_both_feed_abs_p[1], ll_la_abs_p[1]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Absolute P Error')
+    plt.title('Absolute P Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    ###############################################################################
+    plt.figure()
+    data = [ll_no_feed_perc_v[2], ll_v_feed_perc_v[2], ll_p_feed_perc_v[2], 
+            ll_both_feed_perc_v[2], ll_la_perc_v[2]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Percentage V Error')
+    plt.title('Percentage V Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    plt.figure()
+    data = [ll_no_feed_perc_p[2], ll_v_feed_perc_p[2], ll_p_feed_perc_p[2], 
+            ll_both_feed_perc_p[2], ll_la_perc_p[2]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Percentage P Error')
+    plt.title('Percentage P Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    plt.figure()
+    data = [ll_no_feed_abs_v[2], ll_v_feed_abs_v[2], ll_p_feed_abs_v[2], 
+            ll_both_feed_abs_v[2], ll_la_abs_v[2]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Absolute V Error')
+    plt.title('Absolute V Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
+    
+    plt.figure()
+    data = [ll_no_feed_abs_p[2], ll_v_feed_abs_p[2], ll_p_feed_abs_p[2], 
+            ll_both_feed_abs_p[2], ll_la_abs_p[2]]
+    sns.boxplot(data=data, orient="h")
+    # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
+    plt.ylabel('Different SE Models')
+    plt.xlabel('Absolute P Error')
+    plt.title('Absolute P Error for Different SE Models')
+    plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 
 ###############################################################################
-plt.figure()
-data = [ll_no_feed_perc_v[1], ll_v_feed_perc_v[1], ll_p_feed_perc_v[1], 
-        ll_both_feed_perc_v[1], ll_la_perc_v[1]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Percentage V Error')
-plt.title('Percentage V Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-plt.figure()
-data = [ll_no_feed_perc_p[1], ll_v_feed_perc_p[1], ll_p_feed_perc_p[1], 
-        ll_both_feed_perc_p[1], ll_la_perc_p[1]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Percentage P Error')
-plt.title('Percentage P Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-plt.figure()
-data = [ll_no_feed_abs_v[1], ll_v_feed_abs_v[1], ll_p_feed_abs_v[1], 
-        ll_both_feed_abs_v[1], ll_la_abs_v[1]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Absolute V Error')
-plt.title('Absolute V Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-plt.figure()
-data = [ll_no_feed_abs_p[1], ll_v_feed_abs_p[1], ll_p_feed_abs_p[1], 
-        ll_both_feed_abs_p[1], ll_la_abs_p[1]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Absolute P Error')
-plt.title('Absolute P Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-###############################################################################
-plt.figure()
-data = [ll_no_feed_perc_v[2], ll_v_feed_perc_v[2], ll_p_feed_perc_v[2], 
-        ll_both_feed_perc_v[2], ll_la_perc_v[2]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Percentage V Error')
-plt.title('Percentage V Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-plt.figure()
-data = [ll_no_feed_perc_p[2], ll_v_feed_perc_p[2], ll_p_feed_perc_p[2], 
-        ll_both_feed_perc_p[2], ll_la_perc_p[2]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Percentage P Error')
-plt.title('Percentage P Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-plt.figure()
-data = [ll_no_feed_abs_v[2], ll_v_feed_abs_v[2], ll_p_feed_abs_v[2], 
-        ll_both_feed_abs_v[2], ll_la_abs_v[2]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Absolute V Error')
-plt.title('Absolute V Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-plt.figure()
-data = [ll_no_feed_abs_p[2], ll_v_feed_abs_p[2], ll_p_feed_abs_p[2], 
-        ll_both_feed_abs_p[2], ll_la_abs_p[2]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
-plt.ylabel('Different SE Models')
-plt.xlabel('Absolute P Error')
-plt.title('Absolute P Error for Different SE Models')
-plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
-
-###############################################################################
-# SUBPLOT #
+# SUBPLOT FOR 3 CASES OF MISSING MEASUREMENTS #
 ###############################################################################
 
 plt.figure()
 data = [ll_no_feed_perc_v[0], ll_v_feed_perc_v[0], ll_p_feed_perc_v[0], 
         ll_both_feed_perc_v[0], ll_la_perc_v[0]]
 plt.subplot(3,4,1)
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(a) Percentage V Error')
 # plt.title('Percentage V Error for Different SE Models')
@@ -421,8 +707,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,2)
 data = [ll_no_feed_perc_p[0], ll_v_feed_perc_p[0], ll_p_feed_perc_p[0], 
         ll_both_feed_perc_p[0], ll_la_perc_p[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(b) Percentage P Error')
 # plt.title('Percentage P Error for Different SE Models')
@@ -431,8 +717,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,3)
 data = [ll_no_feed_abs_v[0], ll_v_feed_abs_v[0], ll_p_feed_abs_v[0], 
         ll_both_feed_abs_v[0], ll_la_abs_v[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(c) Absolute V Error')
 # plt.title('Absolute V Error for Different SE Models')
@@ -441,8 +727,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,4)
 data = [ll_no_feed_abs_p[0], ll_v_feed_abs_p[0], ll_p_feed_abs_p[0], 
         ll_both_feed_abs_p[0], ll_la_abs_p[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(d) Absolute P Error')
 # plt.title('Absolute P Error for Different SE Models')
@@ -452,8 +738,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,5)
 data = [ll_no_feed_perc_v[1], ll_v_feed_perc_v[1], ll_p_feed_perc_v[1], 
         ll_both_feed_perc_v[1], ll_la_perc_v[1]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(e) Percentage V Error')
 # plt.title('Percentage V Error for Different SE Models')
@@ -462,8 +748,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,6)
 data = [ll_no_feed_perc_p[1], ll_v_feed_perc_p[1], ll_p_feed_perc_p[1], 
         ll_both_feed_perc_p[1], ll_la_perc_p[1]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(f) Percentage P Error')
 # plt.title('Percentage P Error for Different SE Models')
@@ -472,8 +758,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,7)
 data = [ll_no_feed_abs_v[1], ll_v_feed_abs_v[1], ll_p_feed_abs_v[1], 
         ll_both_feed_abs_v[1], ll_la_abs_v[1]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(g) Absolute V Error')
 # plt.title('Absolute V Error for Different SE Models')
@@ -482,8 +768,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,8)
 data = [ll_no_feed_abs_p[1], ll_v_feed_abs_p[1], ll_p_feed_abs_p[1], 
         ll_both_feed_abs_p[1], ll_la_abs_p[1]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(h) Absolute P Error')
 # plt.title('Absolute P Error for Different SE Models')
@@ -493,8 +779,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,9)
 data = [ll_no_feed_perc_v[2], ll_v_feed_perc_v[2], ll_p_feed_perc_v[2], 
         ll_both_feed_perc_v[2], ll_la_perc_v[2]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(i) Percentage V Error')
 # plt.title('Percentage V Error for Different SE Models')
@@ -503,8 +789,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,10)
 data = [ll_no_feed_perc_p[2], ll_v_feed_perc_p[2], ll_p_feed_perc_p[2], 
         ll_both_feed_perc_p[2], ll_la_perc_p[2]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(j) Percentage P Error')
 # plt.title('Percentage P Error for Different SE Models')
@@ -513,8 +799,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,11)
 data = [ll_no_feed_abs_v[2], ll_v_feed_abs_v[2], ll_p_feed_abs_v[2], 
         ll_both_feed_abs_v[2], ll_la_abs_v[2]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(k) Absolute V Error')
 # plt.title('Absolute V Error for Different SE Models')
@@ -523,8 +809,8 @@ plt.yticks([0, 1, 2, 3, 4], ['N', 'LV', 'LP', 'LB', 'LA'])
 plt.subplot(3,4,12)
 data = [ll_no_feed_abs_p[2], ll_v_feed_abs_p[2], ll_p_feed_abs_p[2], 
         ll_both_feed_abs_p[2], ll_la_abs_p[2]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(l) Absolute P Error')
 # plt.title('Absolute P Error for Different SE Models')
@@ -539,8 +825,8 @@ plt.figure(100)
 # data = [ll_no_feed_perc_v[0],
 #         ll_both_feed_perc_v[0], ll_la_perc_v[0]]
 # plt.subplot(2,4,1)
-# seaborn.boxplot(data=data, orient="h")
-# # seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# sns.boxplot(data=data, orient="h")
+# # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # # plt.ylabel('Different SE Models')
 # plt.xlabel('(a) Percentage V Error')
 # # plt.title('Percentage V Error for Different SE Models')
@@ -549,8 +835,8 @@ plt.figure(100)
 # plt.subplot(2,4,2)
 # data = [ll_no_feed_perc_p[0],
 #         ll_both_feed_perc_p[0], ll_la_perc_p[0]]
-# seaborn.boxplot(data=data, orient="h")
-# # seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# sns.boxplot(data=data, orient="h")
+# # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # # plt.ylabel('Different SE Models')
 # plt.xlabel('(b) Percentage P Error')
 # # plt.title('Percentage P Error for Different SE Models')
@@ -559,8 +845,8 @@ plt.figure(100)
 # plt.subplot(2,4,3)
 # data = [ll_no_feed_abs_v[0],
 #         ll_both_feed_abs_v[0], ll_la_abs_v[0]]
-# seaborn.boxplot(data=data, orient="h")
-# # seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# sns.boxplot(data=data, orient="h")
+# # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # # plt.ylabel('Different SE Models')
 # plt.xlabel('(c) Absolute V Error')
 # # plt.title('Absolute V Error for Different SE Models')
@@ -569,8 +855,8 @@ plt.figure(100)
 # plt.subplot(2,4,4)
 # data = [ll_no_feed_abs_p[0],
 #         ll_both_feed_abs_p[0], ll_la_abs_p[0]]
-# seaborn.boxplot(data=data, orient="h")
-# # seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+# sns.boxplot(data=data, orient="h")
+# # sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # # plt.ylabel('Different SE Models')
 # plt.xlabel('(d) Absolute P Error')
 # # plt.title('Absolute P Error for Different SE Models')
@@ -580,8 +866,8 @@ plt.figure(100)
 data = [ll_no_feed_perc_v[0],
         ll_both_feed_perc_v[0], ll_la_perc_v[0]]
 plt.subplot(2,4,5)
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(e) Percentage V Error')
 # plt.title('Percentage V Error for Different SE Models')
@@ -590,8 +876,8 @@ plt.yticks([0, 1, 2,], ['N', 'LB','LA'])
 plt.subplot(2,4,6)
 data = [ll_no_feed_perc_p[0],
         ll_both_feed_perc_p[0], ll_la_perc_p[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(f) Percentage P Error')
 # plt.title('Percentage P Error for Different SE Models')
@@ -600,8 +886,8 @@ plt.yticks([0, 1, 2,], ['N', 'LB', 'LA'])
 plt.subplot(2,4,7)
 data = [ll_no_feed_abs_v[0],
         ll_both_feed_abs_v[0], ll_la_abs_v[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(g) Absolute V Error')
 # plt.title('Absolute V Error for Different SE Models')
@@ -610,8 +896,8 @@ plt.yticks([0, 1, 2,], ['N', 'LB', 'LA'])
 plt.subplot(2,4,8)
 data = [ll_no_feed_abs_p[0],
         ll_both_feed_abs_p[0], ll_la_abs_p[0]]
-seaborn.boxplot(data=data, orient="h")
-# seaborn.swarmplot(data=ll_v_feed_perc_v, color=".25")
+sns.boxplot(data=data, orient="h")
+# sns.swarmplot(data=ll_v_feed_perc_v, color=".25")
 # plt.ylabel('Different SE Models')
 plt.xlabel('(h) Absolute P Error')
 # plt.title('Absolute P Error for Different SE Models')
@@ -740,32 +1026,32 @@ for i in arr: # i are number of known measurements
 
 # plot the max error graph
 # plt.subplot(3,4,12)
-# seaborn.boxplot(data=list_of_errors_p)
-# seaborn.swarmplot(data=list_of_errors_p, color=".25")
+# sns.boxplot(data=list_of_errors_p)
+# sns.swarmplot(data=list_of_errors_p, color=".25")
 # plt.xlabel('Known number of measurements')
 # plt.ylabel('Max absolute error in pu')
 # plt.title('Max Absolute Error Corresponding to known number of Measurements')
 
 # # plot all error graph
 # plt.figure()
-# seaborn.boxplot(data=list_of_all_errors_p)
-# # seaborn.swarmplot(data=list_of_all_errors_p, color=".25") 
+# sns.boxplot(data=list_of_all_errors_p)
+# # sns.swarmplot(data=list_of_all_errors_p, color=".25") 
 # plt.xlabel('Known number of measurements')
 # plt.ylabel(' absolute error in pu')
 # plt.title('All Absolute Errors Corresponding to known number of Measurements')
 
 # # plot known errors
 # plt.figure()
-# seaborn.boxplot(data=list_all_error_known_p)
-# seaborn.swarmplot(data=list_of_errors_p, color=".25")
+# sns.boxplot(data=list_all_error_known_p)
+# sns.swarmplot(data=list_of_errors_p, color=".25")
 # plt.xlabel('Known number of measurements')
 # plt.ylabel('absolute error in pu')
 # plt.title('Absolute Error Corresponding to known Measurements Buses')
 
 # # plot known errors
 # plt.figure()
-# seaborn.boxplot(data=list_all_error_unknown_p)
-# seaborn.swarmplot(data=list_all_error_unknown_p, color=".25")
+# sns.boxplot(data=list_all_error_unknown_p)
+# sns.swarmplot(data=list_all_error_unknown_p, color=".25")
 # plt.xlabel('Known number of measurements')
 # plt.ylabel('absolute error in pu')
 # plt.title('Absolute Error Corresponding to unknown Measurement Buses')
@@ -893,8 +1179,8 @@ for indices in combs:
 
 # plot V mag percentage error
 plt.figure()
-seaborn.boxplot(data=vmag_perc_error, orient='h')
-seaborn.swarmplot(data=vmag_perc_error, color=".25", orient='h')
+sns.boxplot(data=vmag_perc_error, orient='h')
+sns.swarmplot(data=vmag_perc_error, color=".25", orient='h')
 plt.ylabel('Different Solvers')
 plt.xlabel('Percentage Voltage Error')
 plt.title('Percentage Voltage Error for Different Solvers')
@@ -902,8 +1188,8 @@ plt.yticks([0, 1, 2], ['WLS', 'GD', 'Pytorch GD'])
 
 # plot P mag percentage error
 plt.figure()
-seaborn.boxplot(data=p_perc_error, orient='h')
-# seaborn.swarmplot(data=p_perc_error, color=".25")
+sns.boxplot(data=p_perc_error, orient='h')
+# sns.swarmplot(data=p_perc_error, color=".25")
 plt.ylabel('Different Solvers')
 plt.xlabel('Percentage P Error')
 plt.title('Percentage P Error for Different Solvers')
@@ -911,8 +1197,8 @@ plt.yticks([0, 1, 2], ['WLS', 'GD', 'Pytorch GD'])
 
 # plot P mag percentage error
 plt.figure()
-seaborn.boxplot(data=p_abs_error)
-# seaborn.swarmplot(data=p_abs_error, color=".25")
+sns.boxplot(data=p_abs_error)
+# sns.swarmplot(data=p_abs_error, color=".25")
 plt.xlabel('Different Solvers')
 plt.ylabel('Absolute P Error')
 plt.title('Absolute P Error for Different Solvers')
