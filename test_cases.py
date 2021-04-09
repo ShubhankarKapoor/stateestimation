@@ -28,7 +28,7 @@ SMALL_SIZE = 8
 MEDIUM_SIZE = 15
 BIGGER_SIZE = 22
 
-plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('font', size=MEDIUM_SIZE)          # controls default text sizes
 plt.rc('axes', titlesize=BIGGER_SIZE)     # fontsize of the axes title
 plt.rc('axes', labelsize=BIGGER_SIZE)    # fontsize of the x and y labels
 plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
@@ -398,30 +398,40 @@ for row, i in enumerate(num_known):
 vmin = min(heatmap_volt_perc_no_feed.min(), heatmap_volt_perc_v_feed.min(), heatmap_volt_perc_p_feed.min(), heatmap_volt_perc_both_feed.min(), heatmap_volt_perc_la.min())
 vmax = max(heatmap_volt_perc_no_feed.max(), heatmap_volt_perc_v_feed.max(), heatmap_volt_perc_p_feed.max(), heatmap_volt_perc_both_feed.max(), heatmap_volt_perc_la.max())
 
-fig1, axn1 = plt.subplots(3, 2, sharex=True, sharey=True)
+fig1, axn1 = plt.subplots(5, 1, sharex=True, sharey=True)
 fig1.suptitle("V Max Percentage Error for Each Node using Different Models")
-# cbar_ax = fig1.add_axes([.91, .3, .03, .4])
-cbar_ax = fig1.add_axes([.55, .2, .4, .03])
-plt.subplot(3,2,1)
-sns.heatmap(heatmap_volt_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,
-                 cbar_kws={ "orientation": "horizontal" })
+cbar_ax = fig1.add_axes([.91, .3, .03, .4])
+# cbar_ax = fig1.add_axes([.068, .2, .42, .03])
+plt.subplot(5, 1,1)
+sns.heatmap(heatmap_volt_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+                 # cbar_kws={ "orientation": "horizontal" }) # for horizontal cbar
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(all_index_array))+0.5, all_index_array) # node number
 plt.xlabel('N')
-plt.subplot(3,2,2)
+plt.subplot(5, 1,2)
 subplot_heatmap(heatmap_volt_perc_v_feed, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
-plt.subplot(3,2,3)
+plt.subplot(5, 1,3)
 subplot_heatmap(heatmap_volt_perc_p_feed, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LP')
-plt.subplot(3,2,4)
+plt.subplot(5, 1,4)
 subplot_heatmap(heatmap_volt_perc_both_feed, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LB')
-plt.subplot(3,2,5)
+plt.subplot(5, 1,5)
 subplot_heatmap(heatmap_volt_perc_la, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
-fig1.delaxes(axn1[2][1])
+fig1.text(0.5, 0.04, 'Node Number', ha='center')
+fig1.text(0.04, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+# fig1.delaxes(axn1[2][0])
+left  = 0.125  # the left side of the subplots of the figure
+right = 0.9    # the right side of the subplots of the figure
+bottom = 0.12   # the bottom of the subplots of the figure
+top = 0.9      # the top of the subplots of the figure
+wspace = 0.2   # the amount of width reserved for blank space between subplots
+hspace = 0.6   # the amount of height reserved for white space between subplots
+plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 fig1.tight_layout()
+# fig1.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 ##################### plot p percentage error ###########################
 vmin = min(heatmap_p_perc_no_feed.min(), heatmap_p_perc_v_feed.min(), heatmap_p_perc_p_feed.min(), heatmap_p_perc_both_feed.min(), heatmap_p_perc_la.min())
