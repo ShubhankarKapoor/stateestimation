@@ -66,8 +66,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # print(x[not_considered+37], full_x_est[not_considered+37])
 
         # calculate error between state vectors
-        errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p = error_calc(x[0:num_buses], full_x_est[0:num_buses])
-        errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, _ = error_calc(x[num_buses:2*num_buses], full_x_est[num_buses:2*num_buses])
+        errperc_vectorp, mean_error_st_p, max_error_st_p, errabs_vectorp, mean_error_st_abs_p, max_error_st_abs_p, max_index_p = error_calc(x[0:num_buses], full_x_est[0:num_buses])
+        errperc_vectorq, mean_error_st_q, max_error_st_q, errabs_vectorq, mean_error_st_abs_q, max_error_st_abs_q, _ = error_calc(x[num_buses:2*num_buses], full_x_est[num_buses:2*num_buses])
 
         # print some results
         # print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
@@ -94,19 +94,20 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # error calc between measurements
         # V_mag^2 and V_mag error
         errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
-        errperc_vector_vmag, mean_vmag_err, max_vmag_err, st_err_vmag, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
+        errperc_vector_vmag, mean_vmag_err, max_vmag_err, errabs_vectorv, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
         print('vmag bus err:', mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err)
 
         # pflow and qflow error
         # _, mean_pflow_err, max_pflow_err, mean_abs_pflow_err, max_abs_pflow_err, _ = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))
         # _, mean_qflow_err, max_qflow_err, mean_abs_qflow_err, max_abs_qflow_err, _ = error_calc(np.array(list(Q_line.values())), np.array(list(Q_line_con.values())))
-    #     return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
-    #            errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
+    #     return errperc_vectorp, mean_error_st_p, max_error_st_p, errabs_vectorp, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
+    #            errperc_vectorq, mean_error_st_q, max_error_st_q, errabs_vectorq, mean_error_st_abs_q, max_error_st_abs_q, \
     #            errperc_vector_vmag, mean_vmag_err, max_vmag_err, _, mean_abs_vmag_err, max_abs_vmag_err
     # else:
-    #     return errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
-    #            errperc_vectorp, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
-    return errperc_vector_vmag, errperc_vectorp, st_err_p, st_err_vmag
+    #     return errperc_vectorp, mean_error_st_p, max_error_st_p, errabs_vectorp, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
+    #            errperc_vectorp, mean_error_st_q, max_error_st_q, errabs_vectorq, mean_error_st_abs_q, max_error_st_abs_q, \
+
+    return errperc_vector_vmag, errperc_vectorp, errabs_vectorv, errabs_vectorp # all vectors
 
 def noise_addition(z, sd, mu = None):
 
