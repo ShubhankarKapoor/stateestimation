@@ -474,7 +474,7 @@ vmin = min(heatmap_volt_abs_no_feed.min(), heatmap_volt_abs_v_feed.min(), heatma
 vmax = max(heatmap_volt_abs_no_feed.max(), heatmap_volt_abs_v_feed.max(), heatmap_volt_abs_p_feed.max(), heatmap_volt_abs_both_feed.max(), heatmap_volt_abs_la.max())
 
 fig3, axn3 = plt.subplots(5, 1, sharex=True, sharey=True)
-fig3.suptitle("V Max Absolute Error for Each Node using Different Models")
+fig3.suptitle("V Max Absolute Error (kV) for Each Node using Different Models")
 cbar_ax = fig3.add_axes([.91, .3, .03, .4])
 # cbar_ax = fig3.add_axes([.55, .2, .4, .03])
 plt.subplot(5, 1,1)
@@ -522,7 +522,7 @@ vmin = min(heatmap_p_abs_no_feed.min(), heatmap_p_abs_v_feed.min(), heatmap_p_ab
 vmax = max(heatmap_p_abs_no_feed.max(), heatmap_p_abs_v_feed.max(), heatmap_p_abs_p_feed.max(), heatmap_p_abs_both_feed.max(), heatmap_p_abs_la.max())
 
 fig4, axn4 = plt.subplots(5, 1, sharex=True, sharey=True)
-fig4.suptitle("P Max Absolute Error for Each Node using Different Models")
+fig4.suptitle("P Max Absolute Error (kW) for Each Node using Different Models")
 cbar_ax = fig4.add_axes([.91, .3, .03, .4])
 # cbar_ax = fig4.add_axes([.55, .2, .4, .03])
 plt.subplot(5, 1,1)
