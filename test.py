@@ -101,7 +101,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 1 # 1
+num_plow_meas = 0 # 1
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -113,7 +113,7 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[0])
+indices = np.asarray(combs[5])
 # ----->>> full loss based system works most of the cases.
 # ----->>> might be a small bug in code or jacobian calc. worth checking
 # ----->>> an example when i = 8,  combs=5
@@ -121,7 +121,7 @@ indices = np.asarray(combs[0])
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
 
-# indices = np.asarray((   3,  4,    6,  7,   9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+indices = np.asarray((   1,  2,  3 , 8,  9 )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 
 # 906
 # [ 34, 70, 73, 74, 225, 289, 349, 387, 388, 502, 562, 563, 611, 629, 817, 860, 861, 896, 898, 900, 906]
@@ -217,6 +217,8 @@ x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
 _,_,_,p3error1 = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+# print(x_estn)
+
 ###############################################################################
 loss, pflow = 1, 0
 # LinDist + Voltage Feedback
@@ -224,8 +226,9 @@ x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+_,_,_,p3error2 = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+# print(x_estn)
 ###############################################################################
 loss, pflow = 0, 1
 # LinDist + Pflow Feedback
@@ -233,8 +236,9 @@ x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+_,_,_,p3error3 = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+# print(x_estn)
 ###############################################################################
 loss, pflow = 1, 1
 # LinDist + Voltage & Pflow Feedback
