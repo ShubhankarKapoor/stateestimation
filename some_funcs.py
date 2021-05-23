@@ -109,6 +109,16 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
 
     return errperc_vector_vmag, errperc_vectorp, errabs_vectorv, errabs_vectorp # all vectors
 
+def inc_avg(prev_avg, total_counts, new_array):
+    """Calculate the average incrementally.
+    prev_avg: last calculated average.
+    total_counts: number of elements for prev_avg
+    new_array: new array that will update the average"""
+
+    new_avg = prev_avg + (sum(new_array) - len(new_array)*prev_avg)/(total_counts+len(new_array))
+ 
+    return new_avg
+
 def noise_addition(z, sd, mu = None):
 
     mu = mu if mu is not None else 0
@@ -155,7 +165,7 @@ def subset_of_measurements(num_plow_meas, arcs, P_line, Q_line, V):
     ''' function for subset of measurements of pflow, qflow'''
 
     # keys list p_line and q_line
-    key_list = list(P_line.keys())
+    key_list = sorted(list(P_line.keys()))
     if num_plow_meas == 0: # return empty dict for flows
         return {}, {}
     if num_plow_meas == 1:
@@ -163,8 +173,10 @@ def subset_of_measurements(num_plow_meas, arcs, P_line, Q_line, V):
         meas_Q_line = {key_list[0]: Q_line[key_list[0]]}
     else:
         # randomly chose keys for powerflows
-        p_line_index = np.sort(random.sample(range(1,len(P_line)), num_plow_meas-1))
-        p_line_index = np.insert(p_line_index, 0, 0) # so that the pflow in first line is always considered
+        p_line_index = np.sort(random.sample(range(1,len(P_line)), num_plow_meas-1)) # doesn't include 0 here
+        # p_line_index = np.insert(p_line_index, 0, 0) # so that the pflow in first line is always considered
+        p_line_index = np.hstack((int(0),p_line_index))
+        p_line_index = p_line_index.astype(np.int64)
         meas_P_line = {key_list[k]: P_line[key_list[k]] for k in p_line_index}
         meas_Q_line = {key_list[k]: Q_line[key_list[k]] for k in p_line_index}
 
@@ -189,6 +201,12 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
             raise ValueError("NUmber of indices not equal to length of known measurements")
         else:
             known_meas_idx = indices
+            # if 0 in known_meas_idx:
+            #     pass
+            # else:
+            #     known_meas_idx = np.insert(known_meas_idx, 0, int(0))
+            #     known_meas_idx = known_meas_idx.astype(int)
+            
             # missing indices from known_meas_idx
             unknown_meas_idx = np.setdiff1d(np.arange(0,len(non_zib_index)), known_meas_idx) 
             # should fix the above mentioned issue here

@@ -19,7 +19,7 @@ from itertools import combinations
 import seaborn as sns
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
-                       error_calc_refactor, countour_plot
+                       error_calc_refactor, countour_plot, inc_avg
 import time
 import torch
 import matplotlib.pyplot as plt
@@ -36,7 +36,7 @@ plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)
 
-which = 37 # IEEE 37-node or IEEE 906-node
+which = 906 # IEEE 37-node or IEEE 906-node
 
 if which == 37:
     from Network37 import *
@@ -107,8 +107,8 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 
 # random initialization of state vars instead of above
 torch.manual_seed(0)
-x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
-# x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
+# x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
+x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
@@ -117,7 +117,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 1
+num_plow_meas = 0
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -128,6 +128,7 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
+num_known = [7, 1, ] # known number of measurements
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
@@ -147,6 +148,24 @@ def max_val(A, current_calc_error, non_zib_index):
     # B = current_calc_error
     A[B>A] = B[B>A]
     return A
+
+def max_val_for_index(A, current_calc_error, non_zib_index, node):
+    ''' returns a flag when a max value is changed for a specific node 
+        doing it for power only
+    '''
+    # node is the index number and not the node number
+    # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+    # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
+
+    # A prev_max_error for non zib buses
+    flag = 0 # flag for getting max error in node 26
+    node26 = A[node] # error val for node 26   
+    B = current_calc_error[non_zib_index]
+    A[B>A] = B[B>A]
+    
+    if node26 != A[node]:
+        flag = 1
+    return A, flag
 
 def subplot_heatmap(array_2d, indices, vmin, vmax, cbar = None, cbar_ax = None, ax = None):
     cbar = 0 if cbar is None else cbar
@@ -194,6 +213,17 @@ heatmap_volt_perc_la = np.zeros((len(num_known), len(P_Load)))
 heatmap_p_perc_la = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
 
+# all average variables
+avg_perc_v_nofeed, avg_perc_p_nofeed, avg_abs_p_nofeed = 0, 0, 0
+avg_perc_v_vfeed, avg_perc_p_vfeed, avg_abs_p_vfeed = 0, 0, 0
+avg_perc_v_pfeed, avg_perc_p_pfeed, avg_abs_p_pfeed = 0, 0, 0
+avg_perc_v_bothfeed, avg_perc_p_bothfeed, avg_abs_p_bothfeed = 0, 0, 0
+avg_perc_v_la, avg_perc_p_la, avg_abs_p_la = 0, 0, 0
+total_counts_v, total_counts_p = 0, 0 # total number of vars for average
+
+node_26_error_for_diff_known_meas = [] # to store known indices for max error
+count = 0 # total number of iters, should be sum of all combs at the end
+
 for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
     combs = list(combinations(arr,i))
@@ -219,6 +249,7 @@ for row, i in enumerate(num_known):
 
     # different combs for known number of meas
     for indices in combs:
+        count+=1
         indices = np.asarray(indices)
         # see the known meas
         if len(indices) !=0:
@@ -276,11 +307,20 @@ for row, i in enumerate(num_known):
         print('GN-WLS based on linear jacobian with no feedback/ feedback') 
         perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-        l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
-        l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
+        # average of all elements
+        avg_perc_v_nofeed = inc_avg(avg_perc_v_nofeed, total_counts_v, perc_v_nofeed)
+        avg_perc_p_nofeed = inc_avg(avg_perc_p_nofeed, total_counts_p, perc_p_nofeed[non_zib_index])
+        avg_abs_p_nofeed = inc_avg(avg_abs_p_nofeed, total_counts_p, abs_p_nofeed[non_zib_index])
+        # uncomment below to store all errors
+        # l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
+        # l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
         ################### HEATMAP ##########################################
         volt_max_perc_nofeed = max_val(volt_max_perc_nofeed, perc_v_nofeed, all_index_array)
-        p_max_perc_nofeed = max_val(p_max_perc_nofeed, perc_p_nofeed, non_zib_index)       
+        # _, flag = max_val_for_index(p_max_perc_nofeed, perc_p_nofeed, non_zib_index, 7)
+        # print('Flaaaaaaaaaaaag', flag)
+        # if flag == 1:
+        #     max_node_26_error = corresponding_nodes        
+        p_max_perc_nofeed = max_val(p_max_perc_nofeed, perc_p_nofeed, non_zib_index)    
         volt_max_abs_nofeed = max_val(volt_max_abs_nofeed, abs_v_nofeed, all_index_array)
         p_max_abs_nofeed = max_val(p_max_abs_nofeed, abs_p_nofeed, non_zib_index)
         #######################################################################
@@ -293,8 +333,13 @@ for row, i in enumerate(num_known):
         print('GN-WLS based on linear jacobian with no feedback/ feedback')
         perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-        l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
-        l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
+        # average of all elements
+        avg_perc_v_vfeed = inc_avg(avg_perc_v_vfeed, total_counts_v, perc_v_vfeed)
+        avg_perc_p_vfeed = inc_avg(avg_perc_p_vfeed, total_counts_p, perc_p_vfeed[non_zib_index])
+        avg_abs_p_vfeed = inc_avg(avg_abs_p_vfeed, total_counts_p, abs_p_vfeed[non_zib_index])        
+        # uncomment below to store all errors        
+        # l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
+        # l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
         ################### HEATMAP ##########################################
         volt_max_perc_vfeed = max_val(volt_max_perc_vfeed, perc_v_vfeed, all_index_array)
         p_max_perc_vfeed = max_val(p_max_perc_vfeed, perc_p_vfeed, non_zib_index)       
@@ -310,8 +355,13 @@ for row, i in enumerate(num_known):
         print('GN-WLS based on linear jacobian with no feedback/ feedback')
         perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-        l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
-        l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
+        # average of all elements
+        avg_perc_v_pfeed = inc_avg(avg_perc_v_pfeed, total_counts_v, perc_v_pfeed)
+        avg_perc_p_pfeed = inc_avg(avg_perc_p_pfeed, total_counts_p, perc_p_pfeed[non_zib_index])
+        avg_abs_p_pfeed = inc_avg(avg_abs_p_pfeed, total_counts_p, abs_p_pfeed[non_zib_index])           
+        # uncomment below to store all errors        
+        # l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
+        # l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
         ################### HEATMAP ##########################################
         volt_max_perc_pfeed = max_val(volt_max_perc_pfeed, perc_v_pfeed, all_index_array)
         p_max_perc_pfeed = max_val(p_max_perc_pfeed, perc_p_pfeed, non_zib_index)       
@@ -327,8 +377,13 @@ for row, i in enumerate(num_known):
         print('GN-WLS based on linear jacobian with no feedback/ feedback')
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-        l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
-        l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
+        # average of all elements
+        avg_perc_v_bothfeed = inc_avg(avg_perc_v_bothfeed, total_counts_v, perc_v_n)
+        avg_perc_p_bothfeed = inc_avg(avg_perc_p_bothfeed, total_counts_p, perc_p_n[non_zib_index])
+        avg_abs_p_bothfeed = inc_avg(avg_abs_p_bothfeed, total_counts_p, abs_p_n[non_zib_index])   
+        # uncomment below to store all errors        
+        # l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
+        # l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
         ################### HEATMAP ##########################################
         volt_max_perc_bothfeed = max_val(volt_max_perc_bothfeed, perc_v_n, all_index_array)
         p_max_perc_bothfeed = max_val(p_max_perc_bothfeed, perc_p_n, non_zib_index)       
@@ -346,15 +401,24 @@ for row, i in enumerate(num_known):
         print('GN-WLS based on non-linear with ass')
         perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
-        l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
-        l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
+        # average of all elements
+        avg_perc_v_la = inc_avg(avg_perc_v_la, total_counts_v, perc_v_la)
+        avg_perc_p_la = inc_avg(avg_perc_p_la, total_counts_p, perc_p_la[non_zib_index])
+        avg_abs_p_la = inc_avg(avg_abs_p_la, total_counts_p, abs_p_la[non_zib_index]) 
+        # uncomment below to store all errors
+        # l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
+        # l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
         ################### HEATMAP ##########################################
         volt_max_perc_la = max_val(volt_max_perc_la, perc_v_la, all_index_array)
         p_max_perc_la = max_val(p_max_perc_la, perc_p_la, non_zib_index)       
         volt_max_abs_la = max_val(volt_max_abs_la, abs_v_la, all_index_array)
         p_max_abs_la = max_val(p_max_abs_la, abs_p_la, non_zib_index)
         # break
-    
+
+        # update total counts
+        total_counts_v+= len(perc_v_nofeed) # count * len(perc_v_nofeed)
+        total_counts_p+= len(perc_p_nofeed[non_zib_index])
+    # node_26_error_for_diff_known_meas.append(max_node_26_error) # append indices
     # insert the values for heatmap
     heatmap_volt_abs_no_feed[row,:] = volt_max_abs_nofeed * Vbase
     heatmap_p_abs_no_feed[row,:] = p_max_abs_nofeed * Sbase
@@ -383,16 +447,17 @@ for row, i in enumerate(num_known):
     ###########################################################################
     
     # values for all errors
-    ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
-    ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
-    ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
-    ll_v_feed_abs_v.append(l_v_feed_abs_v), ll_v_feed_abs_p.append(l_v_feed_abs_p)
-    ll_p_feed_perc_v.append(l_p_feed_perc_v), ll_p_feed_perc_p.append(l_p_feed_perc_p), 
-    ll_p_feed_abs_v.append(l_p_feed_abs_v), ll_p_feed_abs_p.append(l_p_feed_abs_p)
-    ll_both_feed_perc_v.append(l_both_feed_perc_v), ll_both_feed_perc_p.append(l_both_feed_perc_p), 
-    ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
-    ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
-    ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+    # uncomment below to store all errors
+    # ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
+    # ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
+    # ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
+    # ll_v_feed_abs_v.append(l_v_feed_abs_v), ll_v_feed_abs_p.append(l_v_feed_abs_p)
+    # ll_p_feed_perc_v.append(l_p_feed_perc_v), ll_p_feed_perc_p.append(l_p_feed_perc_p), 
+    # ll_p_feed_abs_v.append(l_p_feed_abs_v), ll_p_feed_abs_p.append(l_p_feed_abs_p)
+    # ll_both_feed_perc_v.append(l_both_feed_perc_v), ll_both_feed_perc_p.append(l_both_feed_perc_p), 
+    # ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
+    # ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
+    # ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
 
 ###############################################################################
 # Adjusting the subplots
@@ -416,7 +481,7 @@ sns.heatmap(heatmap_volt_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_a
                  # cbar_kws={ "orientation": "horizontal" }) # for horizontal cbar
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(all_index_array))+0.5, all_index_array) # node number
-plt.xlabel('N')
+plt.xlabel('LN')
 plt.subplot(5, 1,2)
 subplot_heatmap(heatmap_volt_perc_v_feed, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
@@ -429,8 +494,8 @@ plt.xlabel('LB')
 plt.subplot(5, 1,5)
 subplot_heatmap(heatmap_volt_perc_la, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
-fig1.text(0.51, 0.02, 'Node Number', ha='center')
-fig1.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+fig1.text(0.51, 0.02, 'Node Number', ha='center', fontsize=BIGGER_SIZE)
+fig1.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical', fontsize=BIGGER_SIZE)
 plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 # fig1.delaxes(axn1[2][0])
 # fig1.tight_layout()
@@ -444,26 +509,26 @@ fig2, axn2 = plt.subplots(5, 1, sharex=True, sharey=True)
 fig2.suptitle("P Max Percentage Error for Each Node using Different Models")
 cbar_ax = fig2.add_axes([.91, .3, .03, .4])
 # cbar_ax = fig2.add_axes([.55, .2, .4, .03])
-plt.subplot(5, 1,1)
+plt.subplot(5, 1, 1)
 sns.heatmap(heatmap_p_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
                  # cbar_kws={ "orientation": "horizontal" })
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
-plt.xlabel('N')
-plt.subplot(5, 1,2)
+plt.xlabel('LN')
+plt.subplot(5, 1, 2)
 subplot_heatmap(heatmap_p_perc_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
-plt.subplot(5, 1,3)
+plt.subplot(5, 1, 3)
 subplot_heatmap(heatmap_p_perc_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LP')
-plt.subplot(5, 1,4)
+plt.subplot(5, 1, 4)
 subplot_heatmap(heatmap_p_perc_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LB')
-plt.subplot(5, 1,5)
+plt.subplot(5, 1, 5)
 subplot_heatmap(heatmap_p_perc_la, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
-fig2.text(0.51, 0.02, 'Node Number', ha='center')
-fig2.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+fig2.text(0.51, 0.02, 'Node Number', ha='center', fontsize=BIGGER_SIZE)
+fig2.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical', fontsize=BIGGER_SIZE)
 plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 # fig2.delaxes(axn2[2][1])
 # fig2.tight_layout()
@@ -482,7 +547,7 @@ sns.heatmap(heatmap_volt_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax
                  # cbar_kws={ "orientation": "horizontal" })
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(all_index_array))+0.5, all_index_array) # node number
-plt.xlabel('N')
+plt.xlabel('LN')
 plt.subplot(5, 1,2)
 subplot_heatmap(heatmap_volt_abs_v_feed, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
@@ -495,8 +560,8 @@ plt.xlabel('LB')
 plt.subplot(5, 1,5)
 subplot_heatmap(heatmap_volt_abs_la, all_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
-fig3.text(0.51, 0.02, 'Node Number', ha='center')
-fig3.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+fig3.text(0.51, 0.02, 'Node Number', ha='center', fontsize=BIGGER_SIZE)
+fig3.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical', fontsize=BIGGER_SIZE)
 plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 # fig3.delaxes(axn3[2][1])
 # fig3.tight_layout()
@@ -530,7 +595,7 @@ sns.heatmap(heatmap_p_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = 
                  # cbar_kws={ "orientation": "horizontal" })
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
-plt.xlabel('N')
+plt.xlabel('LN')
 plt.subplot(5, 1,2)
 subplot_heatmap(heatmap_p_abs_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
@@ -543,8 +608,8 @@ plt.xlabel('LB')
 plt.subplot(5, 1,5)
 subplot_heatmap(heatmap_p_abs_la, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
-fig4.text(0.51, 0.02, 'Node Number', ha='center')
-fig4.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical')
+fig4.text(0.51, 0.02, 'Node Number', ha='center', fontsize=BIGGER_SIZE)
+fig4.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical', fontsize=BIGGER_SIZE)
 plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 # fig4.delaxes(axn4[2][1])
 # fig4.tight_layout()
