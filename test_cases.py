@@ -227,6 +227,11 @@ count = 0 # total number of iters, should be sum of all combs at the end
 for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
     combs = list(combinations(arr,i))
+    if len(combs) > 1000: # sampling
+        np.random.seed(0)
+        idx = np.random.choice(len(combs), 1000, replace=False)
+        combs = np.array(combs)
+        combs=combs[idx]
 
     # stores the max abs voltage error for each node
     volt_max_abs_nofeed, p_max_abs_nofeed = np.zeros((len(P_Load))),  np.zeros((len(non_zib_index)))
