@@ -72,7 +72,9 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
                     loss_term_p = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].real
                     loss_term_q = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].imag
                     P_line[bus_arcs[i]["To"][0]] = P_line[bus_arcs[i]["To"][0]] + loss_term_p
-                    Q_line[bus_arcs[i]["To"][0]] = Q_line[bus_arcs[i]["To"][0]] + loss_term_q                
+                    Q_line[bus_arcs[i]["To"][0]] = Q_line[bus_arcs[i]["To"][0]] + loss_term_q  
+                    # if loss_term_p > 0.13: # loss greater than 25kW
+                    #     print('loss is:', loss_term_p/2.60*100, bus_arcs[i],)
 
             #Forward sweep
             if loss == 1: # voltage loss term
