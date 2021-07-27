@@ -15,7 +15,7 @@ from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        error_calc_refactor, countour_plot
 import torch
 import matplotlib.pyplot as plt
-which = 906 # IEEE 37-node or IEEE 906-node
+which = 37 # IEEE 37-node or IEEE 906-node
 
 if which == 37:
     from Network37 import *
@@ -38,7 +38,8 @@ comparison = 0
 
 # masurement set
 if data_lin == 1:
-    [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which,loss=1, pflow = 1)
+    [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
+    # [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which,loss=1, pflow = 1)
 
 if data_full_ac == 1:
     [V_mag, V_ang, _, S_line, I_line, I_load, e_max, k] = BackwardForwardSweep(
@@ -108,7 +109,7 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 20
+i = 5
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
@@ -129,8 +130,8 @@ indices = np.asarray(combs[5])
   # [     1,      3,  4,   5,        7,   8,   9,             12,  13,  14,       16,            19,  20]
 
 # indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
-indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,     11,  
-                        13,  14,  15,  16, 17, 19,))
+# indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,     11,  
+#                         13,  14,  15,  16, 17, 19,))
 
 # see the known meas
 if len(indices) !=0:
@@ -270,37 +271,37 @@ x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobia
 ###############################################################################
 costs_lagd, tot_iters_la = [], 0
 
-# lr, iterations, = 0.1, 300 # Learning Rate and Number of iterations
-# # x_est=x_est_lagd
-# print('Implementing LA based with GD')
-# x_est_lagd, _, costs_labb, count_lagd, emax_lagd, jacobian_matrix_lagd = se_wls_la_bgd(
-#     x_est, z, W, lr, iterations,  meas_P_line, meas_Q_line, P_Load_state, 
-#     meas_P_load, path_to_all_nodes_list, path_to_all_nodes, non_zib_index, 
-#     meas_V, R_line, X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+lr, iterations, = 0.1, 300 # Learning Rate and Number of iterations
+# x_est=x_est_lagd
+print('Implementing LA based with GD')
+x_est_lagd, _, costs_labb, count_lagd, emax_lagd, jacobian_matrix_lagd = se_wls_la_bgd(
+    x_est, z, W, lr, iterations,  meas_P_line, meas_Q_line, P_Load_state, 
+    meas_P_load, path_to_all_nodes_list, path_to_all_nodes, non_zib_index, 
+    meas_V, R_line, X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
 
-# tot_iters_la+=iterations
-# costs_lagd.extend(costs_labb)
-# _, _, _, _ = error_calc_refactor(x, x_est_lagd, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-#                         which, V, V_mag, loss = loss, pflow = pflow) # for self GD
-# ##############################################################################
-# ##############################################################################
-# # Running the gradient Algorithm
-# costsb, tot_iters = [], 0
-# ##############################################################################
-# lr, iterations, = 0.1, 300 # Learning Rate and Number of iterations
+tot_iters_la+=iterations
+costs_lagd.extend(costs_labb)
+_, _, _, _ = error_calc_refactor(x, x_est_lagd, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = loss, pflow = pflow) # for self GD
+##############################################################################
+##############################################################################
+# Running the gradient Algorithm
+costsb, tot_iters = [], 0
+##############################################################################
+lr, iterations, = 0.1, 300 # Learning Rate and Number of iterations
 
-# # x_est=x_estb
-# # Batch Gradient Descent
-# print('Running BGD')
-# x_estb, thetasb, costsbb, countsb, emaxb = batch_gradient_descent(
-#     jacobian_matrix, z, x_est, W, lr, iterations, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-# tot_iters+=iterations
-# costsb.extend(costsbb)
-# print('final cost', costsn[-1], costsb[-1])
-# print('BGD-WLS based on linear jacobian with no feedback/ feedback')
+# x_est=x_estb
+# Batch Gradient Descent
+print('Running BGD')
+x_estb, thetasb, costsbb, countsb, emaxb = batch_gradient_descent(
+    jacobian_matrix, z, x_est, W, lr, iterations, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+tot_iters+=iterations
+costsb.extend(costsbb)
+print('final cost', costsn[-1], costsb[-1])
+print('BGD-WLS based on linear jacobian with no feedback/ feedback')
 
-# _, _, _, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-#                         which, V, V_mag, loss = loss, pflow = pflow) # for self GD
+_, _, _, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = loss, pflow = pflow) # for self GD
 # countour_plot(1, 5, x_estb, thetasb, z, W, jacobian_matrix) # contour plot
 
 # Running Stochastic Gradient Descent
@@ -342,9 +343,9 @@ perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_
 # error_calc_refactor(x, x_estloss, non_zib_index, len(P_Load), est_lin, est_full_ac, 
 #                         which, V, V_mag, loss = 1, pflow = 1) # non linear GN WLS
 # print('GD-WLS based on linear jacobian with no feedback/ feedback')
-# print('BGD-WLS based on linear jacobian with no feedback/ feedback')
-# _, _, _, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-#                         which, V, V_mag, loss = loss, pflow = pflow) # for self GD
+print('BGD-WLS based on linear jacobian with no feedback/ feedback')
+_, _, _, _ = error_calc_refactor(x, x_estb, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = loss, pflow = pflow) # for self GD
 # error_calc_refactor(x, xx.detach().numpy(), non_zib_index, len(P_Load), est_lin, est_full_ac, 
 #                         which, V, V_mag) # for pytorch GD
 ##############################################################################
