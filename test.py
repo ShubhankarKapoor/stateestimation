@@ -39,6 +39,7 @@ comparison = 0
 # masurement set
 if data_lin == 1:
     [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
+    # [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which,loss=1, pflow = 1)
 
 if data_full_ac == 1:
     [V_mag, V_ang, _, S_line, I_line, I_load, e_max, k] = BackwardForwardSweep(
@@ -121,7 +122,7 @@ indices = np.asarray(combs[5])
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
 
-indices = np.asarray((   1,  2,  3 , 8,  9 )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+# indices = np.asarray((   1,  2,  3 , 8,  9 )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 
 # 906
 # [ 34, 70, 73, 74, 225, 289, 349, 387, 388, 502, 562, 563, 611, 629, 817, 860, 861, 896, 898, 900, 906]
@@ -129,8 +130,8 @@ indices = np.asarray((   1,  2,  3 , 8,  9 )) # [ 2,  8, 10, 11, 21, 22, 23, 26,
   # [     1,      3,  4,   5,        7,   8,   9,             12,  13,  14,       16,            19,  20]
 
 # indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
-# indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,   10,  11,  
-#                       12,  13,  14,  15,  16, 17, 18, 19, 20))
+# indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,     11,  
+#                         13,  14,  15,  16, 17, 19,))
 
 # see the known meas
 if len(indices) !=0:
@@ -211,32 +212,32 @@ lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index,
 # to include non linear voltage feedback and pflow/qflow
 loss, pflow = 0, 0
 # LinDist
-x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+x_estn0, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-_,_,_,p3error1 = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+_,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 # print(x_estn)
 
 ###############################################################################
 loss, pflow = 1, 0
 # LinDist + Voltage Feedback
-x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+x_estn1, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-_,_,_,p3error2 = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+_,_,_,p3error2 = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 # print(x_estn)
 ###############################################################################
 loss, pflow = 0, 1
 # LinDist + Pflow Feedback
-x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+x_estn2, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
-_,_,_,p3error3 = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+_,_,_,p3error3 = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 # print(x_estn)
 ###############################################################################
