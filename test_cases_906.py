@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Feb  8 11:01:17 2021
-
 @author: shub
 """
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
@@ -117,7 +116,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
+num_plow_meas = 1
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -128,7 +127,7 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
-num_known = [7, 1, ] # known number of measurements
+num_known = [20, 14, 7, 1] # known number of measurements
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
@@ -175,8 +174,8 @@ def subplot_heatmap(array_2d, indices, vmin, vmax, cbar = None, cbar_ax = None, 
     ax = sns.heatmap(array_2d, vmin, vmax, cbar = cbar, cbar_ax = cbar_ax)
     # plt.xlabel('Node Number')
     # plt.ylabel('Number of Missing Measurements')
-    plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
-    plt.xticks(np.arange(len(indices))+0.5, indices) # node number
+    plt.yticks(np.arange(len(num_known))+0.5, num_known, rotation = 360) # num known meas
+    plt.xticks(np.arange(len(indices))+0.5, indices, rotation = 360) # node number
 
 def plot_heatmap(array_2d):
     # plt.figure()
@@ -187,29 +186,29 @@ def plot_heatmap(array_2d):
 
 # heatmap array
 # num missing meas * num nodes
-heatmap_volt_abs_no_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_abs_no_feed = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_abs_no_feed = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_no_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_perc_no_feed = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_perc_no_feed = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
-heatmap_volt_abs_v_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_abs_v_feed = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_abs_v_feed = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_v_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_perc_v_feed = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_perc_v_feed = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
-heatmap_volt_abs_p_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_abs_p_feed = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_abs_p_feed = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_p_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_perc_p_feed = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_perc_p_feed = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
-heatmap_volt_abs_both_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_abs_both_feed = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_abs_both_feed = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_both_feed = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_perc_both_feed = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_perc_both_feed = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
-heatmap_volt_abs_la = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_abs_la = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_abs_la = np.zeros((len(num_known), len(non_zib_index)))
-heatmap_volt_perc_la = np.zeros((len(num_known), len(P_Load)))
+heatmap_volt_perc_la = np.zeros((len(num_known), len(non_zib_index)))
 heatmap_p_perc_la = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
 
@@ -227,19 +226,24 @@ count = 0 # total number of iters, should be sum of all combs at the end
 for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
     combs = list(combinations(arr,i))
+    if len(combs) > 1000: # sampling
+        np.random.seed(40) # 40 for latex, 28 alternative
+        idx = np.random.choice(len(combs), 1000, replace=False)
+        combs = np.array(combs)
+        combs=combs[idx]
 
     # stores the max abs voltage error for each node
-    volt_max_abs_nofeed, p_max_abs_nofeed = np.zeros((len(P_Load))),  np.zeros((len(non_zib_index)))
-    volt_max_perc_nofeed = np.zeros((len(P_Load)))
+    volt_max_abs_nofeed, p_max_abs_nofeed = np.zeros((len(non_zib_index))),  np.zeros((len(non_zib_index)))
+    volt_max_perc_nofeed = np.zeros((len(non_zib_index)))
     p_max_perc_nofeed = np.zeros((len(non_zib_index)))
 
-    volt_max_perc_vfeed, p_max_perc_vfeed, volt_max_abs_vfeed, p_max_abs_vfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+    volt_max_perc_vfeed, p_max_perc_vfeed, volt_max_abs_vfeed, p_max_abs_vfeed = np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index)))
 
-    volt_max_perc_pfeed, p_max_perc_pfeed, volt_max_abs_pfeed, p_max_abs_pfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+    volt_max_perc_pfeed, p_max_perc_pfeed, volt_max_abs_pfeed, p_max_abs_pfeed = np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index)))
 
-    volt_max_perc_bothfeed, p_max_perc_bothfeed, volt_max_abs_bothfeed, p_max_abs_bothfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+    volt_max_perc_bothfeed, p_max_perc_bothfeed, volt_max_abs_bothfeed, p_max_abs_bothfeed = np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index)))
     
-    volt_max_perc_la, p_max_perc_la, volt_max_abs_la, p_max_abs_la = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+    volt_max_perc_la, p_max_perc_la, volt_max_abs_la, p_max_abs_la = np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index))), np.zeros((len(non_zib_index)))
     # to hold all eroors for all combinations for a fixed num of missing meass 
     l_no_feed_perc_v, l_no_feed_perc_p, l_no_feed_abs_v, l_no_feed_abs_p = [], [], [], []
     l_v_feed_perc_v, l_v_feed_perc_p, l_v_feed_abs_v, l_v_feed_abs_p = [], [], [], []
@@ -283,7 +287,9 @@ for row, i in enumerate(num_known):
         weight_array2 = np.ones((len(meas_P_load)))
         weight_array2[list(P_known_meas.keys())] = weight_array2[list(P_known_meas.keys())]*w21 # for known p meas
         weight_array2[list(P_pseudo_meas.keys())] = weight_array2[list(P_pseudo_meas.keys())]*w22# for unknown p meas
-        weight_array2 = np.concatenate((weight_array2, weight_array2)) # for p and q bus
+        # modified weight for reactive power
+        # weight_array2 = np.concatenate((weight_array2, np.ones((len(meas_P_load)))*0.1)) # for p and q bus
+        weight_array2 = np.concatenate((weight_array2, weight_array2))
         weight_array3 = np.ones((len(meas_V)))*w3 # for v mag
         weight_array = np.concatenate((weight_array1, weight_array2,weight_array3)) # entire weight vector
 
@@ -308,20 +314,20 @@ for row, i in enumerate(num_known):
         perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
-        avg_perc_v_nofeed = inc_avg(avg_perc_v_nofeed, total_counts_v, perc_v_nofeed)
+        avg_perc_v_nofeed = inc_avg(avg_perc_v_nofeed, total_counts_v, perc_v_nofeed[non_zib_index])
         avg_perc_p_nofeed = inc_avg(avg_perc_p_nofeed, total_counts_p, perc_p_nofeed[non_zib_index])
         avg_abs_p_nofeed = inc_avg(avg_abs_p_nofeed, total_counts_p, abs_p_nofeed[non_zib_index])
         # uncomment below to store all errors
-        # l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
-        # l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
+        l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
+        l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
         ################### HEATMAP ##########################################
-        volt_max_perc_nofeed = max_val(volt_max_perc_nofeed, perc_v_nofeed, all_index_array)
+        volt_max_perc_nofeed = max_val(volt_max_perc_nofeed, perc_v_nofeed, non_zib_index)
         # _, flag = max_val_for_index(p_max_perc_nofeed, perc_p_nofeed, non_zib_index, 7)
         # print('Flaaaaaaaaaaaag', flag)
         # if flag == 1:
         #     max_node_26_error = corresponding_nodes        
         p_max_perc_nofeed = max_val(p_max_perc_nofeed, perc_p_nofeed, non_zib_index)    
-        volt_max_abs_nofeed = max_val(volt_max_abs_nofeed, abs_v_nofeed, all_index_array)
+        volt_max_abs_nofeed = max_val(volt_max_abs_nofeed, abs_v_nofeed, non_zib_index)
         p_max_abs_nofeed = max_val(p_max_abs_nofeed, abs_p_nofeed, non_zib_index)
         #######################################################################
 
@@ -334,16 +340,16 @@ for row, i in enumerate(num_known):
         perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
-        avg_perc_v_vfeed = inc_avg(avg_perc_v_vfeed, total_counts_v, perc_v_vfeed)
+        avg_perc_v_vfeed = inc_avg(avg_perc_v_vfeed, total_counts_v, perc_v_vfeed[non_zib_index])
         avg_perc_p_vfeed = inc_avg(avg_perc_p_vfeed, total_counts_p, perc_p_vfeed[non_zib_index])
         avg_abs_p_vfeed = inc_avg(avg_abs_p_vfeed, total_counts_p, abs_p_vfeed[non_zib_index])        
         # uncomment below to store all errors        
-        # l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
-        # l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
+        l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
+        l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
         ################### HEATMAP ##########################################
-        volt_max_perc_vfeed = max_val(volt_max_perc_vfeed, perc_v_vfeed, all_index_array)
+        volt_max_perc_vfeed = max_val(volt_max_perc_vfeed, perc_v_vfeed, non_zib_index)
         p_max_perc_vfeed = max_val(p_max_perc_vfeed, perc_p_vfeed, non_zib_index)       
-        volt_max_abs_vfeed = max_val(volt_max_abs_vfeed, abs_v_vfeed, all_index_array)
+        volt_max_abs_vfeed = max_val(volt_max_abs_vfeed, abs_v_vfeed, non_zib_index)
         p_max_abs_vfeed = max_val(p_max_abs_vfeed, abs_p_vfeed, non_zib_index)
         #######################################################################
 
@@ -356,16 +362,16 @@ for row, i in enumerate(num_known):
         perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
-        avg_perc_v_pfeed = inc_avg(avg_perc_v_pfeed, total_counts_v, perc_v_pfeed)
+        avg_perc_v_pfeed = inc_avg(avg_perc_v_pfeed, total_counts_v, perc_v_pfeed[non_zib_index])
         avg_perc_p_pfeed = inc_avg(avg_perc_p_pfeed, total_counts_p, perc_p_pfeed[non_zib_index])
         avg_abs_p_pfeed = inc_avg(avg_abs_p_pfeed, total_counts_p, abs_p_pfeed[non_zib_index])           
         # uncomment below to store all errors        
-        # l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
-        # l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
+        l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
+        l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
         ################### HEATMAP ##########################################
-        volt_max_perc_pfeed = max_val(volt_max_perc_pfeed, perc_v_pfeed, all_index_array)
+        volt_max_perc_pfeed = max_val(volt_max_perc_pfeed, perc_v_pfeed, non_zib_index)
         p_max_perc_pfeed = max_val(p_max_perc_pfeed, perc_p_pfeed, non_zib_index)       
-        volt_max_abs_pfeed = max_val(volt_max_abs_pfeed, abs_v_pfeed, all_index_array)
+        volt_max_abs_pfeed = max_val(volt_max_abs_pfeed, abs_v_pfeed, non_zib_index)
         p_max_abs_pfeed = max_val(p_max_abs_pfeed, abs_p_pfeed, non_zib_index)
         #######################################################################
 
@@ -378,16 +384,16 @@ for row, i in enumerate(num_known):
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
-        avg_perc_v_bothfeed = inc_avg(avg_perc_v_bothfeed, total_counts_v, perc_v_n)
+        avg_perc_v_bothfeed = inc_avg(avg_perc_v_bothfeed, total_counts_v, perc_v_n[non_zib_index])
         avg_perc_p_bothfeed = inc_avg(avg_perc_p_bothfeed, total_counts_p, perc_p_n[non_zib_index])
         avg_abs_p_bothfeed = inc_avg(avg_abs_p_bothfeed, total_counts_p, abs_p_n[non_zib_index])   
         # uncomment below to store all errors        
-        # l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
-        # l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
+        l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
+        l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
         ################### HEATMAP ##########################################
-        volt_max_perc_bothfeed = max_val(volt_max_perc_bothfeed, perc_v_n, all_index_array)
+        volt_max_perc_bothfeed = max_val(volt_max_perc_bothfeed, perc_v_n, non_zib_index)
         p_max_perc_bothfeed = max_val(p_max_perc_bothfeed, perc_p_n, non_zib_index)       
-        volt_max_abs_bothfeed = max_val(volt_max_abs_bothfeed, abs_v_n, all_index_array)
+        volt_max_abs_bothfeed = max_val(volt_max_abs_bothfeed, abs_v_n, non_zib_index)
         p_max_abs_bothfeed = max_val(p_max_abs_bothfeed, abs_p_n, non_zib_index)
 
         #######################################################################
@@ -402,21 +408,21 @@ for row, i in enumerate(num_known):
         perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
         # average of all elements
-        avg_perc_v_la = inc_avg(avg_perc_v_la, total_counts_v, perc_v_la)
+        avg_perc_v_la = inc_avg(avg_perc_v_la, total_counts_v, perc_v_la[non_zib_index])
         avg_perc_p_la = inc_avg(avg_perc_p_la, total_counts_p, perc_p_la[non_zib_index])
         avg_abs_p_la = inc_avg(avg_abs_p_la, total_counts_p, abs_p_la[non_zib_index]) 
         # uncomment below to store all errors
-        # l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
-        # l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
+        l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
+        l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
         ################### HEATMAP ##########################################
-        volt_max_perc_la = max_val(volt_max_perc_la, perc_v_la, all_index_array)
+        volt_max_perc_la = max_val(volt_max_perc_la, perc_v_la, non_zib_index)
         p_max_perc_la = max_val(p_max_perc_la, perc_p_la, non_zib_index)       
-        volt_max_abs_la = max_val(volt_max_abs_la, abs_v_la, all_index_array)
+        volt_max_abs_la = max_val(volt_max_abs_la, abs_v_la, non_zib_index)
         p_max_abs_la = max_val(p_max_abs_la, abs_p_la, non_zib_index)
         # break
 
         # update total counts
-        total_counts_v+= len(perc_v_nofeed) # count * len(perc_v_nofeed)
+        total_counts_v+= len(perc_v_nofeed[non_zib_index]) # count * len(perc_v_nofeed)
         total_counts_p+= len(perc_p_nofeed[non_zib_index])
     # node_26_error_for_diff_known_meas.append(max_node_26_error) # append indices
     # insert the values for heatmap
@@ -448,16 +454,16 @@ for row, i in enumerate(num_known):
     
     # values for all errors
     # uncomment below to store all errors
-    # ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
-    # ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
-    # ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
-    # ll_v_feed_abs_v.append(l_v_feed_abs_v), ll_v_feed_abs_p.append(l_v_feed_abs_p)
-    # ll_p_feed_perc_v.append(l_p_feed_perc_v), ll_p_feed_perc_p.append(l_p_feed_perc_p), 
-    # ll_p_feed_abs_v.append(l_p_feed_abs_v), ll_p_feed_abs_p.append(l_p_feed_abs_p)
-    # ll_both_feed_perc_v.append(l_both_feed_perc_v), ll_both_feed_perc_p.append(l_both_feed_perc_p), 
-    # ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
-    # ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
-    # ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+    ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
+    ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
+    ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
+    ll_v_feed_abs_v.append(l_v_feed_abs_v), ll_v_feed_abs_p.append(l_v_feed_abs_p)
+    ll_p_feed_perc_v.append(l_p_feed_perc_v), ll_p_feed_perc_p.append(l_p_feed_perc_p), 
+    ll_p_feed_abs_v.append(l_p_feed_abs_v), ll_p_feed_abs_p.append(l_p_feed_abs_p)
+    ll_both_feed_perc_v.append(l_both_feed_perc_v), ll_both_feed_perc_p.append(l_both_feed_perc_p), 
+    ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
+    ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
+    ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
 
 ###############################################################################
 # Adjusting the subplots
@@ -479,20 +485,20 @@ cbar_ax = fig1.add_axes([.91, .3, .03, .4])
 plt.subplot(5, 1,1)
 sns.heatmap(heatmap_volt_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
                  # cbar_kws={ "orientation": "horizontal" }) # for horizontal cbar
-plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
-plt.xticks(np.arange(len(all_index_array))+0.5, all_index_array) # node number
+plt.yticks(np.arange(len(num_known))+0.5, num_known, rotation = 360) # num known meas
+plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array, rotation = 360) # node number
 plt.xlabel('LN')
 plt.subplot(5, 1,2)
-subplot_heatmap(heatmap_volt_perc_v_feed, all_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_volt_perc_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
 plt.subplot(5, 1,3)
-subplot_heatmap(heatmap_volt_perc_p_feed, all_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_volt_perc_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LP')
 plt.subplot(5, 1,4)
-subplot_heatmap(heatmap_volt_perc_both_feed, all_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_volt_perc_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LB')
 plt.subplot(5, 1,5)
-subplot_heatmap(heatmap_volt_perc_la, all_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_volt_perc_la, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
 fig1.text(0.51, 0.02, 'Node Number', ha='center', fontsize=BIGGER_SIZE)
 fig1.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical', fontsize=BIGGER_SIZE)
@@ -512,8 +518,8 @@ cbar_ax = fig2.add_axes([.91, .3, .03, .4])
 plt.subplot(5, 1, 1)
 sns.heatmap(heatmap_p_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
                  # cbar_kws={ "orientation": "horizontal" })
-plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
-plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
+plt.yticks(np.arange(len(num_known))+0.5, num_known, rotation = 360) # num known meas
+plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array, rotation = 360) # node number
 plt.xlabel('LN')
 plt.subplot(5, 1, 2)
 subplot_heatmap(heatmap_p_perc_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
@@ -545,20 +551,20 @@ cbar_ax = fig3.add_axes([.91, .3, .03, .4])
 plt.subplot(5, 1,1)
 sns.heatmap(heatmap_volt_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
                  # cbar_kws={ "orientation": "horizontal" })
-plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
-plt.xticks(np.arange(len(all_index_array))+0.5, all_index_array) # node number
+plt.yticks(np.arange(len(num_known))+0.5, num_known, rotation = 360) # num known meas
+plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array, rotation = 360) # node number
 plt.xlabel('LN')
 plt.subplot(5, 1,2)
-subplot_heatmap(heatmap_volt_abs_v_feed, all_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_volt_abs_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LV')
 plt.subplot(5, 1,3)
-subplot_heatmap(heatmap_volt_abs_p_feed, all_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_volt_abs_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LP')
 plt.subplot(5, 1,4)
-subplot_heatmap(heatmap_volt_abs_both_feed, all_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_volt_abs_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LB')
 plt.subplot(5, 1,5)
-subplot_heatmap(heatmap_volt_abs_la, all_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_volt_abs_la, non_zib_index_array, vmin=vmin, vmax=vmax)
 plt.xlabel('LA')
 fig3.text(0.51, 0.02, 'Node Number', ha='center', fontsize=BIGGER_SIZE)
 fig3.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical', fontsize=BIGGER_SIZE)
@@ -567,18 +573,18 @@ plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 # fig3.tight_layout()
 
 # plot heatmap with different colorbar values
-fig0, axn0 = plt.subplots(5, 1, sharex=True, sharey=True)
-# cbar_ax = fig0.add_axes([.91, .3, .03, .4])
-plt.subplot(5, 1,1)
-plot_heatmap(heatmap_volt_abs_no_feed)
-plt.subplot(5, 1,2)
-plot_heatmap(heatmap_volt_abs_v_feed)
-plt.subplot(5, 1,3)
-plot_heatmap(heatmap_volt_abs_p_feed)
-plt.subplot(5, 1,4)
-plot_heatmap(heatmap_volt_abs_both_feed)
-plt.subplot(5, 1,5)
-plot_heatmap(heatmap_volt_abs_la)
+# fig0, axn0 = plt.subplots(5, 1, sharex=True, sharey=True)
+# # cbar_ax = fig0.add_axes([.91, .3, .03, .4])
+# plt.subplot(5, 1,1)
+# plot_heatmap(heatmap_volt_abs_no_feed)
+# plt.subplot(5, 1,2)
+# plot_heatmap(heatmap_volt_abs_v_feed)
+# plt.subplot(5, 1,3)
+# plot_heatmap(heatmap_volt_abs_p_feed)
+# plt.subplot(5, 1,4)
+# plot_heatmap(heatmap_volt_abs_both_feed)
+# plt.subplot(5, 1,5)
+# plot_heatmap(heatmap_volt_abs_la)
 # fig0.delaxes(axn0[2][1])
 # fig0.tight_layout()
 
@@ -593,8 +599,8 @@ cbar_ax = fig4.add_axes([.91, .3, .03, .4])
 plt.subplot(5, 1,1)
 sns.heatmap(heatmap_p_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
                  # cbar_kws={ "orientation": "horizontal" })
-plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
-plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
+plt.yticks(np.arange(len(num_known))+0.5, num_known, rotation = 360) # num known meas
+plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array, rotation = 360) # node number
 plt.xlabel('LN')
 plt.subplot(5, 1,2)
 subplot_heatmap(heatmap_p_abs_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
@@ -973,7 +979,6 @@ list_of_errors_p, list_of_errors_q, list_of_errors_v = [], [], [] # max abs erro
 list_of_all_errors_p, list_of_all_errors_q = [], [] # all abs error
 list_all_error_known_p, list_all_error_known_q = [], []  # error for known buses
 list_all_error_unknown_p, list_all_error_unknown_q = [], [] # error for unknown buses
-
 # save all estimate results and combinations of different meas
 store_estimates, list_of_all_combs = [], []
 list_max_error_index_p = []
@@ -989,18 +994,15 @@ for i in arr: # i are number of known measurements
     print('known meas implementation:', i)
     combs = list(combinations(arr,i)) # combinations for i
     list_of_all_combs.append(combs) # stores all combinations
-
     # can put the following loop in a function
     for indices in combs:
         P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
                 P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
                 non_zib_index, zib_index, num_known_meas=len(indices), indices = np.asarray(indices))
-
         meas_P_load = {**P_known_meas, **P_pseudo_meas}
         meas_P_load = dict(sorted(meas_P_load.items()))
         meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
         meas_Q_load = dict(sorted(meas_Q_load.items()))
-
         z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
                list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
     
@@ -1017,7 +1019,6 @@ for i in arr: # i are number of known measurements
         weight_array2 = np.concatenate((weight_array2, weight_array2)) # for p and q bus
         weight_array3 = np.ones((len(meas_V)))*w3 # for v mag
         weight_array = np.concatenate((weight_array1, weight_array2,weight_array3)) # entire weight vector
-
         W = np.diag(weight_array) # Weight mat
         W = np.linalg.inv(W)
         
@@ -1041,7 +1042,6 @@ for i in arr: # i are number of known measurements
         # print('Running Pytorch Implementation')
         # regr = WLeastSquaresRegressorTorch(n_iter=30000, eta=0.01, batch_size=len(z))
         # xx = regr.fit(jacobian_matrix, z, W)
-
         # Error Calculations
         # the following function is used when the states are non zib buses
         errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
@@ -1053,7 +1053,6 @@ for i in arr: # i are number of known measurements
         #                         which, V, V_mag) # for self GD
         # error_calc_refactor(x, xx.detach().numpy(), non_zib_index, P_Load, est_lin, est_full_ac, 
         #                         which, V, V_mag) # for pytorch GD
-
         # append the max absolute error
         err_for_diff_known_meas_p.append(max_error_st_abs_p)
         err_for_diff_known_meas_q.append(max_error_st_abs_q)
@@ -1061,11 +1060,9 @@ for i in arr: # i are number of known measurements
         err_for_diff_known_meas_v.append(max_abs_vmag_err)
         # itermediate_results.append(full_x_est)
         max_abs_error_index_p.append(max_index_p)
-
         # plot all the errors as well
         all_err_for_diff_known_meas_p.extend(st_err_p)
         all_err_for_diff_known_meas_q.extend(st_err_q)
-
         # get known and unknown errors separately
         known_indices = np.asarray(list(P_known_meas.keys()))
         unknown_indices = np.asarray(list(P_pseudo_meas.keys ()))
@@ -1073,7 +1070,6 @@ for i in arr: # i are number of known measurements
         error_for_known_q.extend(st_err_q[known_indices]) # erorrs of all known q
         error_for_unknown_p.extend(st_err_p[unknown_indices]) # erorrs of all unknown p
         error_for_unknown_q.extend(st_err_q[unknown_indices]) # erorrs of all unknown q
-
     # max abs error
     list_of_errors_p.append(err_for_diff_known_meas_p)
     list_of_errors_q.append(err_for_diff_known_meas_q)
@@ -1088,7 +1084,6 @@ for i in arr: # i are number of known measurements
     list_all_error_known_q.append(error_for_known_q)
     list_all_error_unknown_p.append(error_for_unknown_p)
     list_all_error_unknown_q.append(error_for_unknown_q)
-
 # plot the max error graph
 # plt.subplot(3,4,12)
 # sns.boxplot(data=list_of_errors_p)
@@ -1096,7 +1091,6 @@ for i in arr: # i are number of known measurements
 # plt.xlabel('Known number of measurements')
 # plt.ylabel('Max absolute error in pu')
 # plt.title('Max Absolute Error Corresponding to known number of Measurements')
-
 # # plot all error graph
 # plt.figure()
 # sns.boxplot(data=list_of_all_errors_p)
@@ -1104,7 +1098,6 @@ for i in arr: # i are number of known measurements
 # plt.xlabel('Known number of measurements')
 # plt.ylabel(' absolute error in pu')
 # plt.title('All Absolute Errors Corresponding to known number of Measurements')
-
 # # plot known errors
 # plt.figure()
 # sns.boxplot(data=list_all_error_known_p)
@@ -1112,7 +1105,6 @@ for i in arr: # i are number of known measurements
 # plt.xlabel('Known number of measurements')
 # plt.ylabel('absolute error in pu')
 # plt.title('Absolute Error Corresponding to known Measurements Buses')
-
 # # plot known errors
 # plt.figure()
 # sns.boxplot(data=list_all_error_unknown_p)
@@ -1120,7 +1112,6 @@ for i in arr: # i are number of known measurements
 # plt.xlabel('Known number of measurements')
 # plt.ylabel('absolute error in pu')
 # plt.title('Absolute Error Corresponding to unknown Measurement Buses')
-
 # check if max error is at pseudo buses
 # count = 0 
 print('checking if error nodes are known measurement nodes or not')
@@ -1141,7 +1132,6 @@ for i,val in enumerate(list_max_error_index_p):
 arr = np.arange(len(non_zib_index)) # used for combinations
 i = 2 # number of known measurements
 combs = list(combinations(arr,i)) # all for combination of buses with known number of i
-
 # run one scenario for different solvers
 vmag_perc_error = [] # abs vmag error
 p_perc_error, q_perc_error = [], [] # perc p q bus error
@@ -1158,19 +1148,15 @@ for indices in combs:
     # unknown buses 
     not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
     not_considered_indices = np.setdiff1d(arr, indices)
-
     P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
             P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
             non_zib_index, zib_index, num_known_meas=len(indices), indices = np.asarray(indices))
-
     meas_P_load = {**P_known_meas, **P_pseudo_meas}
     meas_P_load = dict(sorted(meas_P_load.items()))
     meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
     meas_Q_load = dict(sorted(meas_Q_load.items()))
-
     z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
             list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
-
     w1 = 1 # weight value for pflow, qflow
     w21 = 1 # known measurements for p,q at buses
     w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
@@ -1184,31 +1170,25 @@ for indices in combs:
     weight_array2 = np.concatenate((weight_array2, weight_array2)) # for p and q bus
     weight_array3 = np.ones((len(meas_V)))*w3 # for v mag
     weight_array = np.concatenate((weight_array1, weight_array2,weight_array3)) # entire weight vector
-
     W = np.diag(weight_array) # Weight mat
     W = np.linalg.inv(W)
     
     # get jacobain matrix
     jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
                                       meas_V, R_line, X_line, len(x_est), len(z))
-
     # run WLS SE
     x_estn, emax, count, residuals_mat, delta_mat, results = se_wls(
         x_est, z, jacobian_matrix, W)
-
     # Running the gradient Algorithm
     lr, iterations = 0.1, 30000 # Learning Rate and Number of iterations
-
     # x_est=x_estb
     # Batch Gradient Descent
     print('Running BGD')
     x_estb, thetasb, costsb, countsb = batch_gradient_descent(
         jacobian_matrix, z, x_est, W, lr, iterations)
-
     print('Running Pytorch Implementation')
     regr = WLeastSquaresRegressorTorch(n_iter=30000, eta=0.01, batch_size=len(z))
     xx = regr.fit(jacobian_matrix, z, W)
-
     # Error Calculations
     # the following function is used when the states are non zib buses
     errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
@@ -1220,7 +1200,6 @@ for indices in combs:
     vmag_perc_error.append(errperc_vector_vmag)
     p_perc_error.append(errperc_vectorp), q_perc_error.append(errperc_vectorq)
     p_abs_error.append(st_err_p), q_abs_error.append(st_err_q)
-
     errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
     errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
     errperc_vector_vmag, mean_vmag_err, max_vmag_err, _, mean_abs_vmag_err, max_abs_vmag_err = \
@@ -1230,7 +1209,6 @@ for indices in combs:
     vmag_perc_error.append(errperc_vector_vmag)
     p_perc_error.append(errperc_vectorp), q_perc_error.append(errperc_vectorq)
     p_abs_error.append(st_err_p), q_abs_error.append(st_err_q)
-
     errperc_vectorp, mean_error_st_p, max_error_st_p, st_err_p, mean_error_st_abs_p, max_error_st_abs_p, max_index_p, \
     errperc_vectorq, mean_error_st_q, max_error_st_q, st_err_q, mean_error_st_abs_q, max_error_st_abs_q, \
     errperc_vector_vmag, mean_vmag_err, max_vmag_err, _, mean_abs_vmag_err, max_abs_vmag_err = \
@@ -1241,7 +1219,6 @@ for indices in combs:
     p_perc_error.append(errperc_vectorp), q_perc_error.append(errperc_vectorq)
     p_abs_error.append(st_err_p), q_abs_error.append(st_err_q)
     break
-
 # plot V mag percentage error
 plt.figure()
 sns.boxplot(data=vmag_perc_error, orient='h')
@@ -1250,7 +1227,6 @@ plt.ylabel('Different Solvers')
 plt.xlabel('Percentage Voltage Error')
 plt.title('Percentage Voltage Error for Different Solvers')
 plt.yticks([0, 1, 2], ['WLS', 'GD', 'Pytorch GD'])
-
 # plot P mag percentage error
 plt.figure()
 sns.boxplot(data=p_perc_error, orient='h')
@@ -1259,7 +1235,6 @@ plt.ylabel('Different Solvers')
 plt.xlabel('Percentage P Error')
 plt.title('Percentage P Error for Different Solvers')
 plt.yticks([0, 1, 2], ['WLS', 'GD', 'Pytorch GD'])
-
 # plot P mag percentage error
 plt.figure()
 sns.boxplot(data=p_abs_error)
