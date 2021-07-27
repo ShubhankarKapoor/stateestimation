@@ -118,10 +118,12 @@ for i in BusNum:
         P_Load[i] = 0*LoadData.iloc[:,0] # 1440*1 zero vector
     Q_Load[i] = 0*LoadData.iloc[:,0] # 1440*1 zero vector
 
+scaling_factor = 1
 # Let's just consider a specific time like t = 720 (data for 12pm)
 for i in BusNum:
-    P_Load[i] = P_Load[i][720]
-    Q_Load[i] = Q_Load[i][720]       
+    P_Load[i] = P_Load[i][720] * scaling_factor
+    Q_Load[i] = Q_Load[i][720] * scaling_factor      
+    # print(P_Load, Q_Load)
 
 # added nw info on top of Masoume's code
 R_line = {key:val.real for key, val in LineData_Z_pu.items()} # resistance of every line
