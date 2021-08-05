@@ -390,6 +390,7 @@ def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est,
     jacobian_matrix_la = np.zeros((num_meas, num_states)) # jacobian with loss assumption
     
     # grad for pline_p, pline_q, qline_p, qline_q
+    # this one changes every iteration
     grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass(
         P_line_meas, P_Load_state, path_to_all_nodes, R_line, X_line, Vsq_mes[0], P_Load_est, Q_Load_est)
     meas_rows = grad_array_pline_p.shape[0]
@@ -405,6 +406,7 @@ def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est,
     last_row_inserted = 2*meas_rows # didn't do -1 because then this can be used directly
     
     # call jacobian for ppseudo_p
+    # this is constant
     grad_array = grad_pseudo_with_p(P_Load_meas, P_Load_state)
     meas_rows = grad_array.shape[0]
     state_cols = grad_array.shape[1]
