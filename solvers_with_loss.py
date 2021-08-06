@@ -87,6 +87,8 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
 
         # to reconstruct the measurement f(x)
         # distflow backward sweep for calculating measurements
+        if iter_num == 0:
+            jacobian_matrix = np.zeros((num_meas, num_states))
         hx, _, _, _, _, _, _ = measurements_estimated_from_states(x_est, P_line_meas, 
                 Vsq_meas, which, non_zib_index, len(P_Load_meas), tot_state_vars)
         # distflow forward sweep for calculating measurements
@@ -96,11 +98,13 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
         Q_Load_est = dict(zip(P_Load_state.keys(), x_est[len(P_Load_state):2*len(P_Load_state)]))
         
         jacobian_matrix = create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
-                    Vsq_meas, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num)
+                    Vsq_meas, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num,
+                    jacobian_matrix)
 
         # changes every iter unlike lindist based SE
         # jacobian changes every iter
         G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
+        print(iter_num)
         Ginv = np.linalg.inv(G)
 
         # calculate h(x)

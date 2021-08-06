@@ -384,10 +384,11 @@ def grad_vnode_with_v0(v_meas):
 ###############################################################################
 
 def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
-                    Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num):
+                    Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num,
+                    jacobian_matrix_la):
     ''' creates jacobian while considering losses and some assumptions'''
 
-    jacobian_matrix_la = np.zeros((num_meas, num_states)) # jacobian with loss assumption
+    # jacobian_matrix_la = np.zeros((num_meas, num_states)) # jacobian with loss assumption
     
     # grad for pline_p, pline_q, qline_p, qline_q
     # this changes every iteration
