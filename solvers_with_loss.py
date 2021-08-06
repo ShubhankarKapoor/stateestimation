@@ -104,7 +104,6 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
         # changes every iter unlike lindist based SE
         # jacobian changes every iter
         G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
-        print(iter_num)
         Ginv = np.linalg.inv(G)
 
         # calculate h(x)
