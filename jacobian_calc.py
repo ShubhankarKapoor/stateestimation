@@ -384,12 +384,14 @@ def grad_vnode_with_v0(v_meas):
 ###############################################################################
 
 def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
-                    Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas):
+                    Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num,
+                    jacobian_matrix_la):
     ''' creates jacobian while considering losses and some assumptions'''
 
-    jacobian_matrix_la = np.zeros((num_meas, num_states)) # jacobian with loss assumption
+    # jacobian_matrix_la = np.zeros((num_meas, num_states)) # jacobian with loss assumption
     
     # grad for pline_p, pline_q, qline_p, qline_q
+    # this changes every iteration
     grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass(
         P_line_meas, P_Load_state, path_to_all_nodes, R_line, X_line, Vsq_mes[0], P_Load_est, Q_Load_est)
     meas_rows = grad_array_pline_p.shape[0]
@@ -405,17 +407,22 @@ def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est,
     last_row_inserted = 2*meas_rows # didn't do -1 because then this can be used directly
     
     # call jacobian for ppseudo_p
-    grad_array = grad_pseudo_with_p(P_Load_meas, P_Load_state)
-    meas_rows = grad_array.shape[0]
-    state_cols = grad_array.shape[1]
-    jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, 0:state_cols] = grad_array
-    last_row_inserted = last_row_inserted + meas_rows
-    
-    # call jacobian for qpseudo_q, should be same as above
-    jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
-    last_row_inserted += meas_rows
-
+    # this is constant
+    if iter_num == 0:
+        grad_array = grad_pseudo_with_p(P_Load_meas, P_Load_state)
+        meas_rows = grad_array.shape[0]
+        state_cols = grad_array.shape[1]
+        jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, 0:state_cols] = grad_array
+        last_row_inserted = last_row_inserted + meas_rows
+        
+        # call jacobian for qpseudo_q, should be same as above
+        # this is constant
+        jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
+        last_row_inserted += meas_rows
+    else:
+        last_row_inserted+= len(P_Load_meas)*2
     # call jacobian for vnode^2 with p and q
+    # this changes every iteration
     grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass(Vsq_mes, P_Load_state, path_to_all_nodes, 
                                    R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     meas_rows = grad_array_v_p.shape[0]
@@ -426,6 +433,7 @@ def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est,
     jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array_v_q
 
     # gradient for pflow/ qflow with v0^2
+    # this changes every iteration
     grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass(
         P_line_meas, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, Vsq_mes[0])
     meas_rows = grad_array_pline_vnode.shape[0]
@@ -439,8 +447,10 @@ def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est,
     last_row_inserted = 2*meas_rows # didn't do -1 because then this can be used directly
 
     # jacobian for p/q with v0^2 is 0
+    # this is constant, zero vector
     last_row_inserted = last_row_inserted + 2* len(P_Load_meas)
     # call jacobian for v^2 with v0^2
+    # this changes every iteration
     grad_array_vnode_v = grad_vnode_with_v0_loss_ass(Vsq_mes, P_Load_state, 
                                                      path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     meas_rows = grad_array_vnode_v.shape[0]
