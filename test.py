@@ -15,7 +15,7 @@ from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        error_calc_refactor, countour_plot
 import torch
 import matplotlib.pyplot as plt
-which = 907 # IEEE 37-node or IEEE 906-node
+which = 906 # IEEE 37-node or IEEE 906-node
 
 if which == 37:
     from Network37 import *

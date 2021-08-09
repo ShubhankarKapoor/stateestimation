@@ -1,20 +1,45 @@
 from evolve_core_tools.parser import network_from_ejson
 from evolve_core_tools.parser import (
     network_to_ejson, network_from_ejson, measurements_from_ejson,  measurements_to_ejson)
+from evolve_core_tools.network_graphs.processing import (
+    set_full_graph_edge_direction,
+    arbitrarily_remove_edges_to_remove_cycles,)
 import json
 import numpy as np
+import networkx as nx
 
-NETWORK_SAMPLE_EJSON = '/home/shub/Documents/phd/distflow/ausnet_network.json'
 
- 
+NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_network_updated.json"
+MEASUREMENT_SAMPLE_EJSON = "/home/shub/Documents/phd/distflow/json_files/ausnet_measurements.json"
+
 with open(NETWORK_SAMPLE_EJSON) as f:
     ejson_nw = json.load(f)
+
+with open(MEASUREMENT_SAMPLE_EJSON) as f:
+    ejson_meas = json.load(f)
 
 # Example of using 'network_from_ejson' function (ejson_parser.py), that returns a new Network object
 full_nw = network_from_ejson("loaded_nw", ejson_nw)
 print("loaded nw")
 print(full_nw)
- 
+
+measurements_from_ejson(ejson_meas, full_nw)
+print("Loaded measurement data")
+
+nx.find_cycle(full_nw.graph)
+result =arbitrarily_remove_edges_to_remove_cycles(full_nw.graph, inplace=True)
+xx = set_full_graph_edge_direction(full_nw.graph, inplace=True)
+print("Number of edges", xx.number_of_edges())
+
+# test node
+nodes = ['node_9']
+for node_id in nodes:
+    meas = full_nw.nodes[node_id].meas
+    if full_nw.nodes[node_id].meas:
+        print(f"{len(meas)} meters are associated with Node {node_id}")
+        meas_df = next(iter(meas.values())).data
+        print(meas_df.head(5))
+
 BusNum = [] # double check if it type array or list
 line_num, arcs = [], []
 
@@ -28,52 +53,11 @@ for k, component in ejson_nw['components'].items():
         # print(k, component)
         # break
 
-    # if 'Line' in component:
-
-    #     # there is no line_1
-    #     component_dct = component['Line']
-        
-    #     if 'cons' in component_dct:
-    #         # print('yo', component_dct["cons"][0]["node"], component_dct["cons"][1]["node"])
-    #         # if len(component_dct["cons"])!=2:
-    #         #        print(k, len(component_dct["cons"]))
-    #         break
-    #     break
-
-    #     if 'imped_mod' in component_dct:
-
-    #         # print(k)
-
-    #         component_dct['z'] = component_dct['imped_mod']['ZZ0']['z']
-
-    #         component_dct['z0'] = component_dct['imped_mod']['ZZ0']['z0']
-
-    #         component_dct.pop('imped_mod')
-
-    # if 'Transformer' in component:
-
-    #     component_dct = component['Transformer']
-
-    #     component_dct['nom_turns_ratio'] = component_dct['v_base'][0] / component_dct['v_base'][1]
-
-    #     component_dct['v_winding_base'] = component_dct.pop('v_base')
-
-    # if 'Load' in component:
-
-    #     component_dct = component['Load']
-
-    #     component_dct['wiring'] = 'wye'
-
-    # if 'Infeeder' in component:
-
-    #     component_dct = component['Infeeder']
-
-    #     component_dct['v_setpoint'] = 22.0
-
 # check if there are missing buses
+# sort the buses in ascending order before doing it
 for i in range(len(BusNum)-1):
     if abs(BusNum[i] - BusNum[i+1])!=1:
-        # print(BusNum[i] - BusNum[i+1],BusNum[i], BusNum[i+1])
+        print(BusNum[i] - BusNum[i+1],BusNum[i], BusNum[i+1])
         pass
 
 R_line, X_line, LineData_Z_pu = {}, {}, {}
