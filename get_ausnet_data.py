@@ -65,9 +65,10 @@ for k, component in ejson_nw['components'].items():
     
     if 'Line' in component:
 
-        # print(k)
+        print(k)
+        # break
         # get the line number from the string line name
-        line_num.append(int(k.split("_")[1]))        
+        # line_num.append(int(k.split("_")[1]))        
 
         # there is no line_1
         component_dct = component['Line']
@@ -79,10 +80,10 @@ for k, component in ejson_nw['components'].items():
             # make sure arcs are ordered
             arcs.append((first_node, second_node))
             # get R_line, X_line and imp
-            R, X = component_dct['imped_mod']['ZZ0']['z'][0], component_dct['imped_mod']['ZZ0']['z'][1]
+            R, X = component_dct['z'][0], component_dct['z'][1]
             R_line[(first_node, second_node)] = R
             X_line[(first_node, second_node)] = X
-            component_dct['z'] = component_dct['imped_mod']['ZZ0']['z']
+            # component_dct['z'] = component_dct['imped_mod']['ZZ0']['z']
             LineData_Z_pu[(first_node, second_node)] = R + X*1j
             
             # if len(component_dct["cons"])!=2:
