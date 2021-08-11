@@ -23,13 +23,15 @@ full_nw = network_from_ejson("loaded_nw", ejson_nw)
 print("loaded nw")
 print(full_nw)
 
+
+# nx.find_cycle(full_nw.graph)
+# result =arbitrarily_remove_edges_to_remove_cycles(full_nw.graph, inplace=True)
+xx = set_full_graph_edge_direction(full_nw.graph, inplace=True)
+# network_to_ejson(xx)
+# print("Number of edges", xx.number_of_edges())
+
 measurements_from_ejson(ejson_meas, full_nw)
 print("Loaded measurement data")
-
-nx.find_cycle(full_nw.graph)
-result =arbitrarily_remove_edges_to_remove_cycles(full_nw.graph, inplace=True)
-xx = set_full_graph_edge_direction(full_nw.graph, inplace=True)
-print("Number of edges", xx.number_of_edges())
 
 # test node
 nodes = ['node_9']
@@ -41,7 +43,7 @@ for node_id in nodes:
         print(meas_df.head(5))
 
 BusNum = [] # double check if it type array or list
-line_num, arcs = [], []
+line_num = []
 
 for k, component in ejson_nw['components'].items():
     
@@ -61,6 +63,7 @@ for i in range(len(BusNum)-1):
         pass
 
 R_line, X_line, LineData_Z_pu = {}, {}, {}
+arcs = []
 for k, component in ejson_nw['components'].items():
     
     if 'Line' in component:
