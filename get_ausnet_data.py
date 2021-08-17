@@ -109,7 +109,15 @@ for node_id in nodes:
         meas_df = next(iter(meas.values())).data
         print(meas_df.head(5))
 '''
-BusNum = [] # double check if it type array or list
+# topologically ordered nodes
+# need it for forward backward calculations of power flow
+bus_sorted = list(nx.topological_sort(reduced_nw.graph))
+bus_all = []
+for num in bus_sorted:
+    if 'node' in num:
+        bus_all.append(int(num.split("_")[1]))
+
+BusNum = []
 line_num = []
 
 for k, component in ejson_nw_updated['components'].items():
@@ -122,18 +130,16 @@ for k, component in ejson_nw_updated['components'].items():
         # print(k, component)
         # break
 
-# check if there are missing buses
-# sort the buses in ascending order before doing it
-for i in range(len(BusNum)-1):
-    if abs(BusNum[i] - BusNum[i+1])!=1:
-        # print(BusNum[i] - BusNum[i+1],BusNum[i], BusNum[i+1])
-        pass
+# check if the number of nodes from ejson file and topologically sorted graph
+# are same
+if len(BusNum) != len(bus_all):
+    print('something fishy!!!!!')
 
-R_line, X_line, LineData_Z_pu = {}, {}, {}
+R_line_unordered, X_line_unordered, LineData_Z_pu_unordered = {}, {}, {}
 arcs = []
 count, count2 = 0, 0
 for k, component in ejson_nw_updated['components'].items():
-    
+
     if 'Line' in component:
         count +=1
         # print(k)
@@ -143,30 +149,42 @@ for k, component in ejson_nw_updated['components'].items():
 
         # there is no line_1
         component_dct = component['Line']
-        
+
         if 'cons' in component_dct:
             # print('yo', component_dct["cons"][0]["node"], component_dct["cons"][1]["node"])
             first_node = int(component_dct["cons"][0]["node"].split("_")[1])
             second_node = int(component_dct["cons"][1]["node"].split("_")[1])
             # make sure arcs are ordered
             arcs.append((first_node, second_node))
-            # get R_line, X_line and imp
+            # get R_line_unordered, X_line_unordered and imp
             R, X = component_dct['z'][0], component_dct['z'][1]
-            R_line[(first_node, second_node)] = R
-            X_line[(first_node, second_node)] = X
+            R_line_unordered[(first_node, second_node)] = R
+            X_line_unordered[(first_node, second_node)] = X
             # component_dct['z'] = component_dct['imped_mod']['ZZ0']['z']
-            LineData_Z_pu[(first_node, second_node)] = R + X*1j
+            LineData_Z_pu_unordered[(first_node, second_node)] = R + X*1j
+
     if 'Transformer' in component:
         count2+=1
         component_dct = component['Transformer']
         if 'cons' in component_dct:
-            # print('yo', component_dct["cons"][0]["node"], component_dct["cons"][1]["node"])
             first_node = int(component_dct["cons"][0]["node"].split("_")[1])
             second_node = int(component_dct["cons"][1]["node"].split("_")[1])
-            # make sure arcs are ordered
             arcs.append((first_node, second_node))        
-            # if len(component_dct["cons"])!=2:
-            #        print(k, len(component_dct["cons"]))
+        
+            # component_dct['z'] = component_dct['imped_mod']['ZZ0']['z']
+
+            # need to see how to model transformers as line
+            # not sure
+            # reason to do beacsue they behave as edges in this system
+            # alternatively can remove all transformers and related nodes
+            # below isn't correct impedance, it s just to run the code for sorted arcs
+            
+            R, X = component_dct['z'][1][0], component_dct['z'][1][1]
+            R_line_unordered[(first_node, second_node)] = R
+            X_line_unordered[(first_node, second_node)] = X
+            # component_dct['z'] = component_dct['imped_mod']['ZZ0']['z']
+            LineData_Z_pu_unordered[(first_node, second_node)] = R + X*1j
+
         #     break
         # break
 
@@ -176,28 +194,65 @@ for k, component in ejson_nw_updated['components'].items():
 
 # bus_arcs[0] = {"To":[],"from":[(0,1)]}
 
-bus_arcs = {}
-for i in BusNum:
+# add to and then from for bus nodes in list of ordered arcs
+# avoid repitition
+arcs_all = [] # ordered arcs
+bus_arcs = {} # ordered with busnodes
+
+for i in bus_all: # use ordered bus
     t = []
     f = []
 
     for ii in arcs:
         if i == ii[0]:
-            f.append(ii)        
+            f.append(ii)
+            if ii not in arcs_all:
+                arcs_all.append(ii)
         if i == ii[1]:
             t.append(ii)
+            if ii not in arcs_all:
+                arcs_all.append(ii)            
         # break
     bus_arcs[i] = {"To":t,"from":f}
     # break
 # bus_arcs[1]["To"] = [(0,1)]
 
+# ordered arcs characteristics
+R_line, X_line, LineData_Z_pu = {}, {}, {}
+
+for arc in arcs_all:
+    R_line[arc] = R_line_unordered[arc]
+    X_line[arc] = X_line_unordered[arc]
+    LineData_Z_pu[arc] = LineData_Z_pu_unordered[arc]
+
+###############################################################################
+# check for cycles
+###############################################################################
+for key, val in bus_arcs.items():
+    if len(val["To"])>1:
+        print(key, val)
+
+# see unconnected nodes
+unconnected_nodes = []
+uconnected_bus_count = 0
+for bus in BusNum:
+    bus_found = 0
+    for arc in arcs:
+        if bus == arc[1]:
+            bus_found = 1
+            break
+    if bus_found == 0:
+        uconnected_bus_count+=1
+        unconnected_nodes.append(bus)
+
+###############################################################################
 # check if there is gap between line numbers
+###############################################################################
 for i in range(len(line_num)-1):
     if abs(line_num[i] - line_num[i+1])!=1:
         # print(line_num[i] - line_num[i+1],line_num[i], line_num[i+1])
         pass
-   
-
+    
 # nw = network_from_ejson("loaded_nw", ejson_nw)
 
 # ##################################################

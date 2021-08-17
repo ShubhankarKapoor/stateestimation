@@ -81,7 +81,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
                 for (i,j) in LineData_Z_pu.keys():
                     loss_term = ((abs(LineData_Z_pu[(i,j)])**2) * (P_line[(i,j)]**2 + Q_line[(i,j)]**2)) * (1/V[i])
                     V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)]) + loss_term
-            else: # no loss term in voltagw
+            else: # no loss term in voltage
                 for (i,j) in LineData_Z_pu.keys():
                     V[j] = V[i] - 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)])
 
