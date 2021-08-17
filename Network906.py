@@ -17,7 +17,7 @@ LoadData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/Network
 Vbase = .48/np.sqrt(3) #kV
 Sbase = 1 #kVA three-phase
 
-BusNum = range(0,busNo)
+BusNum = np.arange(busNo)
 Slack_Bus_Num=[0] #slack bus
 Zbase = 1000*Vbase**2/Sbase
 
