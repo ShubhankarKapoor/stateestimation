@@ -43,7 +43,8 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
             I_load[i] = np.conj(P_Load[i]+1j*Q_Load[i])/np.conj(V[i])
         
         #Backward sweep
-        for i in range(len(BusNum)-1,0,-1):
+        # for i in range(len(BusNum)-1,0,-1):
+        for i in BusNum[:0:-1]:
             I_line[bus_arcs[i]["To"][0]] = I_load[i] + sum(I_line[g] for g in bus_arcs[i]["from"] ) 
 
         #Forward sweep

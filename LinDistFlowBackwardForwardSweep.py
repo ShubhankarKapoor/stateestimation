@@ -64,7 +64,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
 
             #Backward sweep
             # for i in range(len(BusNum)-1,0,-1):
-            for i in BusNum[:0:-1]:                
+            for i in BusNum[:0:-1]:
                 # if no loss included in pflow/ qflow
                 P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
                 Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
