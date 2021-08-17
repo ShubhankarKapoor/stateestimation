@@ -13,7 +13,7 @@ Vbase = 4.8/np.sqrt(3) #kV Base voltage for normalization
 Sbase = 100 #kVA Base apparent power for normalization
 Zbase=1000*Vbase**2/Sbase #ohm
 
-BusNum = range(0,busNo)
+BusNum = np.arange(busNo)
 Slack_Bus_Num=[0] #slack bus, Note that ideal secondary of the transformer is considered as the slack bus, i.e., V = 1<0 pu
 
 Sbase_old_t = 2500/3 #kVA Transformer rated apparent power. Note that transforer impedance is given in pu and it is based on transformer rated values (S and V) as the base values. We should update this value based on new base values, i.e., Sbase and Vbase 
