@@ -20,14 +20,27 @@ with open(MEASUREMENT_SAMPLE_EJSON) as f:
     ejson_meas = json.load(f)
 
 # Example of using 'network_from_ejson' function (ejson_parser.py), that returns a new Network object
+# com_ground added here, required some tracebility to see, coming from network in evolve core tools object
 full_nw = network_from_ejson("loaded_nw", ejson_nw)
 print("loaded nw")
 print(full_nw)
 
 reduced_nw = full_nw.copy()
 
-arbitrarily_remove_edges_to_remove_cycles(reduced_nw.graph, inplace=True)
+_, edges_removed = arbitrarily_remove_edges_to_remove_cycles(reduced_nw.graph, inplace=True)
 set_full_graph_edge_direction(reduced_nw.graph, inplace=True)
+
+# get the removed edges without 'com_ground'
+# most of the cycles introduced by 'com_ground'
+count_com = 0
+removed_edges_without_com = []
+for i, val in enumerate(edges_removed):
+    if 'com_ground' in val:
+        count_com+=1
+    else:
+        removed_edges_without_com.append(val)
+# num_edges includes sum of of infeeders, loads, lines and  transformers
+# num lines + transformers = num_nodes - 1
 
 print("removed edges and set directions")
 
@@ -48,12 +61,12 @@ for key, component in reduced_json["components"].items():
     if 'node' in key:
         reduced_json["components"][key]["Node"]["xy"] = reduced_json["components"][key]["Node"]["xy"].tolist()
         # break
-    
+
     if 'Line' in component:
         component_dct = component['Line']
         component_dct['z'] = component_dct['z'].tolist()
         component_dct['z0'] = component_dct['z0'].tolist()
-    
+
     if 'Transformer' in component:
 
         component_dct = component['Transformer']
@@ -66,7 +79,7 @@ for key, component in reduced_json["components"].items():
         component_dct = component['Load']
         component_dct["s_nom"] = component_dct["s_nom"].tolist()
         # break
-    
+
 # write it to a json file
 with open(NETWORK_UPDATED_SAMPLE_EJSON, 'w') as fp:
     json.dump(reduced_json, fp, indent=2)
@@ -74,7 +87,7 @@ with open(NETWORK_UPDATED_SAMPLE_EJSON, 'w') as fp:
 # check the newly updated json file
 with open(NETWORK_UPDATED_SAMPLE_EJSON) as f:
     ejson_nw_updated = json.load(f)
-    
+
 # Example of using 'network_from_ejson' function (ejson_parser.py), that returns a new Network object
 updated_nw = network_from_ejson("loaded_nw_updated", ejson_nw_updated)
 print("updated loaded nw")
@@ -82,7 +95,6 @@ print(updated_nw)
 
 print(f"updated_nw graph has {updated_nw.graph.number_of_nodes()} nodes "
 f"and {updated_nw.graph.number_of_edges()} edges")
-
 
 # # nx.find_cycle(full_nw.graph)
 # result =arbitrarily_remove_edges_to_remove_cycles(full_nw.graph, inplace=True)
@@ -120,8 +132,10 @@ for num in bus_sorted:
 BusNum = []
 line_num = []
 
+# get all the buses from the json file
+# Busnum would be less than number_of_nodes() becasue it doesn't count the 
+# upstream and com_ground nodes
 for k, component in ejson_nw_updated['components'].items():
-    
     # if 'Node' in component:
     if 'node' in k:
         # print(k)
@@ -135,6 +149,7 @@ for k, component in ejson_nw_updated['components'].items():
 if len(BusNum) != len(bus_all):
     print('something fishy!!!!!')
 
+# unordered arcs characteristics
 R_line_unordered, X_line_unordered, LineData_Z_pu_unordered = {}, {}, {}
 arcs = []
 count, count2 = 0, 0
@@ -228,22 +243,52 @@ for arc in arcs_all:
 ###############################################################################
 # check for cycles
 ###############################################################################
+count_to = 0
 for key, val in bus_arcs.items():
     if len(val["To"])>1:
+        count_to+=1
         print(key, val)
 
 # see unconnected nodes
 unconnected_nodes = []
-uconnected_bus_count = 0
+unconnected_bus_count = 0
 for bus in BusNum:
     bus_found = 0
-    for arc in arcs:
-        if bus == arc[1]:
+    for arc in arcs: # iterate over arcs
+        if bus == arc[1]: # see if the bus is being connected with a previous node
             bus_found = 1
             break
     if bus_found == 0:
-        uconnected_bus_count+=1
+        unconnected_bus_count+=1
         unconnected_nodes.append(bus)
+
+# the only node that should be unconnected from the above loop
+# should be the slack node
+
+###############################################################################
+# see the removed edges for unconnected nodes
+###############################################################################
+unconnected_nodes_in_removed_edges = [] # nodes that are still unconnected after searching for them in removed edges
+for j in unconnected_nodes:
+    found = 0
+    count_more_than_to = 0
+    for i in removed_edges_without_com:
+        if 'node_'+str(j) in i[1]: # maybe compare with the second node of i
+            # print(j,i)
+            found = 1 # when to for missing node is found
+            count_more_than_to+=1
+    if count_more_than_to > 1: # if the unconnected nodes have multiple to
+        # you should only use 1 of them for radial distribution
+        print('Multiple to for node:',j, i)
+    if found == 0: # when to for missing node isn't found, it should only happen for slack bus
+        print('omg! should be only once', j,i)
+        unconnected_nodes_in_removed_edges.append(j)
+    # add the removed edges back to the list of edges
+
+# Remove double to, make sure the removed ones first coincide with the removed nodes
+# and then see what else can be removed
+
+# runt tests again to see if the final network is connected and usable
 
 ###############################################################################
 # check if there is gap between line numbers
@@ -252,7 +297,7 @@ for i in range(len(line_num)-1):
     if abs(line_num[i] - line_num[i+1])!=1:
         # print(line_num[i] - line_num[i+1],line_num[i], line_num[i+1])
         pass
-    
+
 # nw = network_from_ejson("loaded_nw", ejson_nw)
 
 # ##################################################
