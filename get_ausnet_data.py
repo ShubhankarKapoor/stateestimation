@@ -124,7 +124,7 @@ for node_id in nodes:
 # topologically ordered nodes
 # need it for forward backward calculations of power flow
 bus_sorted = list(nx.topological_sort(reduced_nw.graph))
-bus_all = []
+bus_all = [] # all buses with node in its name, ignores upstream & com_ground
 for num in bus_sorted:
     if 'node' in num:
         bus_all.append(int(num.split("_")[1]))
@@ -152,11 +152,11 @@ if len(BusNum) != len(bus_all):
 # unordered arcs characteristics
 R_line_unordered, X_line_unordered, LineData_Z_pu_unordered = {}, {}, {}
 arcs = []
-count, count2 = 0, 0
+count_lines, count_transformers = 0, 0
 for k, component in ejson_nw_updated['components'].items():
 
     if 'Line' in component:
-        count +=1
+        count_lines +=1
         # print(k)
         # break
         # get the line number from the string line name
@@ -179,7 +179,7 @@ for k, component in ejson_nw_updated['components'].items():
             LineData_Z_pu_unordered[(first_node, second_node)] = R + X*1j
 
     if 'Transformer' in component:
-        count2+=1
+        count_transformers+=1
         component_dct = component['Transformer']
         if 'cons' in component_dct:
             first_node = int(component_dct["cons"][0]["node"].split("_")[1])
@@ -240,56 +240,194 @@ for arc in arcs_all:
     X_line[arc] = X_line_unordered[arc]
     LineData_Z_pu[arc] = LineData_Z_pu_unordered[arc]
 
-###############################################################################
-# check for cycles
-###############################################################################
-count_to = 0
-for key, val in bus_arcs.items():
-    if len(val["To"])>1:
-        count_to+=1
-        print(key, val)
+def find_unconnected_nodes(BusNum, arcs):
+    # returns the lsit of unconnected nodes and the total number
+    # see unconnected nodes
+    unconnected_nodes = []
+    unconnected_bus_count = 0
+    for bus in BusNum:
+        bus_found = 0
+        for arc in arcs: # iterate over arcs
+            if bus == arc[1]: # see if the bus is being connected with a previous node
+                bus_found = 1
+                break
+        if bus_found == 0:
+            unconnected_bus_count+=1
+            unconnected_nodes.append(bus)
+    return unconnected_nodes, unconnected_bus_count
 
-# see unconnected nodes
-unconnected_nodes = []
-unconnected_bus_count = 0
-for bus in BusNum:
-    bus_found = 0
-    for arc in arcs: # iterate over arcs
-        if bus == arc[1]: # see if the bus is being connected with a previous node
-            bus_found = 1
-            break
-    if bus_found == 0:
-        unconnected_bus_count+=1
-        unconnected_nodes.append(bus)
-
+# unconnected nodes pre processing
+unconnected_nodes_pre, unconnected_bus_count_pre = find_unconnected_nodes(BusNum, arcs)
 # the only node that should be unconnected from the above loop
-# should be the slack node
+# should be the slack node in an ideal world
 
 ###############################################################################
-# see the removed edges for unconnected nodes
+# see if you can connect unconnected nodes using the removed edges
 ###############################################################################
 unconnected_nodes_in_removed_edges = [] # nodes that are still unconnected after searching for them in removed edges
-for j in unconnected_nodes:
+for j in unconnected_nodes_pre:
     found = 0
     count_more_than_to = 0
+    edges_feeding_to_node = []
     for i in removed_edges_without_com:
-        if 'node_'+str(j) in i[1]: # maybe compare with the second node of i
+        if 'node_'+str(j) in i[1]: # see the line that is feeding to node j
             # print(j,i)
             found = 1 # when to for missing node is found
             count_more_than_to+=1
-    if count_more_than_to > 1: # if the unconnected nodes have multiple to
-        # you should only use 1 of them for radial distribution
-        print('Multiple to for node:',j, i)
+            first_node = int(i[0].split("_")[1])
+            second_node = int(i[1].split("_")[1])
+            edges_feeding_to_node.append((first_node, second_node))
+            arcs.append((first_node, second_node)) # add it to the list of arcs
     if found == 0: # when to for missing node isn't found, it should only happen for slack bus
         print('omg! should be only once', j,i)
         unconnected_nodes_in_removed_edges.append(j)
     # add the removed edges back to the list of edges
+    else:
+        if count_more_than_to == 1: # when unconnected node has 1 feed in line
+            bus_arcs[j]['To'] = edges_feeding_to_node
+        if count_more_than_to > 1: # if the unconnected nodes have multiple to
+            # you should only use 1 of them for radial distribution
+            # but at this time we'll add all
+            print('Multiple to for node:',j, i, edges_feeding_to_node)
+            bus_arcs[j]['To'] = edges_feeding_to_node
+        # the only other case is when the value is 0, not required to deal 
+        # wtih this case. Has been taken care in a way when found == 0
 
+# unconnected nodes post processing with updated arcs
+unconnected_nodes_post, unconnected_bus_count_post = find_unconnected_nodes(BusNum, arcs)
+
+if unconnected_bus_count_post != len(unconnected_nodes_in_removed_edges):
+    print('Something aint working')
+if unconnected_nodes_post != unconnected_nodes_in_removed_edges:
+    print('Check again, should be the same nodes')
+
+def check_for_multiple_sources_to_node():
+    pass
+###############################################################################
+# check for cycles
 # Remove double to, make sure the removed ones first coincide with the removed nodes
+###############################################################################
+count_to = 0 # nodes having multiple lines feeding them
+for key, val in bus_arcs.items():
+    if len(val["To"])>1:
+        count_to+=1
+        print(key, val)
+        if len(val["To"])>2:
+            print('Damn SON')
+print(count_to)
+
+slack_node = 8183
+unconnected_nodes_post.remove(slack_node) # remove slack node from unconnected nodes
+# nodes downstream of unconected nodes and are leaf nodes
+# 2349 is downstream of one of the uncoonected nodes: 3212
+# removing 3312 won't affect 2349 becasue it has another upstream node: 2703
+downstream_leaf_nodes = [130, 7730, 8023]
+unconnected_nodes_post.extend(downstream_leaf_nodes)
+
+# Remove the nodes still unconnected
+for i in unconnected_nodes_post:
+    for j in bus_all:
+        if i == j:
+            bus_all.remove(i)
+            bus_arcs.pop(i)# remove bus_arcs as well
+ 
+# make sure bus_all is still ordered
+bb = []
+for num in bus_sorted:
+    if 'node' in num:
+        bb.append(int(num.split("_")[1]))
+
+indices_of_removed_nodes = []
+for i in unconnected_nodes_post:
+    for j, val in enumerate(bb):
+        if i == val:
+            indices_of_removed_nodes.append(j)
+indices_of_removed_nodes = np.sort(np.asarray(indices_of_removed_nodes))
+# they look in order, checked
+
+# Remove arcs corresponding to unconnectred nodes
+for i in unconnected_nodes_post:
+    # print(i)
+    for j in arcs:
+        if i in j:
+            print(i, j)
+            arcs.remove(j)
+
+# also remove the nodes downstream to the unconnceted nodes
+# ceheck if the number of removed nodes matches the previously existing number
+if len(BusNum) != len(bus_all) + len(unconnected_nodes_post):
+    print('Mate, check it again')
+
+# might have to create new to and from with updated arcs
+arcs_all = [] # recreate ordered arcs
+bus_arcs = {} # recreate ordered with busnodes
+
+for i in bus_all: # use ordered bus
+    t = []
+    f = []
+
+    for ii in arcs:
+        if i == ii[0]:
+            f.append(ii)
+            if ii not in arcs_all:
+                arcs_all.append(ii)
+        if i == ii[1]:
+            t.append(ii)
+            if ii not in arcs_all:
+                arcs_all.append(ii)            
+        # break
+    bus_arcs[i] = {"To":t,"from":f}
+
+
+###############################################################################
+# check again for cycles
+# see if removing nodes reduced the number of nodes with double feeders
+# Remove double to, make sure the removed ones first coincide with the removed nodes
+###############################################################################
+count_to = 0 # nodes having multiple lines feeding them
+nodes_with_multiple_source, edges_removed = [], []
+for key, val in bus_arcs.items():
+    if len(val["To"])>1: # multiple source to a node
+        count_to+=1
+        nodes_with_multiple_source.append(key)
+        print(key, val)
+        if len(val["To"])>2:
+            print('Damn SON')
+        else: # when len is 2
+            edge_removed = bus_arcs[key]["To"].pop(0) # remove the first edge
+            edges_removed.append(edge_removed)
+
+# remove it from arcs
+for edge in edges_removed:
+    for arc in arcs_all:
+        if edge == arc:
+            print(edge, arc)
+            arcs_all.remove(arc)
+            break
+
+# final check  for multiple source to node
+count_to = 0 # nodes having multiple lines feeding them
+for key, val in bus_arcs.items():
+    if len(val["To"])>1: # multiple source to a node
+        count_to+=1
+        nodes_with_multiple_source.append(key)
+        print(key, val)
+
+# think how you are gonna 'to'
+
+# num_edges = num_nodes -1
 # and then see what else can be removed
 
-# runt tests again to see if the final network is connected and usable
 
+# make sure to get the order correct
+# runt tests again to see if the final network is connected and usable
+# total_edges = total_nodes - 1
+# total_edges = num_lines + num_transformers
+
+
+# make sure there is a path to every node from slack bus
+# and there should be only way from slack node to any node in the system
+# i think you have a function path_to_node, could use that
 ###############################################################################
 # check if there is gap between line numbers
 ###############################################################################
