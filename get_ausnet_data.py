@@ -318,9 +318,10 @@ print(count_to)
 
 slack_node = 8183
 unconnected_nodes_post.remove(slack_node) # remove slack node from unconnected nodes
-# nodes downstream of unconected nodes and are leaf nodes
+# also remove the nodes downstream to the unconnceted nodes
+# nodes downstream of unconected nodes are leaf nodes apart from one: 2349
 # 2349 is downstream of one of the uncoonected nodes: 3212
-# removing 3312 won't affect 2349 becasue it has another upstream node: 2703
+# removing 3212 won't affect 2349 becasue it has another upstream node: 2703
 downstream_leaf_nodes = [130, 7730, 8023]
 unconnected_nodes_post.extend(downstream_leaf_nodes)
 
@@ -329,7 +330,7 @@ for i in unconnected_nodes_post:
     for j in bus_all:
         if i == j:
             bus_all.remove(i)
-            bus_arcs.pop(i)# remove bus_arcs as well
+            bus_arcs.pop(i)# remove the nodes from bus_arcs as well
  
 # make sure bus_all is still ordered
 bb = []
@@ -343,22 +344,23 @@ for i in unconnected_nodes_post:
         if i == val:
             indices_of_removed_nodes.append(j)
 indices_of_removed_nodes = np.sort(np.asarray(indices_of_removed_nodes))
-# they look in order, checked
+# they look in order, checked manually
 
 # Remove arcs corresponding to unconnectred nodes
+arcs_removed = []
 for i in unconnected_nodes_post:
     # print(i)
     for j in arcs:
         if i in j:
             print(i, j)
             arcs.remove(j)
+            arcs_removed.append(j)
 
-# also remove the nodes downstream to the unconnceted nodes
 # ceheck if the number of removed nodes matches the previously existing number
 if len(BusNum) != len(bus_all) + len(unconnected_nodes_post):
     print('Mate, check it again')
 
-# might have to create new to and from with updated arcs
+# create new to and from with updated buses and arcs
 arcs_all = [] # recreate ordered arcs
 bus_arcs = {} # recreate ordered with busnodes
 
@@ -378,7 +380,6 @@ for i in bus_all: # use ordered bus
         # break
     bus_arcs[i] = {"To":t,"from":f}
 
-
 ###############################################################################
 # check again for cycles
 # see if removing nodes reduced the number of nodes with double feeders
@@ -394,10 +395,12 @@ for key, val in bus_arcs.items():
         if len(val["To"])>2:
             print('Damn SON')
         else: # when len is 2
+            # remove edge when multiple edges are fed to a node
             edge_removed = bus_arcs[key]["To"].pop(0) # remove the first edge
             edges_removed.append(edge_removed)
+            # maybe make sure you arent removing transformer edges?
 
-# remove it from arcs
+# remove  it from arcs
 for edge in edges_removed:
     for arc in arcs_all:
         if edge == arc:
@@ -413,21 +416,45 @@ for key, val in bus_arcs.items():
         nodes_with_multiple_source.append(key)
         print(key, val)
 
-# think how you are gonna 'to'
-
 # num_edges = num_nodes -1
-# and then see what else can be removed
-
+# total_edges = num_lines + num_transformers
+if len(arcs_all) == len(bus_all) - 1 and len(bus_all) == len(bus_arcs):
+    print('All G!')
 
 # make sure to get the order correct
 # runt tests again to see if the final network is connected and usable
-# total_edges = total_nodes - 1
-# total_edges = num_lines + num_transformers
+###############################################################################
+# validation of the updated network
+###############################################################################
+G = nx.DiGraph(arcs_all) # define the graph using the updated arcs
 
+# find cycles
+try:
+    cycle = list(nx.find_cycle(G, orientation="ignore"))
+except nx.exception.NetworkXNoCycle:
+    print('No Cycles, mate!')
 
-# make sure there is a path to every node from slack bus
-# and there should be only way from slack node to any node in the system
-# i think you have a function path_to_node, could use that
+# check connectivity of the graph
+if nx.is_connected(G.to_undirected()) == True:
+    print('Graph is all connected!')
+else:
+    print('Trouble, We got unconnected graphs!')
+
+# check paths to evrey node from the slack node
+# there should be one path from slack node to evry node
+count_nodes = 0 # to make sure it iterates over all nodes
+path_lengths = {}
+for node in bus_all[1:]:
+    count_nodes+=1
+    # gets all the path from source to target
+    path_length = len(list(nx.all_simple_paths(G, source=slack_node, target=node)))
+    path_lengths[slack_node, node] = path_length
+    # should have the length as 1 to satisfy the above 2 conditons
+    if path_length == 1:
+        pass
+    else:
+        print(node)
+
 ###############################################################################
 # check if there is gap between line numbers
 ###############################################################################
