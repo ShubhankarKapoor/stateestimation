@@ -16,7 +16,8 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
         I_load[i] = 0+0j
 
     I_line = {}
-    for i in range(len(BusNum)-1,0,-1):
+    # for i in range(len(BusNum)-1,0,-1):
+    for i in BusNum[:0:-1]:
         # print(I_line[bus_arcs[i]["To"][0]])
         I_line[bus_arcs[i]["To"][0]] = 0+0j
     
@@ -24,6 +25,7 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
     V = {}
     for i in BusNum: #Note that bus 0 here shows the ideal secondary voltages of the transformer
         V[i] = 1+0j
+    # should skip the line below for ausnet because 0 isn't the slack node
     V[0] = 1 if V0 is None else (V0)**(1/2)+0j
     
     #Initialization of iteration count
@@ -49,7 +51,7 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
 
         #Forward sweep
         for (i,j) in LineData_Z_pu.keys():
-            V[j] = V[i] - LineData_Z_pu[(i,j)] * I_line[(i,j)] 
+            V[j] = V[i] - LineData_Z_pu[(i,j)] * I_line[(i,j)]
         
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)

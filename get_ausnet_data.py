@@ -96,20 +96,6 @@ print(updated_nw)
 print(f"updated_nw graph has {updated_nw.graph.number_of_nodes()} nodes "
 f"and {updated_nw.graph.number_of_edges()} edges")
 
-'''
-measurements_from_ejson(ejson_meas, updated_nw)
-print("Loaded measurement data")
-
-# test node
-nodes = ['node_9']
-for node_id in nodes:
-    meas = updated_nw.nodes[node_id].meas
-    if updated_nw.nodes[node_id].meas:
-        print(f"{len(meas)} meters are associated with Node {node_id}")
-        meas_df = next(iter(meas.values())).data
-        print(meas_df.head(5))
-'''
-
 # topologically ordered nodes
 # need it for forward backward calculations of power flow
 bus_sorted = list(nx.topological_sort(reduced_nw.graph))
@@ -117,6 +103,44 @@ BusNum = [] # all buses with node in its name, ignores upstream & com_ground
 for num in bus_sorted:
     if 'node' in num:
         BusNum.append(int(num.split("_")[1]))
+
+measurements_from_ejson(ejson_meas, updated_nw)
+print("Loaded measurement data")
+
+# get measurements for a node
+# choose a time stamp
+# make sure a measurement exists for every node at that time stamp
+zib_nodes = []
+non_zib_nodes = []
+time_steps = [] # time steps for every non zib node
+P_Load,Q_Load = {}, {}
+for node in BusNum:
+    node_id = 'node_'+ str(node)
+    meas = updated_nw.nodes[node_id].meas
+    if updated_nw.nodes[node_id].meas:
+        # print(f"{len(meas)} meters are associated with Node {node_id}")
+        meas_df = next(iter(meas.values())).data
+        time_steps.append(list(meas_df.index.values))
+        # print(len(meas_df))
+        # vv = meas_df.loc[1517177700]
+        non_zib_nodes.append(node)
+        # chsoing random values for testing at this timw
+        P_Load[node] = meas_df.iloc[[1]]['P'].values[0][0]
+        Q_Load[node] = meas_df.iloc[[1]]['Q'].values[0][0]
+        # print(meas_df.head(5))
+        # break
+    else:
+        zib_nodes.append(node)
+        P_Load[node] = 0
+        Q_Load[node] = 0
+
+# intersection of all time steps
+result = set(time_steps[0])
+for i, val in enumerate(time_steps[1:]):
+    result.intersection_update(val)
+    if len(result)<1:
+        break
+        
 
 bus_all = []
 line_num = []
@@ -416,6 +440,12 @@ for key, val in bus_arcs.items():
             edge_removed = bus_arcs[key]["To"].pop(0) # remove the first edge
             edges_removed.append(edge_removed)
             arcs.remove(edge_removed)
+
+# remove the edges from 'for' part of bus
+for edge_removed in edges_removed:
+    for key, val in bus_arcs.items():
+        if edge_removed in val["from"]:
+            bus_arcs[key]['from'].remove(edge_removed)
 
 # create new ordered arcs characteristics
 R_line, X_line, LineData_Z_pu = {}, {}, {}
