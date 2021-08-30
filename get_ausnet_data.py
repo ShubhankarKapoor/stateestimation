@@ -7,7 +7,7 @@ from evolve_core_tools.network_graphs.processing import (
 import json
 import numpy as np
 import networkx as nx
-
+import pandas as pd
 
 NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_network.json"
 MEASUREMENT_SAMPLE_EJSON = "/home/shub/Documents/phd/distflow/json_files/ausnet_measurements.json"
@@ -104,44 +104,6 @@ for num in bus_sorted:
     if 'node' in num:
         BusNum.append(int(num.split("_")[1]))
 
-measurements_from_ejson(ejson_meas, updated_nw)
-print("Loaded measurement data")
-
-# get measurements for a node
-# choose a time stamp
-# make sure a measurement exists for every node at that time stamp
-zib_nodes = []
-non_zib_nodes = []
-time_steps = [] # time steps for every non zib node
-P_Load,Q_Load = {}, {}
-for node in BusNum:
-    node_id = 'node_'+ str(node)
-    meas = updated_nw.nodes[node_id].meas
-    if updated_nw.nodes[node_id].meas:
-        # print(f"{len(meas)} meters are associated with Node {node_id}")
-        meas_df = next(iter(meas.values())).data
-        time_steps.append(list(meas_df.index.values))
-        # print(len(meas_df))
-        # vv = meas_df.loc[1517177700]
-        non_zib_nodes.append(node)
-        # chsoing random values for testing at this timw
-        P_Load[node] = meas_df.iloc[[1]]['P'].values[0][0]
-        Q_Load[node] = meas_df.iloc[[1]]['Q'].values[0][0]
-        # print(meas_df.head(5))
-        # break
-    else:
-        zib_nodes.append(node)
-        P_Load[node] = 0
-        Q_Load[node] = 0
-
-# intersection of all time steps
-result = set(time_steps[0])
-for i, val in enumerate(time_steps[1:]):
-    result.intersection_update(val)
-    if len(result)<1:
-        break
-        
-
 bus_all = []
 line_num = []
 
@@ -162,6 +124,7 @@ if len(bus_all) != len(BusNum):
 
 # unordered arcs characteristics
 R_line_unordered, X_line_unordered, LineData_Z_pu_unordered = {}, {}, {}
+turns_ratio = {} # for transformers
 arcs_all, transformer_edges = [], []
 count_lines, count_transformers = 0, 0
 for k, component in ejson_nw_updated['components'].items():
@@ -188,11 +151,12 @@ for k, component in ejson_nw_updated['components'].items():
             second_node = int(component_dct["cons"][1]["node"].split("_")[1])
             arcs_all.append((first_node, second_node))        
             transformer_edges.append((first_node, second_node))
+            # get turns ratio for transformers
+            turns_ratio[(first_node, second_node)] = component_dct['nom_turns_ratio']
             # need to see how to model transformers as line
             # not sure
             # reason to do beacsue they behave as edges in this system
             # below isn't correct impedance, it s just to run the code for sorted arcs
-            
             R, X = component_dct['z'][1][0], component_dct['z'][1][1]
             R_line_unordered[(first_node, second_node)] = R
             X_line_unordered[(first_node, second_node)] = X
@@ -227,11 +191,11 @@ for i in BusNum: # use ordered bus
 # bus_arcs[1]["To"] = [(0,1)]
 
 # ordered arcs characteristics
-R_line, X_line, LineData_Z_pu = {}, {}, {}
-for arc in arcs:
-    R_line[arc] = R_line_unordered[arc]
-    X_line[arc] = X_line_unordered[arc]
-    LineData_Z_pu[arc] = LineData_Z_pu_unordered[arc]
+# R_line, X_line, LineData_Z_pu = {}, {}, {}
+# for arc in arcs:
+#     R_line[arc] = R_line_unordered[arc]
+#     X_line[arc] = X_line_unordered[arc]
+#     LineData_Z_pu[arc] = LineData_Z_pu_unordered[arc]
 
 def find_unconnected_nodes(bus_all, arcs_all):
     # returns the list and number of unconnected nodes
@@ -454,6 +418,73 @@ for arc in arcs:
     X_line[arc] = X_line_unordered[arc]
     LineData_Z_pu[arc] = LineData_Z_pu_unordered[arc]
 
+measurements_from_ejson(ejson_meas, updated_nw)
+print("Loaded measurement data")
+
+# sort out measurement in dataframe
+zib_nodes, non_zib_nodes = [], []
+
+df_P = pd.DataFrame() # empty df to store non-zib P loads
+df_Q = pd.DataFrame() # empty df to store non-zib Q loads
+for node in BusNum:
+    node_id = 'node_'+ str(node)
+    meas = updated_nw.nodes[node_id].meas
+    if updated_nw.nodes[node_id].meas:
+        # print(f"{len(meas)} meters are associated with Node {node_id}")
+        meas_df = next(iter(meas.values())).data
+        non_zib_nodes.append(node)
+
+        # concatenate different loads in one df
+        new_node_P = meas_df['P']
+        new_node_P = meas_df['P'].rename(columns={new_node_P.columns[0]: node})
+        df_P = pd.concat((df_P, new_node_P), axis=1).sort_index()
+        new_node_Q = meas_df['Q']
+        new_node_Q = meas_df['Q'].rename(columns={new_node_Q.columns[0]: node})
+        df_Q = pd.concat((df_Q, new_node_Q), axis=1).sort_index()        
+    else:
+        zib_nodes.append(node)
+
+# convert time index to readable datetime format for interpolation
+df_P.index = pd.to_datetime(df_P.index,unit='s')
+df_Q.index = pd.to_datetime(df_Q.index,unit='s')
+
+# count the nans in every df row and pick the one with the least for testing
+num_nans = df_P.isnull().sum(axis=1)
+idx_min = num_nans.idxmin()
+
+# perform interpolation to fill up NANs
+df_P = df_P.interpolate(method='time', limit_direction='both')
+df_Q = df_Q.interpolate(method='time', limit_direction='both')
+
+# get P_Load and Q_Load
+P_Load,Q_Load = {}, {}
+for node in BusNum:
+    if node in non_zib_nodes:
+        P_Load[node] = df_P[node][idx_min]
+        Q_Load[node] = df_Q[node][idx_min]
+    if node in zib_nodes:
+        P_Load[node] = 0
+        Q_Load[node] = 0
+
+'''
+from collections import defaultdict
+f = open('/home/shub/Downloads/ausnet_meas.json/ausnet_meas.json')
+data = json.load(f)
+p = {}
+for node, value in list(data['measurements'].items()):
+    dps = defaultdict(dict)
+    if 'PLG' in value:
+        for meas in value['PLG']:
+            for load, v in zip(meas['element'], meas['data']):
+                dps[load][meas['start_time']] = v
+    for k, v in dps.items():
+        p[k] = v
+df2 = pd.DataFrame.from_dict(p).sort_index()
+'''
+
+###############################################################################
+# Final check on the obtained network
+###############################################################################
 # check if edges removed arent removing transformer edges
 transformer_edge_removed = 0
 for i in edges_removed:

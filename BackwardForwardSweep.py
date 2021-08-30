@@ -33,6 +33,7 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
     e_max = 1
     tolerance = 0.000000000001 
 
+    err_vec = []
     while e_max > tolerance and k<max_iter:
         #Number of iteration
         k = k+1 
@@ -51,11 +52,17 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
 
         #Forward sweep
         for (i,j) in LineData_Z_pu.keys():
-            V[j] = V[i] - LineData_Z_pu[(i,j)] * I_line[(i,j)]
-        
+            if (i,j) in transformer_edges:
+                # implement step down for transformers
+                turn_ratio = turns_ratio[(i,j)]
+                V[j] = V[i]/turn_ratio
+            else:
+                V[j] = V[i] - LineData_Z_pu[(i,j)] * I_line[(i,j)]
+
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
-    
+        err_vec.append(e_max)
+
     #Report Results
     V_mag = {}
     V_ang = {}
