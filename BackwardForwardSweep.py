@@ -61,7 +61,9 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
 
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
-        err_vec.append(e_max)
+        if k%1000==1:
+            print(k, e_max)
+            err_vec.append(e_max)
 
     #Report Results
     V_mag = {}

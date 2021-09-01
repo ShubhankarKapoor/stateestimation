@@ -9,7 +9,7 @@ import numpy as np
 import networkx as nx
 import pandas as pd
 
-NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_network.json"
+NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_removed2.json"
 MEASUREMENT_SAMPLE_EJSON = "/home/shub/Documents/phd/distflow/json_files/ausnet_measurements.json"
 NETWORK_UPDATED_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_network_updated.json"
 
@@ -96,9 +96,17 @@ print(updated_nw)
 print(f"updated_nw graph has {updated_nw.graph.number_of_nodes()} nodes "
 f"and {updated_nw.graph.number_of_edges()} edges")
 
+# check length before and after removing edges
+if len(ejson_nw['components'])-len(ejson_nw_updated['components']) == len(edges_removed):
+    print('Number of edges removed match!')
+else:
+    print('check the edges removed, not looking good....!')
+
+# all of this below could go in a function in different file
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # topologically ordered nodes
 # need it for forward backward calculations of power flow
-bus_sorted = list(nx.topological_sort(reduced_nw.graph))
+bus_sorted = list(nx.topological_sort(updated_nw.graph))
 BusNum = [] # all buses with node in its name, ignores upstream & com_ground
 for num in bus_sorted:
     if 'node' in num:
@@ -138,7 +146,8 @@ for k, component in ejson_nw_updated['components'].items():
             second_node = int(component_dct["cons"][1]["node"].split("_")[1])
             arcs_all.append((first_node, second_node))
             # get R_line_unordered, X_line_unordered and imp
-            R, X = component_dct['z'][0], component_dct['z'][1]
+            length = component_dct['length']
+            R, X = component_dct['z'][0] * length, component_dct['z'][1] * length
             R_line_unordered[(first_node, second_node)] = R
             X_line_unordered[(first_node, second_node)] = X
             LineData_Z_pu_unordered[(first_node, second_node)] = R + X*1j
@@ -189,13 +198,6 @@ for i in BusNum: # use ordered bus
                 arcs.append(ii)            
     bus_arcs[i] = {"To":t,"from":f}
 # bus_arcs[1]["To"] = [(0,1)]
-
-# ordered arcs characteristics
-# R_line, X_line, LineData_Z_pu = {}, {}, {}
-# for arc in arcs:
-#     R_line[arc] = R_line_unordered[arc]
-#     X_line[arc] = X_line_unordered[arc]
-#     LineData_Z_pu[arc] = LineData_Z_pu_unordered[arc]
 
 def find_unconnected_nodes(bus_all, arcs_all):
     # returns the list and number of unconnected nodes
@@ -251,7 +253,9 @@ for j in unconnected_nodes_pre:
         # the only other case is when the value is 0, not required to deal 
         # wtih this case. Has been taken care in a way when found == 0
 
+# add newly added arcs to the json file -->> later save as ausnet_removed.json
 # need to get line characterisitcs for the edges added from original ejson
+pre_addn_length = len(ejson_nw_updated['components'])
 for arc in newly_added_arcs:
     for k, component in ejson_nw['components'].items():
 
@@ -264,10 +268,12 @@ for arc in newly_added_arcs:
                 if first_node == arc[0] and second_node == arc[1]:
                     count_lines +=1    
                     # get R_line_unordered, X_line_unordered and imp
-                    R, X = component_dct['z'][0], component_dct['z'][1]
+                    length = component_dct['length']
+                    R, X = component_dct['z'][0] * length, component_dct['z'][1] * length                    
                     R_line_unordered[(first_node, second_node)] = R
                     X_line_unordered[(first_node, second_node)] = X
                     LineData_Z_pu_unordered[(first_node, second_node)] = R + X*1j
+                    ejson_nw_updated['components'][k]=component # add it to update ejson
                     break
         if 'Transformer' in component:
             component_dct = component['Transformer']
@@ -283,7 +289,15 @@ for arc in newly_added_arcs:
                     X_line_unordered[(first_node, second_node)] = X
                     # component_dct['z'] = component_dct['imped_mod']['ZZ0']['z']
                     LineData_Z_pu_unordered[(first_node, second_node)] = R + X*1j
+                    ejson_nw_updated['components'][k]=component # add it to update ejson
                     break
+
+# check length before and after adding edges
+if len(ejson_nw_updated['components']) - pre_addn_length == len(newly_added_arcs):
+    print('Number of edges added match!')
+else:
+    print('check the edges added, not looking good....!')
+
 # unconnected nodes post processing with updated arcs
 unconnected_nodes_post, unconnected_bus_count_post = find_unconnected_nodes(bus_all, arcs_all)
 
@@ -321,7 +335,25 @@ for i in unconnected_nodes_post:
         if i == j:
             BusNum.remove(i)
             bus_arcs.pop(i)# remove the nodes from bus_arcs as well
- 
+
+# remove these nodes from ejson_updated before storing as json file -->> ausnet_removed.json
+# remove the components from ejson_nw_updated
+
+pre_addn_length = len(ejson_nw_updated['components'])
+for node in unconnected_nodes_post:
+    for k, component in ejson_nw_updated['components'].items():
+        if 'node' in k:
+            if 'node_' + str(node) == k:
+                # remove it from the json file
+                ejson_nw_updated['components'].pop(k)
+                break
+
+# check length before and after removing edges
+if pre_addn_length - len(ejson_nw_updated['components']) == len(unconnected_nodes_post):
+    print('Number of edges removed match!')
+else:
+    print('check the edges removed, not looking good....!')
+
 # make sure BusNum is still ordered
 bb = []
 for num in bus_sorted:
@@ -345,6 +377,8 @@ for i in unconnected_nodes_post:
             # print(i, j)
             arcs_all.remove(j)
             arcs_removed.append(j)
+# remove these arcs from ejson_updated before storing as json file -->> ausnet_removed.json
+# done later
 
 # could check here if the arcs removed belongs to transformer edges
 # but it shouldn't affect the system as you removed the nodes as well
@@ -391,7 +425,7 @@ for i in BusNum: # use ordered bus
 # lines and edges have been interchangibily used in the comments
 ###############################################################################
 count_to = 0 # nodes having multiple lines feeding them
-nodes_with_multiple_source, edges_removed = [], []
+nodes_with_multiple_source, edges_to_removed = [], []
 for key, val in bus_arcs.items():
     if len(val["To"])>1: # multiple lines to a node
         count_to+=1
@@ -402,11 +436,11 @@ for key, val in bus_arcs.items():
         else: # when len is 2
             # remove an edge when multiple edges are fed to a node
             edge_removed = bus_arcs[key]["To"].pop(0) # remove the first edge
-            edges_removed.append(edge_removed)
+            edges_to_removed.append(edge_removed)
             arcs.remove(edge_removed)
-
+            
 # remove the edges from 'for' part of bus
-for edge_removed in edges_removed:
+for edge_removed in edges_to_removed:
     for key, val in bus_arcs.items():
         if edge_removed in val["from"]:
             bus_arcs[key]['from'].remove(edge_removed)
@@ -418,6 +452,49 @@ for arc in arcs:
     X_line[arc] = X_line_unordered[arc]
     LineData_Z_pu[arc] = LineData_Z_pu_unordered[arc]
 
+# all arcs to be removed
+arcs_removed.extend(edges_to_removed)
+
+# remove these arcs from ejson_updated before storing as json file -->> ausnet_removed.json
+pre_addn_length = len(ejson_nw_updated['components'])
+for arc in arcs_removed:
+    for k, component in ejson_nw_updated['components'].items():
+
+        if 'Line' in component:
+            component_dct = component['Line']
+
+            if 'cons' in component_dct:
+                first_node = int(component_dct["cons"][0]["node"].split("_")[1])
+                second_node = int(component_dct["cons"][1]["node"].split("_")[1])
+                if first_node == arc[0] and second_node == arc[1]:
+                    # remove the component
+                    ejson_nw_updated['components'].pop(k)
+                    break
+        if 'Transformer' in component:
+            component_dct = component['Transformer']
+            if 'cons' in component_dct:
+                first_node = int(component_dct["cons"][0]["node"].split("_")[1])
+                second_node = int(component_dct["cons"][1]["node"].split("_")[1])
+                if first_node == arc[0] and second_node == arc[1]:
+                    # remove the component
+                    ejson_nw_updated['components'].pop(k)
+                    break
+
+# check length before and after removing edges
+if pre_addn_length - len(ejson_nw_updated['components']) == len(arcs_removed):
+    print('Number of edges removed match!')
+else:
+    print('check the edges removed, not looking good....!')
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+# function could be defiend here with returning updated json and req params
+
+NETWORK_REDUCE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_removed2.json"
+# write updated new a json file
+# with open(NETWORK_REDUCE_EJSON, 'w') as fp:
+#     json.dump(ejson_nw_updated, fp, indent=2)
+# manually removed component 10423 which has node 5594 on its load
+
+# similarly have a function for measurement
 measurements_from_ejson(ejson_meas, updated_nw)
 print("Loaded measurement data")
 
@@ -451,6 +528,7 @@ df_Q.index = pd.to_datetime(df_Q.index,unit='s')
 # count the nans in every df row and pick the one with the least for testing
 num_nans = df_P.isnull().sum(axis=1)
 idx_min = num_nans.idxmin()
+# idx_min = '2018-01-28 11:55:00'
 
 # perform interpolation to fill up NANs
 df_P = df_P.interpolate(method='time', limit_direction='both')
@@ -487,7 +565,7 @@ df2 = pd.DataFrame.from_dict(p).sort_index()
 ###############################################################################
 # check if edges removed arent removing transformer edges
 transformer_edge_removed = 0
-for i in edges_removed:
+for i in edges_to_removed:
     for j in transformer_edges:
         if i == j: # you removed a transformer edge
             transformer_edge_removed = 1
@@ -516,49 +594,125 @@ if len(arcs) == len(BusNum) - 1 and len(BusNum) == len(bus_arcs):
 ###############################################################################
 # validation of the updated network
 ###############################################################################
-G = nx.DiGraph(arcs) # define the graph using the updated arcs
+def check_path_to_every_node_from_slack(G, buses, slack_node):
+    ''' 
+        G: netowrk object
+        buses: all nodes in the graph except slack node
+        slack_node: slack node
+    '''
+    # check paths to evrey node from the slack node
+    # there should be one path from slack node to evry node
+    count_nodes = 0 # to make sure it iterates over all nodes
+    path_lengths = {}
+    all_nodes_are_good = 1 # a flag to see if nodes satisfy above 2 condition
+    for node in buses:
+        count_nodes+=1
+        # gets all the path from source to target
+        path_length = len(list(nx.all_simple_paths(G, source=slack_node, target=node)))
+        path_lengths[slack_node, node] = path_length
+        # should have the length as 1 to satisfy the above 2 conditons
+        if path_length == 1:
+            pass
+        elif path_length == 0:
+            all_nodes_are_good = 0
+            print('Unconnected node: ', node)
+        else:
+            all_nodes_are_good = 2
+            print('Multiple paths to node: ', node)        
 
-# find cycles
-try:
-    cycle = list(nx.find_cycle(G, orientation="ignore"))
-except nx.exception.NetworkXNoCycle:
-    print('No Cycles, mate!')
-
-# check connectivity of the graph
-if nx.is_connected(G.to_undirected()) == True:
-    print('Graph is all connected!')
-else:
-    print('Trouble, We got unconnected graphs!')
-
-# check paths to evrey node from the slack node
-# there should be one path from slack node to evry node
-count_nodes = 0 # to make sure it iterates over all nodes
-path_lengths = {}
-all_nodes_are_good = 1 # a flag to see if nodes satisfy above 2 conditions
-for node in BusNum[1:]:
-    count_nodes+=1
-    # gets all the path from source to target
-    path_length = len(list(nx.all_simple_paths(G, source=slack_node, target=node)))
-    path_lengths[slack_node, node] = path_length
-    # should have the length as 1 to satisfy the above 2 conditons
-    if path_length == 1:
-        pass
-    elif path_length == 0:
-        all_nodes_are_good = 0
-        print('Unconnected node: ', node)
+    if all_nodes_are_good == 1:
+        all_nodes_connected_to_slack = True
+        print('All nodes are connected to slack node and have single path')
     else:
-        all_nodes_are_good = 2
-        print('Multiple paths to node: ', node)        
-        
-if all_nodes_are_good == 1:
-    print('All nodes are connected to slack node and have single path')
-else:
-    print('Either unconnected node or multiple path to nodes')
+        all_nodes_connected_to_slack = False
+        print('Either unconnected node or multiple path to nodes')
+    return all_nodes_connected_to_slack
+                                        
+def validate_nw_using_arcs(arcs, slack_node):
+    ''' validates network by using arcs'''
+    G = nx.DiGraph(arcs) # define the graph using the updated arcs
 
-###############################################################################
-# check if there is gap between line numbers
-###############################################################################
-for i in range(len(line_num)-1):
-    if abs(line_num[i] - line_num[i+1])!=1:
-        # print(line_num[i] - line_num[i+1],line_num[i], line_num[i+1])
-        pass
+    # find cycles
+    try:
+        cycle = list(nx.find_cycle(G, orientation="ignore"))
+        cycles = True
+    except nx.exception.NetworkXNoCycle:
+        cycles = False
+        print('No Cycles, mate!')
+
+    # check connectivity of the graph
+    if nx.is_connected(G.to_undirected()) == True:
+        graph_connectivity = True
+        print('Graph is all connected!')
+    else:
+        graph_connectivity = False
+        print('Trouble, We got unconnected graphs!')
+    
+    buses = list(G.nodes()) # get all nodes/ buses
+    # remove the slack bus
+    buses.remove(slack_node) # no need to check connectivity of slack node
+    # check paths to evrey node from the slack node
+    # there should be one path from slack node to evry node
+    all_nodes_connected_to_slack = check_path_to_every_node_from_slack(G, buses, slack_node)
+
+    return cycles, graph_connectivity, all_nodes_connected_to_slack
+
+def validate_nw_using_json_file(json_file, slack_node):
+    ''' validates json network by getting arcs from the file'''
+    arcs_all, transformer_edges = [], []
+    count_lines, count_transformers = 0, 0
+    for k, component in json_file['components'].items():
+    
+        if 'Line' in component:
+            count_lines +=1
+            component_dct = component['Line']
+    
+            if 'cons' in component_dct:
+                first_node = int(component_dct["cons"][0]["node"].split("_")[1])
+                second_node = int(component_dct["cons"][1]["node"].split("_")[1])
+                arcs_all.append((first_node, second_node))
+    
+        if 'Transformer' in component:
+            count_transformers+=1
+            component_dct = component['Transformer']
+            if 'cons' in component_dct:
+                first_node = int(component_dct["cons"][0]["node"].split("_")[1])
+                second_node = int(component_dct["cons"][1]["node"].split("_")[1])
+                arcs_all.append((first_node, second_node))        
+                transformer_edges.append((first_node, second_node))
+
+    cycles, graph_connectivity, all_nodes_connected_to_slack = validate_nw_using_arcs(arcs_all, slack_node)
+    return cycles, graph_connectivity, all_nodes_connected_to_slack
+
+def validate_nw_using_json_file_to_network(json_file, slack_node):
+    ''' validates json network by converting it to network obj'''
+    nw = network_from_ejson("loaded_nw", json_file)
+    G = nw.graph
+        # find cycles
+    try:
+        cycle = list(nx.find_cycle(G, orientation="ignore"))
+        cycles = True
+    except nx.exception.NetworkXNoCycle:
+        cycles = False
+        print('No Cycles, mate!')
+
+    # check connectivity of the graph
+    if nx.is_connected(G.to_undirected()) == True:
+        graph_connectivity = True
+        print('Graph is all connected!')
+    else:
+        graph_connectivity = False
+        print('Trouble, We got unconnected graphs!')
+    
+    buses = list(G.nodes()) # get all nodes/ buses
+    # check paths to evrey node from the slack node
+    # there should be one path from slack node to evry node
+    slack_node = 'node_'+str(slack_node)
+    # remove the slack bus
+    buses.remove(slack_node) # no need to check connectivity of slack node    
+    all_nodes_connected_to_slack = check_path_to_every_node_from_slack(G, buses, slack_node)
+    return cycles, graph_connectivity, all_nodes_connected_to_slack
+
+validate_nw_using_arcs(arcs_all, slack_node=8183)
+validate_nw_using_json_file(ejson_nw, slack_node=8183)
+validate_nw_using_json_file_to_network(ejson_nw, slack_node=8183)
