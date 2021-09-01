@@ -8,7 +8,7 @@ import numpy as np
 import networkx as nx
 import pandas as pd
 
-NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_network.json"
+NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_removed2.json"
 MEASUREMENT_SAMPLE_EJSON = "/home/shub/Documents/phd/distflow/json_files/ausnet_measurements.json"
 NETWORK_UPDATED_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_network_updated.json"
 
@@ -23,6 +23,9 @@ with open(MEASUREMENT_SAMPLE_EJSON) as f:
 full_nw = network_from_ejson("loaded_nw", ejson_nw)
 print("loaded nw")
 print(full_nw)
+
+# full_nw.graph.remove_node('com_ground')
+# full_nw.graph.remove_node('upstream')
 
 reduced_nw = full_nw.copy()
 
@@ -487,78 +490,6 @@ else:
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 # function could be defiend here with returning updated json and req params
 
-NETWORK_REDUCE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_removed2.json"
-# write updated new a json file
-# with open(NETWORK_REDUCE_EJSON, 'w') as fp:
-#     json.dump(ejson_nw_updated, fp, indent=2)
-# manually removed component 10423 which has node 5594 on its load
-
-# similarly have a function for measurement
-measurements_from_ejson(ejson_meas, updated_nw)
-print("Loaded measurement data")
-
-# sort out measurement in dataframe
-zib_nodes, non_zib_nodes = [], []
-
-df_P = pd.DataFrame() # empty df to store non-zib P loads
-df_Q = pd.DataFrame() # empty df to store non-zib Q loads
-for node in BusNum:
-    node_id = 'node_'+ str(node)
-    meas = updated_nw.nodes[node_id].meas
-    if updated_nw.nodes[node_id].meas:
-        # print(f"{len(meas)} meters are associated with Node {node_id}")
-        meas_df = next(iter(meas.values())).data
-        non_zib_nodes.append(node)
-
-        # concatenate different loads in one df
-        new_node_P = meas_df['P']
-        new_node_P = meas_df['P'].rename(columns={new_node_P.columns[0]: node})
-        df_P = pd.concat((df_P, new_node_P), axis=1).sort_index()
-        new_node_Q = meas_df['Q']
-        new_node_Q = meas_df['Q'].rename(columns={new_node_Q.columns[0]: node})
-        df_Q = pd.concat((df_Q, new_node_Q), axis=1).sort_index()        
-    else:
-        zib_nodes.append(node)
-
-# convert time index to readable datetime format for interpolation
-df_P.index = pd.to_datetime(df_P.index,unit='s')
-df_Q.index = pd.to_datetime(df_Q.index,unit='s')
-
-# count the nans in every df row and pick the one with the least for testing
-num_nans = df_P.isnull().sum(axis=1)
-idx_min = num_nans.idxmin()
-# idx_min = '2018-01-28 11:55:00'
-
-# perform interpolation to fill up NANs
-df_P = df_P.interpolate(method='time', limit_direction='both')
-df_Q = df_Q.interpolate(method='time', limit_direction='both')
-
-# get P_Load and Q_Load
-P_Load,Q_Load = {}, {}
-for node in BusNum:
-    if node in non_zib_nodes:
-        P_Load[node] = df_P[node][idx_min]
-        Q_Load[node] = df_Q[node][idx_min]
-    if node in zib_nodes:
-        P_Load[node] = 0
-        Q_Load[node] = 0
-
-'''
-from collections import defaultdict
-f = open('/home/shub/Downloads/ausnet_meas.json/ausnet_meas.json')
-data = json.load(f)
-p = {}
-for node, value in list(data['measurements'].items()):
-    dps = defaultdict(dict)
-    if 'PLG' in value:
-        for meas in value['PLG']:
-            for load, v in zip(meas['element'], meas['data']):
-                dps[load][meas['start_time']] = v
-    for k, v in dps.items():
-        p[k] = v
-df2 = pd.DataFrame.from_dict(p).sort_index()
-'''
-
 ###############################################################################
 # Final check on the obtained network
 ###############################################################################
@@ -589,6 +520,99 @@ if count_to == 0:
 # total_edges = num_lines + num_transformers
 if len(arcs) == len(BusNum) - 1 and len(BusNum) == len(bus_arcs):
     print('All G!')
+
+NETWORK_REDUCE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_removed2.json"
+# write updated new a json file
+# with open(NETWORK_REDUCE_EJSON, 'w') as fp:
+#     json.dump(ejson_nw_updated, fp, indent=2)
+# manually removed component 10423 which has node 5594 on its load
+
+# similarly have a function for measurement
+def get_load_meas_from_json(ejson_meas, updated_nw, BusNum, timestamp=None):
+    '''
+    Interpolates missing measurements and return load values, zib/ non zib buses 
+    ----------
+    ejson_meas : json measurement file
+    updated_nw : C3X nw object
+    BusNum: ordered list of nodes
+
+    Returns
+    -------
+    P_Load : Active power dict
+    Q_Load : Reactive power dict
+    '''
+    # modified the func below in the source code
+    # it gives key error if the node exists in meas file but not in nw
+    # handling it by try and except
+    measurements_from_ejson(ejson_meas, updated_nw)
+    print("Loaded measurement data")
+    
+    # sort out measurement in dataframe
+    zib_nodes, non_zib_nodes = [], []
+    
+    df_P = pd.DataFrame() # empty df to store non-zib P loads
+    df_Q = pd.DataFrame() # empty df to store non-zib Q loads
+    for node in BusNum:
+        node_id = 'node_'+ str(node)
+        meas = updated_nw.nodes[node_id].meas
+        if updated_nw.nodes[node_id].meas:
+            # print(f"{len(meas)} meters are associated with Node {node_id}")
+            meas_df = next(iter(meas.values())).data
+            non_zib_nodes.append(node)
+    
+            # concatenate different loads in one df
+            new_node_P = meas_df['P']
+            new_node_P = meas_df['P'].rename(columns={new_node_P.columns[0]: node})
+            df_P = pd.concat((df_P, new_node_P), axis=1).sort_index()
+            new_node_Q = meas_df['Q']
+            new_node_Q = meas_df['Q'].rename(columns={new_node_Q.columns[0]: node})
+            df_Q = pd.concat((df_Q, new_node_Q), axis=1).sort_index()        
+        else:
+            zib_nodes.append(node)
+    
+    # convert time index to readable datetime format for interpolation
+    df_P.index = pd.to_datetime(df_P.index,unit='s')
+    df_Q.index = pd.to_datetime(df_Q.index,unit='s')
+    
+    # count the nans in every df row and pick the one with the least for testing
+    num_nans = df_P.isnull().sum(axis=1)
+    idx_min = num_nans.idxmin()
+    # idx_min = '2018-01-28 11:55:00'
+    if timestamp is None:
+        timestamp = idx_min
+    
+    # perform interpolation to fill up NANs
+    df_P = df_P.interpolate(method='time', limit_direction='both')
+    df_Q = df_Q.interpolate(method='time', limit_direction='both')
+    
+    # get P_Load and Q_Load
+    P_Load,Q_Load = {}, {}
+    for node in BusNum:
+        if node in non_zib_nodes:
+            P_Load[node] = df_P[node][idx_min]
+            Q_Load[node] = df_Q[node][idx_min]
+        if node in zib_nodes:
+            P_Load[node] = 0
+            Q_Load[node] = 0
+    return P_Load, Q_Load, non_zib_nodes, zib_nodes
+
+# get load values
+P_Load, Q_Load, _, _ = get_load_meas_from_json(ejson_meas, updated_nw, BusNum, timestamp=None)
+'''
+from collections import defaultdict
+f = open('/home/shub/Downloads/ausnet_meas.json/ausnet_meas.json')
+data = json.load(f)
+p = {}
+for node, value in list(data['measurements'].items()):
+    dps = defaultdict(dict)
+    if 'PLG' in value:
+        for meas in value['PLG']:
+            for load, v in zip(meas['element'], meas['data']):
+                dps[load][meas['start_time']] = v
+    for k, v in dps.items():
+        p[k] = v
+df2 = pd.DataFrame.from_dict(p).sort_index()
+'''
 
 ###############################################################################
 # validation of the updated network
@@ -635,6 +659,7 @@ def validate_nw_using_arcs(arcs, slack_node):
     try:
         cycle = list(nx.find_cycle(G, orientation="ignore"))
         cycles = True
+        print('cycles are present')
     except nx.exception.NetworkXNoCycle:
         cycles = False
         print('No Cycles, mate!')
@@ -687,10 +712,14 @@ def validate_nw_using_json_file_to_network(json_file, slack_node):
     ''' validates json network by converting it to network obj'''
     nw = network_from_ejson("loaded_nw", json_file)
     G = nw.graph
+    G.remove_node('com_ground')
+    G.remove_node('upstream')
+
         # find cycles
     try:
         cycle = list(nx.find_cycle(G, orientation="ignore"))
         cycles = True
+        print('cycles are present')
     except nx.exception.NetworkXNoCycle:
         cycles = False
         print('No Cycles, mate!')
@@ -712,6 +741,7 @@ def validate_nw_using_json_file_to_network(json_file, slack_node):
     all_nodes_connected_to_slack = check_path_to_every_node_from_slack(G, buses, slack_node)
     return cycles, graph_connectivity, all_nodes_connected_to_slack
 
-validate_nw_using_arcs(arcs_all, slack_node=8183)
-validate_nw_using_json_file(ejson_nw, slack_node=8183)
-validate_nw_using_json_file_to_network(ejson_nw, slack_node=8183)
+validate_nw_using_arcs(arcs_all, slack_node=8183) # cycles should be present
+# validate_nw_using_arcs(arcs, slack_node=8183) # no cycles 
+validate_nw_using_json_file(ejson_nw_updated, slack_node=8183) # no cycles
+validate_nw_using_json_file_to_network(ejson_nw_updated, slack_node=8183) # cycles inteoduced because of introductioin of com_ground while converting it to nw
