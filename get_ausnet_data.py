@@ -1,7 +1,6 @@
-from evolve_core_tools.parser import network_from_ejson
-from evolve_core_tools.parser import (network_to_ejson, network_from_ejson, 
+from evolve_core_tools.evolve_core_tools.parser import (network_to_ejson, network_from_ejson, 
     measurements_from_ejson,  measurements_to_ejson, graph_to_ejson)
-from evolve_core_tools.network_graphs.processing import (
+from evolve_core_tools.evolve_core_tools.network_graphs.processing import (
     set_full_graph_edge_direction,
     arbitrarily_remove_edges_to_remove_cycles,)
 import json
@@ -9,7 +8,7 @@ import numpy as np
 import networkx as nx
 import pandas as pd
 
-NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_removed2.json"
+NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_network.json"
 MEASUREMENT_SAMPLE_EJSON = "/home/shub/Documents/phd/distflow/json_files/ausnet_measurements.json"
 NETWORK_UPDATED_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_network_updated.json"
 
@@ -615,10 +614,10 @@ def check_path_to_every_node_from_slack(G, buses, slack_node):
             pass
         elif path_length == 0:
             all_nodes_are_good = 0
-            print('Unconnected node: ', node)
+            # print('Unconnected node: ', node)
         else:
             all_nodes_are_good = 2
-            print('Multiple paths to node: ', node)        
+            # print('Multiple paths to node: ', node)        
 
     if all_nodes_are_good == 1:
         all_nodes_connected_to_slack = True
