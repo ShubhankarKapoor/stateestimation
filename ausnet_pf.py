@@ -8,13 +8,13 @@ Created on Wed Sep  1 13:43:33 2021
 
 from power_flows.dist_flow_pyomo import dist_flow_pyomo, dist_flow_lossy
 from power_flows.dist_flow_lossless import dist_flow_lossless
-
+# from get_ausnet_data import validate_nw_using_json_file, validate_nw_using_json_file_to_network
 # import pyximport
 # pyximport.install()
 # from power_flows.sgt_wrapper.sgt_wrapper import solve_power_flow_sgt, solve_network_sgt
 # from power_flows.sgt_wrapper.test import foo
 # from power_flows.power_flow_sgt import power_flow_sgt
-
+from ausnet_parser import *
 from evolve_core_tools.evolve_core_tools.parser import (network_to_ejson, network_from_ejson, 
     measurements_from_ejson,  measurements_to_ejson, graph_to_ejson)
 from evolve_core_tools.evolve_core_tools.network_graphs.processing import (
@@ -42,30 +42,33 @@ print(full_nw)
 full_nw.graph.remove_node('com_ground')
 full_nw.graph.remove_node('upstream')
 
+# get network characterisitcs
+R_line_unordered, X_line_unordered, LineData_Z_pu_unordered, arcs_all, \
+transformer_edges, turns_ratio, count_lines, count_transformers, BusNum, = \
+get_arcs_and_nw_info(ejson_nw, full_nw)
+
+# get ordered arcs and bus arcs
+arcs, bus_arcs = get_ordered_arcs(BusNum, arcs_all)
+
 # assumed here no cycles
 # run network checks
-# validate_nw_using_json_file(ejson_nw_updated, slack_node=8183) # no cycles
-# validate_nw_using_json_file_to_network(ejson_nw_updated, slack_node=8183) # cycles inteoduced because of introductioin of com_ground while converting it to nw
+validate_nw_using_arcs(arcs_all, slack_node=8183) # cycles should be present
+validate_nw_using_arcs(arcs, slack_node=8183) # no cycles 
+validate_nw_using_json_file(ejson_nw, slack_node=8183) # no cycles
+validate_nw_using_json_file_to_network(ejson_nw, slack_node=8183) # cycles inteoduced because of introductioin of com_ground while converting it to nw
 
-# topologically ordered nodes
-# need it for forward backward calculations of power flow
-bus_sorted = list(nx.topological_sort(full_nw.graph))
-BusNum = [] # all buses with node in its name, ignores upstream & com_ground
-for num in bus_sorted:
-    if 'node' in num:
-        BusNum.append(int(num.split("_")[1]))
-        
+# BusNum.remove(5594)
 # get loads
-# P_Load, Q_Load, _, _ = get_load_meas_from_json(ejson_meas, full_nw, BusNum, timestamp=None)
+P_Load, Q_Load, _, _ = get_load_meas_from_json(ejson_meas, full_nw, BusNum, timestamp=None)
 
 # run different powerflows
 slack_bus_node = 'node_8183'
 
 # run distflow lossy
-dist_flow_lossy(full_nw, slack_bus_node, slack_voltage = 1, write_solver_output=True)
+# dist_flow_lossy(full_nw, slack_bus_node, slack_voltage = 1, write_solver_output=True)
 
 # distflow lossless
-bus_v = dist_flow_lossless(full_nw, root_node=slack_bus_node, v_root=1, calculate_junction_nodes=False, calculate_all_nodes=True)
+# bus_v = dist_flow_lossless(full_nw, root_node=slack_bus_node, v_root=1, calculate_junction_nodes=False, calculate_all_nodes=True)
 
-# # SGT
+# SGT
 # power_flow_sgt(ejson_nw, ejson_meas)

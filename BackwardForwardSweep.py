@@ -56,6 +56,8 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
                 # implement step down for transformers
                 turn_ratio = turns_ratio[(i,j)]
                 V[j] = V[i]/turn_ratio
+                print(V[i], V[j])
+                break
             else:
                 V[j] = V[i] - LineData_Z_pu[(i,j)] * I_line[(i,j)]
 
