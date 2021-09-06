@@ -648,10 +648,11 @@ def get_load_meas_from_json(ejson_meas, updated_nw, BusNum, timestamp=None):
 
     df_P = pd.DataFrame() # empty df to store non-zib P loads
     df_Q = pd.DataFrame() # empty df to store non-zib Q loads
+    df_V = pd.DataFrame() # empty df to store non-zib Q loads
     for node in BusNum:
         node_id = 'node_'+ str(node)
         meas = updated_nw.nodes[node_id].meas
-        if updated_nw.nodes[node_id].meas:
+        if updated_nw.nodes[node_id].meas: # if there are loads/ meas on the node
             # print(f"{len(meas)} meters are associated with Node {node_id}")
             meas_df = next(iter(meas.values())).data
             non_zib_nodes.append(node)
@@ -662,13 +663,22 @@ def get_load_meas_from_json(ejson_meas, updated_nw, BusNum, timestamp=None):
             df_P = pd.concat((df_P, new_node_P), axis=1).sort_index()
             new_node_Q = meas_df['Q']
             new_node_Q = meas_df['Q'].rename(columns={new_node_Q.columns[0]: node})
-            df_Q = pd.concat((df_Q, new_node_Q), axis=1).sort_index()        
+            df_Q = pd.concat((df_Q, new_node_Q), axis=1).sort_index()
+            new_node_V = meas_df['V']
+            new_node_V = meas_df['V'].rename(columns={new_node_V.columns[0]: node})
+            df_V = pd.concat((df_V, new_node_V), axis=1).sort_index()
         else:
             zib_nodes.append(node)
+            # voltage exists for every node regardless of load or no load
+            # meas_df = next(iter(meas.values())).data
+            # new_node_V = meas_df['V']
+            # new_node_V = meas_df['V'].rename(columns={new_node_V.columns[0]: node})
+            # df_V = pd.concat((df_V, new_node_V), axis=1).sort_index()
 
     # convert time index to readable datetime format for interpolation
     df_P.index = pd.to_datetime(df_P.index,unit='s')
     df_Q.index = pd.to_datetime(df_Q.index,unit='s')
+    df_V.index = pd.to_datetime(df_V.index,unit='s')
 
     # count the nans in every df row and pick the one with the least for testing
     num_nans = df_P.isnull().sum(axis=1)
@@ -680,7 +690,11 @@ def get_load_meas_from_json(ejson_meas, updated_nw, BusNum, timestamp=None):
     # perform interpolation to fill up NANs
     df_P = df_P.interpolate(method='time', limit_direction='both')
     df_Q = df_Q.interpolate(method='time', limit_direction='both')
+    df_V = df_V.interpolate(method='time', limit_direction='both')
 
+    # voltage value for the timestamp
+    Vmag = df_V.loc[idx_min]
+    Vmag = Vmag.to_dict()
     # get P_Load and Q_Load
     P_Load,Q_Load = {}, {}
     for node in BusNum:
@@ -690,4 +704,4 @@ def get_load_meas_from_json(ejson_meas, updated_nw, BusNum, timestamp=None):
         if node in zib_nodes:
             P_Load[node] = 0
             Q_Load[node] = 0
-    return P_Load, Q_Load, non_zib_nodes, zib_nodes
+    return P_Load, Q_Load, non_zib_nodes, zib_nodes, Vmag
