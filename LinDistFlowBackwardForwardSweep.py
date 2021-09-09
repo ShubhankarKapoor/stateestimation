@@ -1,11 +1,14 @@
-def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pflow = None, max_iter= None):
+def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, slack_node=None, 
+                            V0=None, loss=None, pflow = None, max_iter= None):
 
     import numpy as np
     import copy
 
-    if which == 37:
+    if which == 37: # for 37
         from Network37 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase, R_line, X_line
-    else:
+    elif which == None: # for ausnet
+        from ausnet_pf import BusNum, bus_arcs, LineData_Z_pu, arcs, R_line, X_line
+    else: # for 906
         from Network906 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase, R_line, X_line
 
     loss = 0 if loss is None else loss # for voltage loss term
@@ -13,18 +16,9 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
     # giving an insanely high number below so it converges with tol when max_iters are missing
     max_iter = 10e12 if max_iter is None else max_iter # max iterations without considering tolerance  
 
-    I_load = {}
-    for i in BusNum:
-        I_load[i] = 0+0j
-
-    I_line = {}
-    for i in range(len(BusNum)-1,0,-1):
-        # print(I_line[bus_arcs[i]["To"][0]])
-        I_line[bus_arcs[i]["To"][0]] = 0+0j
-
     P_line, Q_line = {}, {}
-    for i in range(len(BusNum)-1,0,-1):
-        # print(I_line[bus_arcs[i]["To"][0]])
+    # for i in range(len(BusNum)-1,0,-1):
+    for i in BusNum[:0:-1]:
         P_line[bus_arcs[i]["To"][0]] = 0
         Q_line[bus_arcs[i]["To"][0]] = 0
 
@@ -32,12 +26,14 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
     V = {}
     for i in BusNum: #Note that bus 0 here shows the ideal secondary voltages of the transformer
         V[i] = 1 # square magnitude
-    V[0] = 1 if V0 is None else V0
+    # should skip the line below for ausnet because 0 isn't the slack node        
+    # V[slack_node] = 1 if V0 is None else V0
 
     #Initialization of iteration count
     k = 0 # iteration count
     e_max = 1
     tolerance = 0.000000000001
+    err_vec = []
 
     while e_max > tolerance and k<max_iter: # when both conditions are satisfied
         #Number of iteration
@@ -64,15 +60,18 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
 
             #Backward sweep
             # for i in range(len(BusNum)-1,0,-1):
+            sum_loss_p = 0
             for i in BusNum[:0:-1]:
                 # if no loss included in pflow/ qflow
                 P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
                 Q_line[bus_arcs[i]["To"][0]] = Q_Load[i] + sum(Q_line[g] for g in bus_arcs[i]["from"] )
-
                 if pflow == 1: # pflow/qflow loss term
+                    # print(V[i], (1/V[i]))
                     current_sq = (P_line[bus_arcs[i]["To"][0]]**2 + Q_line[bus_arcs[i]["To"][0]]**2)* (1/V[i])
                     loss_term_p = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].real
                     loss_term_q = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].imag
+                    sum_loss_p+=loss_term_p
+                    # print(bus_arcs[i]["To"][0], P_line[bus_arcs[i]["To"][0]], loss_term_p)
                     P_line[bus_arcs[i]["To"][0]] = P_line[bus_arcs[i]["To"][0]] + loss_term_p
                     Q_line[bus_arcs[i]["To"][0]] = Q_line[bus_arcs[i]["To"][0]] + loss_term_q  
                     # if loss_term_p > 0.13: # loss greater than 25kW
@@ -89,10 +88,13 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
 
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
+        err_vec.append(e_max)
         if k == max_iter:
             print('Maybe reconsider increasing iterations')
-    Vmag = {key:np.sqrt(val) for key, val in V.items()} # sqrt of mag
 
+    # results
+    Vmag = {key:np.sqrt(val) for key, val in V.items()} # sqrt of mag
+    vv =list(Vmag.values())
     # reorder the keys
     S_line, P_line_ordered, Q_line_ordered = {}, {}, {}
     for (i,j) in LineData_Z_pu.keys():
@@ -100,19 +102,8 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, pf
         P_line_ordered[(i,j)] = P_line[(i,j)]
         Q_line_ordered[(i,j)] = Q_line[(i,j)]
 
-    #Report Results
-    # V_mag = {}
-    # V_ang = {}
-    # Voltage = {}
-    # for i in BusNum:
-    #     Voltage[i] = V[i]
-    #     V_mag[i] = abs(V[i])
-    #     V_ang[i] = np.angle(V[i])*(180/np.pi)
-
-    # S_line = {}
-    # for (i,j) in arcs:
-    #     S_line[(i,j)] = Voltage[i]*np.conj(I_line[(i,j)]) 
-    
     # would want to return current as well in futuret
     # print('k is:', k)
     return(V, Vmag, P_line_ordered, Q_line_ordered, S_line, e_max,k)
+
+# LinDistFlowBackwardForwardSweep(P_Load=None, Q_Load=None, which=None, loss=1, pflow = 1, max_iter= 5)

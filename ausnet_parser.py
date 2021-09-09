@@ -101,20 +101,22 @@ def get_ordered_arcs(BusNum, arcs_all):
     # add to and then from for bus nodes in list of ordered arcs
     arcs = [] # ordered arcs
     bus_arcs = {} # ordered with busnodes
-
+    slack_node = BusNum[0]
     for i in BusNum: # use ordered bus
         t = []
         f = []
 
         for ii in arcs_all:
-            if i == ii[0]:
-                f.append(ii)
-                if ii not in arcs:
-                    arcs.append(ii)
-            if i == ii[1]:
-                t.append(ii)
-                if ii not in arcs:
-                    arcs.append(ii)            
+            if i == ii[0]: # get arcs going from i
+                if ii[1] in BusNum: # add the from arc only if the follwing bus is considered a part of the nw
+                    f.append(ii)
+                    if ii not in arcs: # append that arc in the list if not there
+                        arcs.append(ii)
+            if i == ii[1] and i!=slack_node: # get arcs coming to i & no nodes would be coming to slack node
+                if ii[0] in BusNum: # add the to arc only if the bus is considered a part of the nw            
+                    t.append(ii)
+                    if ii not in arcs:
+                        arcs.append(ii)            
         bus_arcs[i] = {"To":t,"from":f}
     return arcs, bus_arcs
 
@@ -157,6 +159,7 @@ def get_arcs_and_nw_info(ejson_nw_updated, updated_nw):
                 arcs_all.append((first_node, second_node))
                 # get R_line_unordered, X_line_unordered and imp
                 length = component_dct['length']
+                length = 1
                 R, X = component_dct['z'][0] * length, component_dct['z'][1] * length
                 R_line_unordered[(first_node, second_node)] = R
                 X_line_unordered[(first_node, second_node)] = X
@@ -310,6 +313,7 @@ def make_the_nw_radial(ejson_nw, slack_node, write = None):
                         count_lines +=1    
                         # get R_line_unordered, X_line_unordered and imp
                         length = component_dct['length']
+                        length = 1
                         R, X = component_dct['z'][0] * length, component_dct['z'][1] * length                    
                         R_line_unordered[(first_node, second_node)] = R
                         X_line_unordered[(first_node, second_node)] = X

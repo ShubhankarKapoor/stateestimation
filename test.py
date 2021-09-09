@@ -15,10 +15,12 @@ from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        error_calc_refactor, countour_plot
 import torch
 import matplotlib.pyplot as plt
-which = 906 # IEEE 37-node or IEEE 906-node
+which = None # IEEE 37-node or IEEE 906-node
 
 if which == 37:
     from Network37 import *
+elif which == None:
+    from ausnet_pf import *
 else:
     from Network906 import *
 
@@ -51,10 +53,11 @@ if data_full_ac == 1:
     P_line = {key:val.real for key, val in S_line.items()} # resistance of every line
     Q_line = {key:val.imag for key, val in S_line.items()} # reactancce of every line
 
+slack_node = BusNum[0]
 # ground truth
 gt_P_load = list(P_Load.values())
 gt_Q_load = list(Q_Load.values())
-gt_V = V[0]
+gt_V = V[slack_node]
 x = np.asarray(gt_P_load + gt_Q_load) # ground truth for states
 x = np.insert(x, len(x), gt_V) # ground truth for states
 

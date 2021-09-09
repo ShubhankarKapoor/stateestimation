@@ -1,4 +1,4 @@
-def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
+def BackwardForwardSweep(P_Load,Q_Load,which, slack_node=None, V0=None, max_iter= None):
 
     import numpy as np
     import copy
@@ -8,6 +8,8 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
     
     if which == 37:
         from Network37 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase
+    elif which == None: # for ausnet
+        from ausnet_pf import BusNum, bus_arcs, LineData_Z_pu, arcs  
     else:
         from Network906 import BusNum, bus_arcs, LineData_Z_pu, arcs, Sbase
 
@@ -26,13 +28,13 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
     for i in BusNum: #Note that bus 0 here shows the ideal secondary voltages of the transformer
         V[i] = 1+0j
     # should skip the line below for ausnet because 0 isn't the slack node
-    V[0] = 1 if V0 is None else (V0)**(1/2)+0j
+    # V[slack_node] = 1 if V0 is None else (V0)**(1/2)+0j
     
     #Initialization of iteration count
     k = 0 # iteration count
     e_max = 1
     tolerance = 0.000000000001 
-
+    last_node = BusNum[-1]
     err_vec = []
     while e_max > tolerance and k<max_iter:
         #Number of iteration
@@ -43,31 +45,39 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
 
         #Calculation of load currents
         for i in BusNum:
+            # print(BusNum)
             I_load[i] = np.conj(P_Load[i]+1j*Q_Load[i])/np.conj(V[i])
+
         
         #Backward sweep
         # for i in range(len(BusNum)-1,0,-1):
         for i in BusNum[:0:-1]:
-            I_line[bus_arcs[i]["To"][0]] = I_load[i] + sum(I_line[g] for g in bus_arcs[i]["from"] ) 
+            if i == last_node:
+                # print('last_node: ', i)
+                I_line[bus_arcs[i]["To"][0]] = I_load[i]
+            else:
+                I_line[bus_arcs[i]["To"][0]] = I_load[i] + sum(I_line[g] for g in bus_arcs[i]["from"] ) 
 
         #Forward sweep
         for (i,j) in LineData_Z_pu.keys():
-            if (i,j) in transformer_edges:
-                # implement step down for transformers
-                turn_ratio = turns_ratio[(i,j)]
-                # V[j] = V[i]/turn_ratio
-                V[j] = V[i]
-                # print(V[i], V[j])
-                # break
-            else:
-                V[j] = V[i] - LineData_Z_pu[(i,j)] * I_line[(i,j)]
+            # if (i,j) in transformer_edges:
+            #     print((i,j))
+            #     # implement step down for transformers
+            #     turn_ratio = turns_ratio[(i,j)]
+            #     # V[j] = V[i]/turn_ratio
+            #     V[j] = V[i]
+            #     # print(V[i], V[j])
+            #     # break
+            # else:
+            V[j] = V[i] - LineData_Z_pu[(i,j)] * I_line[(i,j)]
 
         #Calculation of error
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
-        if k%1000==1:
+        err_vec.append(e_max)
+        if k%100==0:
             print(k, e_max)
-            err_vec.append(e_max)
 
+    err_f = list(abs(V[i] - V_previous[i]) for i in BusNum)
     #Report Results
     V_mag = {}
     V_ang = {}
@@ -76,11 +86,12 @@ def BackwardForwardSweep(P_Load,Q_Load,which, V0=None, max_iter= None):
         Voltage[i] = V[i]
         V_mag[i] = abs(V[i])
         V_ang[i] = np.angle(V[i])*(180/np.pi)
+    vv = list(V_mag.values())
 
     S_line = {}
     for (i,j) in LineData_Z_pu.keys():
         S_line[(i,j)] = Voltage[i]*np.conj(I_line[(i,j)])
-        
+
     # S_line = {}
     # for (i,j) in arcs:
     #     S_line[(i,j)] = Voltage[i]*np.conj(I_line[(i,j)]) 
