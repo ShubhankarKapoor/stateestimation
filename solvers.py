@@ -100,6 +100,7 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
                 V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
                         P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow)
 
+                # update the estimates -- after feedback calculation
                 # update the pline/qline
                 Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
                 Qline_known_meas = {k:Qline_est[k] for k in lossy_volt_est['plines']} # get qflow vals for known measurements

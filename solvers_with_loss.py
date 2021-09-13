@@ -24,6 +24,8 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_me
     while emax > tol:
 
         # distflow backward sweep for calculating measurements
+        # i think you are getting the below vals from PF: might be incorrect
+        # should be just getting the vals from jacobian * xest
         hx, full_x_est, P_Load_est, Q_Load_est, V_est, Pline_est, Qline_est = measurements_estimated_from_states(
             x_est, P_line_meas, Vsq_meas, which, non_zib_index, len(P_Load_meas), 
             lossy_volt_est['tot_states'])

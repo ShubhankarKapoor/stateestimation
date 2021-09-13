@@ -15,7 +15,7 @@ from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        error_calc_refactor, countour_plot
 import torch
 import matplotlib.pyplot as plt
-which = 906 # IEEE 37-node or IEEE 906-node or ausnet
+which = 37 # IEEE 37-node or IEEE 906-node or ausnet
 
 if which == 37:
     from Network37 import *
@@ -48,12 +48,13 @@ if data_full_ac == 1:
                                                                 P_Load, Q_Load, which)
     Vsq =  {key:val**2 for key, val in V_mag.items()} # square of V_mag
     V = Vsq
-    
+
     # when running full network
     P_line = {key:val.real for key, val in S_line.items()} # resistance of every line
     Q_line = {key:val.imag for key, val in S_line.items()} # reactancce of every line
 
 slack_node = BusNum[0]
+# this is the (0,1) lineflow
 arc_from_slack_node = bus_arcs[slack_node]['from'][0] # make sure there is only one arc from slack node
 # ground truth
 gt_P_load = list(P_Load.values())
@@ -134,8 +135,8 @@ indices = np.asarray(combs[5])
   # [     1,      3,  4,   5,        7,   8,   9,             12,  13,  14,       16,            19,  20]
 
 # indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
-indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,     11,  
-                        13,  14,  15,  16, 17, 19,))
+# indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,     11,  
+#                         13,  14,  15,  16, 17, 19,))
 
 # see the known meas
 if len(indices) !=0:
@@ -213,7 +214,8 @@ lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index,
                   'plines':meas_P_line.keys()}
 ###############################################################################
 ###############################################################################
-# to include non linear voltage feedback and pflow/qflow
+# no feedback case
+# constant jacobian in this case
 loss, pflow = 0, 0
 # LinDist
 x_estn0, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
@@ -225,8 +227,9 @@ _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est
 # print(x_estn)
 
 ###############################################################################
-loss, pflow = 1, 0
 # LinDist + Voltage Feedback
+# constant jacobian in this case
+loss, pflow = 1, 0
 x_estn1, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
@@ -235,8 +238,9 @@ _,_,_,p3error2 = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 # print(x_estn)
 ###############################################################################
-loss, pflow = 0, 1
 # LinDist + Pflow Feedback
+# constant jacobian in this case
+loss, pflow = 0, 1
 x_estn2, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
@@ -245,8 +249,9 @@ _,_,_,p3error3 = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 # print(x_estn)
 ###############################################################################
-loss, pflow = 1, 1
 # LinDist + Voltage & Pflow Feedback
+# constant jacobian in this case
+loss, pflow = 1, 1
 x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
     x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
@@ -262,7 +267,6 @@ results = results.T
 #     path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
 #     X_line, LineData_Z_pu,  len(x_est), len(z), which, lossy_volt_est = lossy_volt_est)
 # costsloss = cost(x_estloss, jacobian_matrix, z, W)
-
 
 ###############################################################################
 ###############################################################################
