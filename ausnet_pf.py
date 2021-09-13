@@ -25,7 +25,7 @@ import networkx as nx
 # from power_flows.power_flow_sgt import power_flow_sgt
 
 # load network files and measurement files
-NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/ausnet_removed2.json" # new file
+NETWORK_SAMPLE_EJSON =  "/home/shub/Documents/phd/distflow/json_files/tx_20_fdr.json" # new file
 MEASUREMENT_SAMPLE_EJSON = "/home/shub/Documents/phd/distflow/json_files/ausnet_measurements.json"
 
 with open(NETWORK_SAMPLE_EJSON) as f:
@@ -52,10 +52,11 @@ arcs, bus_arcs = get_ordered_arcs(BusNum, arcs_all)
 
 # assumed here no cycles
 # run network checks
-# validate_nw_using_arcs(arcs_all, slack_node=8183) # cycles should be present
-# validate_nw_using_arcs(arcs, slack_node=8183) # no cycles 
-# validate_nw_using_json_file(ejson_nw, slack_node=8183) # no cycles
-# validate_nw_using_json_file_to_network(ejson_nw, slack_node=8183) # cycles inteoduced because of introductioin of com_ground while converting it to nw
+slack_node = 2009 # 8183
+validate_nw_using_arcs(arcs_all, slack_node=slack_node) # cycles should be present
+validate_nw_using_arcs(arcs, slack_node=slack_node) # no cycles 
+validate_nw_using_json_file(ejson_nw, slack_node=slack_node) # no cycles
+validate_nw_using_json_file_to_network(ejson_nw, slack_node=slack_node) # cycles inteoduced because of introductioin of com_ground while converting it to nw
 
 # get line characteristics
 R_line, X_line, LineData_Z_pu = get_ordered_arcs_characterisitcs(arcs, 
@@ -72,6 +73,10 @@ Sbase = 1000 #kVA Base apparent power for normalization
 # run different powerflows
 slack_bus_node = 'node_8183'
 
+
+
+
+'''
 # getting sub network between 2 transformer edges
 first_transformer_node_found = 0
 transformer_nodes_in_order, idx_of_transformer_nodes = [], []
@@ -107,12 +112,13 @@ for j in bus_arcs2:
         break
 
 BusNum = BusNummm[:last_node_index]
+'''
 
 
 
 
 
-
+'''
 # removing these manually after running distflow, nodes with high errors
 # BusNum = BusNum[105:]
 BusNum = BusNum[0:75]
@@ -132,6 +138,7 @@ for j in bus_arcs:
         break
 if restructure_bus == 1: # this will help avoid using any prev last_node_index val
     BusNum = BusNummm[:last_node_index]
+'''
 
 
 
@@ -148,7 +155,7 @@ for j in bus_arcs:
         last_node_index = BusNum.index(j)
         print(bus_arcs[j])
         
-# checka if the nw is good
+# check if the nw is good
 validate_nw_using_arcs(arcs, slack_node=BusNum[0]) # no cycles
 # consider the nodes before the last node index
 

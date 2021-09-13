@@ -15,7 +15,7 @@ from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        error_calc_refactor, countour_plot
 import torch
 import matplotlib.pyplot as plt
-which = None # IEEE 37-node or IEEE 906-node
+which = 906 # IEEE 37-node or IEEE 906-node or ausnet
 
 if which == 37:
     from Network37 import *
@@ -54,6 +54,7 @@ if data_full_ac == 1:
     Q_line = {key:val.imag for key, val in S_line.items()} # reactancce of every line
 
 slack_node = BusNum[0]
+arc_from_slack_node = bus_arcs[slack_node]['from'][0] # make sure there is only one arc from slack node
 # ground truth
 gt_P_load = list(P_Load.values())
 gt_Q_load = list(Q_Load.values())

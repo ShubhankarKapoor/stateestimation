@@ -1,5 +1,5 @@
-def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, slack_node=None, 
-                            V0=None, loss=None, pflow = None, max_iter= None):
+def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, 
+                                    pflow = None, max_iter= None):
 
     import numpy as np
     import copy
@@ -27,7 +27,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, slack_node=None,
     for i in BusNum: #Note that bus 0 here shows the ideal secondary voltages of the transformer
         V[i] = 1 # square magnitude
     # should skip the line below for ausnet because 0 isn't the slack node        
-    # V[slack_node] = 1 if V0 is None else V0
+    V[0] = 1 if V0 is None else V0 # replace 0 with slack node
 
     #Initialization of iteration count
     k = 0 # iteration count
@@ -60,7 +60,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, slack_node=None,
 
             #Backward sweep
             # for i in range(len(BusNum)-1,0,-1):
-            sum_loss_p = 0
+            # sum_loss_p = 0
             for i in BusNum[:0:-1]:
                 # if no loss included in pflow/ qflow
                 P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
@@ -70,7 +70,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, slack_node=None,
                     current_sq = (P_line[bus_arcs[i]["To"][0]]**2 + Q_line[bus_arcs[i]["To"][0]]**2)* (1/V[i])
                     loss_term_p = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].real
                     loss_term_q = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].imag
-                    sum_loss_p+=loss_term_p
+                    # sum_loss_p+=loss_term_p
                     # print(bus_arcs[i]["To"][0], P_line[bus_arcs[i]["To"][0]], loss_term_p)
                     P_line[bus_arcs[i]["To"][0]] = P_line[bus_arcs[i]["To"][0]] + loss_term_p
                     Q_line[bus_arcs[i]["To"][0]] = Q_line[bus_arcs[i]["To"][0]] + loss_term_q  

@@ -10,10 +10,10 @@ import time
 #Network characteristics
 ########################################################### 
 busNo = 906+1
-ReadLineData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/Network_1/Feeder_1/Lines.xlsx')
-ReadLineCodeData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/Network_1/Feeder_1/LineCode.xlsx')
-ReadLoadBuses = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/Network_1/Feeder_1/Loads.xlsx')
-LoadData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/Network_1/Feeder_1/LoadShapes.xlsx')
+ReadLineData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/Lines.xlsx')
+ReadLineCodeData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/LineCode.xlsx')
+ReadLoadBuses = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/Loads.xlsx')
+LoadData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/LoadShapes.xlsx')
 Vbase = .48/np.sqrt(3) #kV
 Sbase = 1 #kVA three-phase
 
