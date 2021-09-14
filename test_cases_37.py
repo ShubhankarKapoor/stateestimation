@@ -107,8 +107,8 @@ x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 
 # random initialization of state vars instead of above
 torch.manual_seed(0)
-# x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
-x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
+x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
+# x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
@@ -117,7 +117,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
+num_plow_meas = 1
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -128,7 +128,7 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
-num_known = [7, 1, ] # known number of measurements
+# num_known = [7, 1, ] # known number of measurements
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
@@ -301,11 +301,11 @@ for row, i in enumerate(num_known):
         # to include non linear voltage feedback and pflow/qflow
         loss, pflow = 0, 0
         # LinDist
-        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn0, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         # costsn = cost(x_estn, jacobian_matrix, z, W)
-        print('GN-WLS based on linear jacobian with no feedback/ feedback') 
-        perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+        print('GN-WLS based on linear jacobian with no feedback') 
+        perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
         avg_perc_v_nofeed = inc_avg(avg_perc_v_nofeed, total_counts_v, perc_v_nofeed)
@@ -327,11 +327,11 @@ for row, i in enumerate(num_known):
 
         loss, pflow = 1, 0
         # LinDist + Voltage Feedback
-        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn1, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         # costsn = cost(x_estn, jacobian_matrix, z, W)
-        print('GN-WLS based on linear jacobian with no feedback/ feedback')
-        perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+        print('GN-WLS based on linear jacobian with V feedback')
+        perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
         avg_perc_v_vfeed = inc_avg(avg_perc_v_vfeed, total_counts_v, perc_v_vfeed)
@@ -349,11 +349,11 @@ for row, i in enumerate(num_known):
 
         loss, pflow = 0, 1
         # LinDist + Pflow Feedback
-        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn2, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         # costsn = cost(x_estn, jacobian_matrix, z, W)
-        print('GN-WLS based on linear jacobian with no feedback/ feedback')
-        perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+        print('GN-WLS based on linear jacobian with P feedback')
+        perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
         avg_perc_v_pfeed = inc_avg(avg_perc_v_pfeed, total_counts_v, perc_v_pfeed)
@@ -374,7 +374,7 @@ for row, i in enumerate(num_known):
         x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         # costsn = cost(x_estn, jacobian_matrix, z, W)   
-        print('GN-WLS based on linear jacobian with no feedback/ feedback')
+        print('GN-WLS based on linear jacobian with both feedback')
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
@@ -398,7 +398,7 @@ for row, i in enumerate(num_known):
             X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
 
         #######################################################################
-        print('GN-WLS based on non-linear with ass')
+        # print('GN-WLS based on non-linear with ass')
         perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
         # average of all elements

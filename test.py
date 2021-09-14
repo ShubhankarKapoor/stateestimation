@@ -15,7 +15,7 @@ from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        error_calc_refactor, countour_plot
 import torch
 import matplotlib.pyplot as plt
-which = 37 # IEEE 37-node or IEEE 906-node or ausnet
+which = 906 # IEEE 37-node or IEEE 906-node or ausnet
 
 if which == 37:
     from Network37 import *
@@ -135,8 +135,8 @@ indices = np.asarray(combs[5])
   # [     1,      3,  4,   5,        7,   8,   9,             12,  13,  14,       16,            19,  20]
 
 # indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
-# indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,     11,  
-#                         13,  14,  15,  16, 17, 19,))
+indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,     11,  
+                        13,  14,  15,  16, 17, 19,))
 
 # see the known meas
 if len(indices) !=0:

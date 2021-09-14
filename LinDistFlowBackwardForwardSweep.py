@@ -90,7 +90,8 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None,
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
         err_vec.append(e_max)
         if k == max_iter:
-            print('Maybe reconsider increasing iterations')
+            pass
+            # print('Maybe reconsider increasing iterations')
 
     # results
     Vmag = {key:np.sqrt(val) for key, val in V.items()} # sqrt of mag
