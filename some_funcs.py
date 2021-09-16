@@ -185,6 +185,8 @@ def subset_of_measurements(num_plow_meas, arcs, P_line, Q_line, V):
 def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p, 
                      primary_branch_flow_q, non_zib_index, zib_index, 
                      num_known_meas=None, indices = None):
+    # can change this func if not using equal distribution
+    # coz you are using 0 at the end of the func
     ''' function for pseudo and known p, q, v bus measurements
     indices: array of index of known measurements in non_zib_index
     '''
@@ -239,7 +241,6 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     # V_known_meas[898] = V[898]
 
     # include slack bus voltage at all times
-
     # V_known_meas = {k: V[k] for k in P_Load.keys()}
     if 0 in V_known_meas.keys():
         V_known_meas = dict(sorted(V_known_meas.items()))

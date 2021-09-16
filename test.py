@@ -15,7 +15,7 @@ from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        error_calc_refactor, countour_plot
 import torch
 import matplotlib.pyplot as plt
-which = 906 # IEEE 37-node or IEEE 906-node or ausnet
+which = None # IEEE 37-node or IEEE 906-node or ausnet
 
 if which == 37:
     from Network37 import *
@@ -69,26 +69,50 @@ z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) +
 
 ##############################################################################
 ##############################################################################
+def get_index_for_keys(P_Load_state):
+    ''' 
+    Returns zib/ non-zib keys; their index values for the entire x vector
+    Intializes the state variables: consider the state vars only for non ZIBs  
+    '''
+    P_Load_state = {}
+    zib_index, non_zib_index = [], [] # index of zibs and non zibs
+    zib_keys, non_zib_keys = [], [] # actual nodes or keys with zibs and non-zibs
+    # zib_index and zib_keys should be same where slack bus is 0 and node keys are incremented by 1
+    count_index = 0
+    for k,v in P_Load.items():
+        if v != 0:
+            P_Load_state[k] = v
+            non_zib_keys.append(k)
+            non_zib_index.append(count_index)
+        else:
+            # P_Load_state[k] = v # included to consider all nodes
+            # non_zib_index.append(k) # included to consider all nodes
+            zib_keys.append(k)
+            zib_index.append(count_index)
+        count_index+=1
+    return zib_index, non_zib_index, zib_keys, non_zib_keys, P_Load_state
 
+# initialze state vars and get diff indexes & keys
+zib_index, non_zib_index, zib_keys, non_zib_keys, P_Load_state = get_index_for_keys(P_Load)
 # initialze state vars
 # consider the state vars only for non ZIBs
-P_Load_state = {}
-zib_index, non_zib_index = [], [] # index of zibs and non zibs
-for k,v in P_Load.items():
-    if v != 0:
-        P_Load_state[k] = v
-        non_zib_index.append(k)
-    else:
-        # P_Load_state[k] = v # included to consider all nodes
-        # non_zib_index.append(k) # included to consider all nodes
-        zib_index.append(k)
+# P_Load_state = {}
+# zib_index, non_zib_index = [], [] # index of zibs and non zibs
+# for k,v in P_Load.items():
+#     if v != 0:
+#         P_Load_state[k] = v
+#         non_zib_index.append(k)
+#     else:
+#         # P_Load_state[k] = v # included to consider all nodes
+#         # non_zib_index.append(k) # included to consider all nodes
+#         zib_index.append(k)
 
 non_zib_index_array = np.asarray(non_zib_index)
 # remove p0 = 0 and the rest have values equally divided from p_ij
-p_distributed = P_line[(0,1)]/(len(P_Load_state))
+p_distributed = P_line[arc_from_slack_node]/(len(P_Load_state))
 p_states = np.zeros((len(P_Load_state))) + p_distributed
 
-q_distributed = Q_line[(0,1)]/(len(P_Load_state))
+q_distributed = Q_line[arc_from_slack_node]/(len(P_Load_state))
 q_states = np.zeros((len(P_Load_state))) + q_distributed
 v0 = 1 # slack bus
 
@@ -135,8 +159,8 @@ indices = np.asarray(combs[5])
   # [     1,      3,  4,   5,        7,   8,   9,             12,  13,  14,       16,            19,  20]
 
 # indices = np.asarray((0,     4,  5,  6,  7,  )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
-indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,     11,  
-                        13,  14,  15,  16, 17, 19,))
+# indices = np.asarray((0,  1,  2,  3,  4,   5,   6,   7,   8,   9,     11,  
+#                         13,  14,  15,  16, 17, 19,))
 
 # see the known meas
 if len(indices) !=0:
@@ -148,7 +172,7 @@ not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
 not_considered_indices = np.setdiff1d(arr, indices)
 
 P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
-    P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
+    P_Load, Q_Load, V, P_line[arc_from_slack_node], Q_line[arc_from_slack_node], 
     non_zib_index, zib_index, num_known_meas=len(indices), indices = indices)    
 
 meas_P_load = {**P_known_meas, **P_pseudo_meas}

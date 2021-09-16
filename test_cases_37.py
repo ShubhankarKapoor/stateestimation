@@ -128,6 +128,7 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
+num_known = np.array((9,8,5,4,3,2,1))
 # num_known = [7, 1, ] # known number of measurements
 # number of known measurements
 # i = 8

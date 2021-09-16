@@ -52,11 +52,11 @@ arcs, bus_arcs = get_ordered_arcs(BusNum, arcs_all)
 
 # assumed here no cycles
 # run network checks
-slack_node = 2009 # 8183
-validate_nw_using_arcs(arcs_all, slack_node=slack_node) # cycles should be present
-validate_nw_using_arcs(arcs, slack_node=slack_node) # no cycles 
-validate_nw_using_json_file(ejson_nw, slack_node=slack_node) # no cycles
-validate_nw_using_json_file_to_network(ejson_nw, slack_node=slack_node) # cycles inteoduced because of introductioin of com_ground while converting it to nw
+slack_node = BusNum[0] # 8183
+# validate_nw_using_arcs(arcs_all, slack_node=slack_node) # cycles should be present
+# validate_nw_using_arcs(arcs, slack_node=slack_node) # no cycles 
+# validate_nw_using_json_file(ejson_nw, slack_node=slack_node) # no cycles
+# validate_nw_using_json_file_to_network(ejson_nw, slack_node=slack_node) # cycles inteoduced because of introductioin of com_ground while converting it to nw
 
 # get line characteristics
 R_line, X_line, LineData_Z_pu = get_ordered_arcs_characterisitcs(arcs, 
@@ -70,8 +70,10 @@ P_Load, Q_Load, non_zib_nodes, zib_nodes, Vmag_true = get_load_meas_from_json(
 Vbase = 1 # voltage bus of slack bus
 Sbase = 1000 #kVA Base apparent power for normalization
 
-# run different powerflows
-slack_bus_node = 'node_8183'
+# run different powerflows from evolve
+# slack_bus_node = 'node_8183'
+
+
 
 
 
@@ -143,7 +145,7 @@ if restructure_bus == 1: # this will help avoid using any prev last_node_index v
 
 
 
-
+'''
 # network params of the updated nw
 arcs, bus_arcs = get_ordered_arcs(BusNum, arcs_all)
 R_line, X_line, LineData_Z_pu = get_ordered_arcs_characterisitcs(arcs, R_line_unordered, X_line_unordered, 
@@ -183,7 +185,7 @@ G.add_edges_from((arcs))
 # get nodes downstream of every node
 node_of_interest = BusNum[0]
 downstream = [n for n in nx.traversal.bfs_tree(G, node_of_interest) if n != node_of_interest]
-
+'''
 # use the above downstream nodes to check powerflow
 
 
