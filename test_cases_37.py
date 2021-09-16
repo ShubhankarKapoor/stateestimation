@@ -19,7 +19,7 @@ from itertools import combinations
 import seaborn as sns
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
-                       error_calc_refactor, countour_plot, inc_avg
+                       error_calc_refactor, countour_plot, inc_avg, get_index_for_keys_init_stat_var
 import time
 import torch
 import matplotlib.pyplot as plt
@@ -65,10 +65,13 @@ if data_full_ac == 1:
     P_line = {key:val.real for key, val in S_line.items()} # resistance of every line
     Q_line = {key:val.imag for key, val in S_line.items()} # reactancce of every line
 
+slack_node = BusNum[0]
+# this is the (0,1) lineflow
+arc_from_slack_node = bus_arcs[slack_node]['from'][0] # make sure there is only one arc from slack node
 # ground truth
 gt_P_load = list(P_Load.values())
 gt_Q_load = list(Q_Load.values())
-gt_V = V[0]
+gt_V = V[slack_node]
 x = np.asarray(gt_P_load + gt_Q_load) # ground truth for states
 x = np.insert(x, len(x), gt_V) # ground truth for states
 
@@ -81,16 +84,7 @@ z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) +
 
 # initialze state vars
 # consider the state vars only for non ZIBs
-P_Load_state = {}
-zib_index, non_zib_index = [], [] # index of zibs and non zibs
-for k,v in P_Load.items():
-    if v != 0:
-        P_Load_state[k] = v
-        non_zib_index.append(k)
-    else:
-        # P_Load_state[k] = v # included to consider all nodes
-        # non_zib_index.append(k) # included to consider all nodes
-        zib_index.append(k)
+zib_index, non_zib_index, zib_keys, non_zib_keys, P_Load_state = get_index_for_keys_init_stat_var(P_Load)
 
 all_index_array = np.asarray(list(P_Load.keys()))
 non_zib_index_array = np.asarray(non_zib_index)
@@ -100,16 +94,16 @@ p_states = np.zeros((len(P_Load_state))) + p_distributed
 
 q_distributed = Q_line[(0,1)]/(len(P_Load_state))
 q_states = np.zeros((len(P_Load_state))) + q_distributed
-v0 = 1 # slack bus
 
 x_est = np.concatenate((p_states, q_states))
-x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 
 # random initialization of state vars instead of above
 torch.manual_seed(0)
-x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
-# x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
+# x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
+x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
+v0 = 1 # slack bus
+x_est = np.insert(x_est, len(x_est), v0) #
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
@@ -118,7 +112,6 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 
 # get subset of lineflow measurement set
 num_plow_meas = 1
-num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -128,7 +121,7 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
-num_known = np.array((9,8,5,4,3,2,1))
+# num_known = np.array((9,8,5,4,3,2,1))
 # num_known = [7, 1, ] # known number of measurements
 # number of known measurements
 # i = 8
@@ -151,8 +144,9 @@ def max_val(A, current_calc_error, non_zib_index):
     return A
 
 def max_val_for_index(A, current_calc_error, non_zib_index, node):
-    ''' returns a flag when a max value is changed for a specific node 
-        doing it for power only
+    ''' 
+    returns a flag when a max value is changed for a specific node 
+    doing it for power only
     '''
     # node is the index number and not the node number
     # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
@@ -567,6 +561,7 @@ plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 # fig3.delaxes(axn3[2][1])
 # fig3.tight_layout()
 
+'''
 # plot heatmap with different colorbar values
 fig0, axn0 = plt.subplots(5, 1, sharex=True, sharey=True)
 # cbar_ax = fig0.add_axes([.91, .3, .03, .4])
@@ -582,6 +577,7 @@ plt.subplot(5, 1,5)
 plot_heatmap(heatmap_volt_abs_la)
 # fig0.delaxes(axn0[2][1])
 # fig0.tight_layout()
+'''
 
 ########################## plot p abs error ###########################
 vmin = min(heatmap_p_abs_no_feed.min(), heatmap_p_abs_v_feed.min(), heatmap_p_abs_p_feed.min(), heatmap_p_abs_both_feed.min(), heatmap_p_abs_la.min())

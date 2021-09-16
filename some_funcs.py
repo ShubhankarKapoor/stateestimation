@@ -7,6 +7,30 @@ from BackwardForwardSweep import BackwardForwardSweep
 import solvers
 import matplotlib.pyplot as plt
 # error function
+
+def get_index_for_keys_init_stat_var(P_Load):
+    ''' 
+    Returns zib/ non-zib keys; their index values for the entire x vector
+    Intializes the state variables: consider the state vars only for non ZIBs  
+    '''
+    P_Load_state = {}
+    zib_index, non_zib_index = [], [] # index of zibs and non zibs
+    zib_keys, non_zib_keys = [], [] # actual nodes or keys with zibs and non-zibs
+    # zib_index and zib_keys should be same where slack bus is 0 and node keys are incremented by 1
+    count_index = 0
+    for k,v in P_Load.items():
+        if v != 0:
+            P_Load_state[k] = v
+            non_zib_keys.append(k)
+            non_zib_index.append(count_index)
+        else:
+            # P_Load_state[k] = v # included to consider all nodes
+            # non_zib_index.append(k) # included to consider all nodes
+            zib_keys.append(k)
+            zib_index.append(count_index)
+        count_index+=1
+    return zib_index, non_zib_index, zib_keys, non_zib_keys, P_Load_state
+
 def error_calc(ground_truth, estimated):
     ''' function to calculate different types of errors '''
     # when gtruth is 0 it gives a warning in divide
