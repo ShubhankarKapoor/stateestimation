@@ -270,7 +270,7 @@ for row, i in enumerate(num_known):
         # static weights but different for pseudo and known measurements
         w1 = 1 # weight value for pflow, qflow
         w21 = 1 # known measurements for p,q at buses
-        w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
+        w22 = 100000 #1000000 # pseudo measurements for p,q at buses
         w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
         print(w1, w21, w22, w3)
 
