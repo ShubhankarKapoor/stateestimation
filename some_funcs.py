@@ -140,7 +140,7 @@ def inc_avg(prev_avg, total_counts, new_array):
     new_array: new array that will update the average"""
 
     new_avg = prev_avg + (sum(new_array) - len(new_array)*prev_avg)/(total_counts+len(new_array))
- 
+
     return new_avg
 
 def noise_addition(z, sd, mu = None):
@@ -211,7 +211,8 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
                      num_known_meas=None, indices = None):
     # can change this func if not using equal distribution
     # coz you are using 0 at the end of the func
-    ''' function for pseudo and known p, q, v bus measurements
+    ''' 
+    function for pseudo and known p, q, v bus measurements
     indices: array of index of known measurements in non_zib_index
     '''
     # indices are for index in non zib array for now
@@ -232,7 +233,6 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
             # else:
             #     known_meas_idx = np.insert(known_meas_idx, 0, int(0))
             #     known_meas_idx = known_meas_idx.astype(int)
-            
             # missing indices from known_meas_idx
             unknown_meas_idx = np.setdiff1d(np.arange(0,len(non_zib_index)), known_meas_idx) 
             # should fix the above mentioned issue here
@@ -245,7 +245,7 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     P_known_meas = dict(sorted(known_meas.items()))
     Q_known_meas = {k:Q_Load[k] for k in P_known_meas.keys()}
     V_known_meas = {k:V[k] for k in known_meas1.keys()} # get voltage vals for known measurements
-    
+
     # add some additional voltages
     # V_known_meas[36] = V[36]
     # V_known_meas[35] = V[35]
@@ -289,7 +289,7 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
 
 def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which, 
                                        non_zib_index, num_buses, tot_state_vars, max_iter=None):
-    
+
     max_iter = 1 if max_iter is None else max_iter
     full_x_est, P_Load_est, Q_Load_est = refactor_estimates(tot_state_vars, x_est,
                                                                 non_zib_index, num_buses)

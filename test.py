@@ -120,8 +120,8 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[5])
-# indices = np.asarray([0, 2, 4, 5, 6, 7, 8])
+# indices = np.asarray(combs[5])
+indices = np.asarray([0, 2, 4, 5, 6, 7, 8])
 # ----->>> full loss based system works most of the cases.
 # ----->>> might be a small bug in code or jacobian calc. worth checking
 # ----->>> an example when i = 8,  combs=5
@@ -165,12 +165,13 @@ meas_Q_load = dict(sorted(meas_Q_load.items()))
 z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
                list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
 
+# maybe have a func for it
 # static weights but different for pseudo and known measurements
 # these are the variances here, and the weights are their inverse
 # inversed later
 w1 = 1 # weight value for pflow, qflow
 w21 = 1 # known measurements for p,q at buses
-w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
+w22 = 100000 #1000000 # pseudo measurements for p,q at buses
 w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
 print(w1, w21, w22, w3)
 

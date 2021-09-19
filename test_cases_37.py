@@ -137,7 +137,12 @@ ll_la_perc_v, ll_la_perc_p, ll_la_abs_v, ll_la_abs_p = [], [], [], []
 
 # function used to get max vals for each node
 def max_val(A, current_calc_error, non_zib_index):
-    # A prev_max_error for non zib buses
+    '''
+    A: prev_max_error for non zib buses
+    current_calc_error: new error vector
+    non_zib_index: nodes you are in interested in for errors
+    '''
+
     B = current_calc_error[non_zib_index]
     # B = current_calc_error
     A[B>A] = B[B>A]
@@ -223,19 +228,19 @@ for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
     combs = list(combinations(arr,i))
 
-    # stores the max abs voltage error for each node
+    # stores the max perc voltage and power error for each node
+    volt_max_perc_nofeed, p_max_perc_nofeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+    # stores the max abs voltage and power error for each node
     volt_max_abs_nofeed, p_max_abs_nofeed = np.zeros((len(P_Load))),  np.zeros((len(non_zib_index)))
-    volt_max_perc_nofeed = np.zeros((len(P_Load)))
-    p_max_perc_nofeed = np.zeros((len(non_zib_index)))
 
     volt_max_perc_vfeed, p_max_perc_vfeed, volt_max_abs_vfeed, p_max_abs_vfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
 
     volt_max_perc_pfeed, p_max_perc_pfeed, volt_max_abs_pfeed, p_max_abs_pfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
 
     volt_max_perc_bothfeed, p_max_perc_bothfeed, volt_max_abs_bothfeed, p_max_abs_bothfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
-    
+
     volt_max_perc_la, p_max_perc_la, volt_max_abs_la, p_max_abs_la = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
-    # to hold all eroors for all combinations for a fixed num of missing meass 
+    # to hold all eroors for all combinations for a fixed num of missing meass
     l_no_feed_perc_v, l_no_feed_perc_p, l_no_feed_abs_v, l_no_feed_abs_p = [], [], [], []
     l_v_feed_perc_v, l_v_feed_perc_p, l_v_feed_abs_v, l_v_feed_abs_p = [], [], [], []
     l_p_feed_perc_v, l_p_feed_perc_p, l_p_feed_abs_v, l_p_feed_abs_p = [], [], [], []
@@ -296,7 +301,7 @@ for row, i in enumerate(num_known):
         # to include non linear voltage feedback and pflow/qflow
         loss, pflow = 0, 0
         # LinDist
-        x_estn0, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         print('GN-WLS based on linear jacobian with no feedback') 
@@ -322,7 +327,7 @@ for row, i in enumerate(num_known):
 
         loss, pflow = 1, 0
         # LinDist + Voltage Feedback
-        x_estn1, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         print('GN-WLS based on linear jacobian with V feedback')
@@ -344,7 +349,7 @@ for row, i in enumerate(num_known):
 
         loss, pflow = 0, 1
         # LinDist + Pflow Feedback
-        x_estn2, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         print('GN-WLS based on linear jacobian with P feedback')
