@@ -102,6 +102,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # Regenerated measurements using the estimated states
         if est_lin == 1: # reconstruction using lindist or distflow depending on loss and pflow vals
             [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
+                # P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow, max_iter =1) # using lindistflow
                 P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow) # using lindistflow
             # print('lin')
         # using Full AC Network
@@ -117,7 +118,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
             # print('full')
         # error calc between measurements
         # V_mag^2 and V_mag error
-        errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
+        errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, max_index_v = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
         errperc_vector_vmag, mean_vmag_err, max_vmag_err, errabs_vectorv, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
         print('vmag bus err:', mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err)
 
