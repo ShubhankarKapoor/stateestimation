@@ -108,5 +108,3 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None,
     # would want to return current as well in futuret
     # print('k is:', k)
     return(V, Vmag, P_line_ordered, Q_line_ordered, S_line, e_max,k)
-
-# LinDistFlowBackwardForwardSweep(P_Load=None, Q_Load=None, which=None, loss=1, pflow = 1, max_iter= 5)

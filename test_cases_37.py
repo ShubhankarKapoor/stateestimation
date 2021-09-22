@@ -111,7 +111,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
+num_plow_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -120,9 +120,10 @@ meas_P_line, meas_Q_line = subset_of_measurements(
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
-num_known = np.arange(len(non_zib_index))[:0:-1]
+num_known = np.arange(len(non_zib_index))[::-1]
+# num_known = np.arange(len(non_zib_index))[:1:-1]
 # num_known = np.array((9,8,5,4,3,2,1))
-# num_known = [7, 1, ] # known number of measurements
+# num_known = [20, 14, 1] # known number of measurements
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
@@ -224,6 +225,7 @@ total_counts_v, total_counts_p = 0, 0 # total number of vars for average
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
 count = 0 # total number of iters, should be sum of all combs at the end
 iters_n0, iters_n1, iters_n2, iters_n, iters_la = 0, 0, 0, 0, 0
+time_n0, time_n1, time_n2, time_n, time_la = 0, 0, 0, 0, 0
 tot_counts = 0
 for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations

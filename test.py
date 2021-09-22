@@ -115,13 +115,13 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 9 # number of known measurements
+i = 5 # number of known measurements
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
 indices = np.asarray(combs[5])
-# indices = np.asarray([0, 2, 4, 5, 6, 7, 8])
+indices = np.asarray([0, 2, 4, 5, 6, 7, 8])
 # ----->>> full loss based system works most of the cases.
 # ----->>> might be a small bug in code or jacobian calc. worth checking
 # ----->>> an example when i = 8,  combs=5
