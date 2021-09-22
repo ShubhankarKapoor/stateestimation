@@ -3,7 +3,7 @@ import time
 import torch
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from some_funcs import refactor_estimates
-from jacobian_calc import create_loss_jacobian
+from jacobian_calc import create_jacobian, create_loss_jacobian
 # import some_funcs
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
@@ -61,13 +61,18 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     
     return x_est, emax, count, residuals_mat, delta_mat, results
 
-def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, lossy_volt_est = None):
+def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+          meas_V, R_line, X_line, tol = None, loss = None, pflow = None, lossy_volt_est = None):
     ''' Weighted Least Square Estimate'''
 
     tol = tol if tol is not None else 10e-12
     loss = loss if loss is not None else 0
     pflow = pflow if pflow is not None else 0
     lossy_volt_est = lossy_volt_est if lossy_volt_est is not None else {}
+
+    # get jacobain matrix
+    jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+                                  meas_V, R_line, X_line, len(x_est), len(z))
     # some preprocessing for time saving during iterative newton method
     # it is constant here becasue jacobian is constant
     G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)

@@ -95,8 +95,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
 
         # print some results
         # print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
-        # print('p bus err:', mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p) 
-        # print('q bus err:', mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q)
+        print('p bus err:', mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p) 
+        print('q bus err:', mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q)
 
     if V_err == True: # error between measurements
         # Regenerated measurements using the estimated states
@@ -120,7 +120,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # V_mag^2 and V_mag error
         errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, max_index_v = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
         errperc_vector_vmag, mean_vmag_err, max_vmag_err, errabs_vectorv, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
-        # print('vmag bus err:', mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err)
+        print('vmag bus err:', mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err)
 
         # pflow and qflow error
         # _, mean_pflow_err, max_pflow_err, mean_abs_pflow_err, max_abs_pflow_err, _ = error_calc(np.array(list(P_line.values())), np.array(list(P_line_con.values())))

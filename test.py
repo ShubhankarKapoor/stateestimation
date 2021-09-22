@@ -197,8 +197,8 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
 # only their keys
 
-jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-                                  meas_V, R_line, X_line, len(x_est), len(z))
+# jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+#                                   meas_V, R_line, X_line, len(x_est), len(z))
 
 # run WLS/OLS SE
 k_range = np.arange(1,1.6,0.1)
@@ -221,7 +221,8 @@ lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index,
 loss, pflow = 0, 0
 # LinDist
 x_estn0, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
 _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
@@ -233,7 +234,8 @@ _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est
 # constant jacobian in this case
 loss, pflow = 1, 0
 x_estn1, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
 _,_,_,p3error2 = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
@@ -244,7 +246,8 @@ _,_,_,p3error2 = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est
 # constant jacobian in this case
 loss, pflow = 0, 1
 x_estn2, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
 _,_,_,p3error3 = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
@@ -255,7 +258,8 @@ _,_,_,p3error3 = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est
 # constant jacobian in this case
 loss, pflow = 1, 1
 x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 print('GN-WLS based on linear jacobian with no feedback/ feedback')
 perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 

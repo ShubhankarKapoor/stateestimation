@@ -120,7 +120,7 @@ meas_P_line, meas_Q_line = subset_of_measurements(
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
-num_known = np.arange(len(non_zib_index))[::-1]
+num_known = np.arange(len(non_zib_index))[:0:-1]
 # num_known = np.arange(len(non_zib_index))[:1:-1]
 # num_known = np.array((9,8,5,4,3,2,1))
 # num_known = [20, 14, 1] # known number of measurements
@@ -225,7 +225,7 @@ total_counts_v, total_counts_p = 0, 0 # total number of vars for average
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
 count = 0 # total number of iters, should be sum of all combs at the end
 iters_n0, iters_n1, iters_n2, iters_n, iters_la = 0, 0, 0, 0, 0
-time_n0, time_n1, time_n2, time_n, time_la = 0, 0, 0, 0, 0
+time_n0, time_n1, time_n2, time_nn, time_la = 0, 0, 0, 0, 0
 tot_counts = 0
 for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
@@ -304,8 +304,12 @@ for row, i in enumerate(num_known):
         # to include non linear voltage feedback and pflow/qflow
         loss, pflow = 0, 0
         # LinDist
+        start = time.time()
         x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        end = time.time()
+        tot_time = end-start
+        time_n0+= tot_time
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n0+=countsn0
         # print('GN-WLS based on linear jacobian with no feedback') 
@@ -331,8 +335,12 @@ for row, i in enumerate(num_known):
 
         loss, pflow = 1, 0
         # LinDist + Voltage Feedback
+        start = time.time()
         x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        end = time.time()
+        tot_time = end-start
+        time_n1+= tot_time
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n1+=countsn1
         # print('GN-WLS based on linear jacobian with V feedback')
@@ -354,8 +362,12 @@ for row, i in enumerate(num_known):
 
         loss, pflow = 0, 1
         # LinDist + Pflow Feedback
+        start = time.time()
         x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        end = time.time()
+        tot_time = end-start
+        time_n2+= tot_time        
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n2+=countsn2
         # print('GN-WLS based on linear jacobian with P feedback')
@@ -377,10 +389,14 @@ for row, i in enumerate(num_known):
 
         loss, pflow = 1, 1
         # LinDist + Voltage & Pflow Feedback
+        start = time.time()
         x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
             x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-        iters_n+=countsn
+        end = time.time()
+        tot_time = end-start
+        time_nn+= tot_time                
         # costsn = cost(x_estn, jacobian_matrix, z, W)
+        iters_n+=countsn
         # print('GN-WLS based on linear jacobian with both feedback')
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
@@ -399,10 +415,14 @@ for row, i in enumerate(num_known):
 
         #######################################################################
         # print('Implementing loss based with a few assumptions')
+        start = time.time()        
         x_est_la, emax_la, counts_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
             x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
             path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
             X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+        end = time.time()
+        tot_time = end-start
+        time_la+= tot_time                
         iters_la+=counts_la
         #######################################################################
         # print('GN-WLS based on non-linear with ass')
