@@ -102,8 +102,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # Regenerated measurements using the estimated states
         if est_lin == 1: # reconstruction using lindist or distflow depending on loss and pflow vals
             [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
-                # P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow, max_iter =1) # using lindistflow
-                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow) # using lindistflow
+                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow, max_iter =1) # using lindistflow
+                # P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow) # using lindistflow
             # print('lin')
         # using Full AC Network
         if est_full_ac == 1:
