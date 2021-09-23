@@ -293,8 +293,8 @@ for row, i in enumerate(num_known):
         W = np.diag(weight_array) # Weight mat
         W = np.linalg.inv(W)
 
-        jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-                                          meas_V, R_line, X_line, len(x_est), len(z))
+        # jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+        #                                   meas_V, R_line, X_line, len(x_est), len(z))
 
         # GN-WLS
         lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
@@ -306,13 +306,14 @@ for row, i in enumerate(num_known):
         # LinDist
         start = time.time()
         x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn = se_wls(
-            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_n0+= tot_time
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n0+=countsn0
-        # print('GN-WLS based on linear jacobian with no feedback') 
+        print('GN-WLS based on linear jacobian with no feedback') 
         perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
@@ -337,13 +338,14 @@ for row, i in enumerate(num_known):
         # LinDist + Voltage Feedback
         start = time.time()
         x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn = se_wls(
-            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_n1+= tot_time
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n1+=countsn1
-        # print('GN-WLS based on linear jacobian with V feedback')
+        print('GN-WLS based on linear jacobian with V feedback')
         perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
@@ -364,13 +366,14 @@ for row, i in enumerate(num_known):
         # LinDist + Pflow Feedback
         start = time.time()
         x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn = se_wls(
-            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_n2+= tot_time        
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n2+=countsn2
-        # print('GN-WLS based on linear jacobian with P feedback')
+        print('GN-WLS based on linear jacobian with P feedback')
         perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
@@ -391,13 +394,14 @@ for row, i in enumerate(num_known):
         # LinDist + Voltage & Pflow Feedback
         start = time.time()
         x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_nn+= tot_time                
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n+=countsn
-        # print('GN-WLS based on linear jacobian with both feedback')
+        print('GN-WLS based on linear jacobian with both feedback')
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
@@ -425,7 +429,7 @@ for row, i in enumerate(num_known):
         time_la+= tot_time                
         iters_la+=counts_la
         #######################################################################
-        # print('GN-WLS based on non-linear with ass')
+        print('GN-WLS based on non-linear with ass')
         perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
         # average of all elements

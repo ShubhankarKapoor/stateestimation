@@ -97,8 +97,8 @@ x_est = np.concatenate((p_states, q_states))
 
 # random initialization of state vars instead of above
 torch.manual_seed(0)
-# x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
-x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
+x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
+# x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
 v0 = 1 # slack bus
 x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
@@ -121,7 +121,7 @@ combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
 indices = np.asarray(combs[5])
-indices = np.asarray([0, 2, 4, 5, 6, 7, 8])
+# indices = np.asarray([0, 2, 4, 5, 6, 7, 8])
 # ----->>> full loss based system works most of the cases.
 # ----->>> might be a small bug in code or jacobian calc. worth checking
 # ----->>> an example when i = 8,  combs=5
@@ -197,8 +197,8 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
 # only their keys
 
-# jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-#                                   meas_V, R_line, X_line, len(x_est), len(z))
+jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+                                  meas_V, R_line, X_line, len(x_est), len(z))
 
 # run WLS/OLS SE
 k_range = np.arange(1,1.6,0.1)

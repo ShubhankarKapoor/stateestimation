@@ -6,23 +6,26 @@ from BackwardForwardSweep import BackwardForwardSweep
 
 def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_meas, path_to_all_nodes_list,
            path_to_all_nodes, non_zib_index, Vsq_meas, R_line, X_line, LineData_Z_pu, 
-           num_states, num_meas, tot_state_vars, which, tol = None):
+           num_states, num_meas, tot_state_vars, which, tol = None, iters= None):
     ''' Weighted Least Square Estimate with assumptions on losses
         num_states: state vars being estimated
         tot_state_vars: state vars being estimated + zib buses
     '''
 
     tol = tol if tol is not None else 10e-12 #10e-14
+    iters = iters if iters is not None else 10e12 #10e-14
 
     count = 0
     delta_mat = np.zeros((num_states, 1000)) # delta in states
     residuals_mat = np.zeros((num_meas, 1000)) # meas residuals
     results = x_est
     emax = 100 # chosen higher than the tol
-    while emax > tol:
+    while emax > tol and count < iters:
 
         if count == 0:
             jacobian_matrix = np.zeros((num_meas, num_states)) # initialize jacobian with zeros
+            R_mat, X_mat, Z_mat = np.zeros((len(Vsq_meas), len(P_Load_state))), np.zeros((len(Vsq_meas), len(P_Load_state))), \
+                np.zeros((len(Vsq_meas)*len(P_Load_state), len(P_Load_state)))            
 
         # i think you are getting the below vals from PF: might be incorrect
         # should be just getting the vals from jacobian * xest
@@ -35,9 +38,9 @@ def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Loa
         Q_Load_est = dict(zip(P_Load_state.keys(), x_est[len(P_Load_state):2*len(P_Load_state)]))
 
         # recalculate jacobian: changes every iter here
-        jacobian_matrix = create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
+        jacobian_matrix, R_mat, X_mat, Z_mat = create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
                     Vsq_meas, R_line, X_line, LineData_Z_pu, num_states, num_meas, count,
-                    jacobian_matrix)
+                    jacobian_matrix, R_mat, X_mat, Z_mat, x_est)
 
         # calculate h(x)
         hx = np.matmul(jacobian_matrix, x_est)
