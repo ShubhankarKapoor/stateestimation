@@ -281,8 +281,8 @@ results = results.T
 ###############################################################################
 print('Implementing loss based with a few assumptions')
 x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
-    x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
-    path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
+    x_est, z, W, meas_P_line,  P_Load_state, meas_P_load, path_to_all_nodes, 
+    non_zib_index, meas_V, R_line, 
     X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
 ###############################################################################
 print('GN-WLS based on non-linear with ass')
