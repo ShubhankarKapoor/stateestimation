@@ -25,7 +25,7 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
         if count == 0:
             jacobian_matrix = np.zeros((num_meas, num_states)) # initialize jacobian with zeros
             R_mat, X_mat, Z_mat = np.zeros((len(meas_V), len(P_Load_state))), np.zeros((len(meas_V), len(P_Load_state))), \
-                np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))            
+                np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state))) # initialize with zeros
 
         # i think you are getting the below vals from PF: might be incorrect
         # should be just getting the vals from jacobian * xest
@@ -38,9 +38,11 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
         Q_Load_est = dict(zip(P_Load_state.keys(), x_est[len(P_Load_state):2*len(P_Load_state)]))
 
         # recalculate jacobian: changes every iter here
-        jacobian_matrix, R_mat, X_mat, Z_mat = create_loss_jacobian_ass(meas_P_line, P_Load_state, meas_P_load, P_Load_est, Q_Load_est, path_to_all_nodes,
-                    meas_V, R_line, X_line, LineData_Z_pu, num_states, num_meas, count,
-                    jacobian_matrix, R_mat, X_mat, Z_mat, x_est)
+        # R_mat, X_mat, Z_mat remains consistent: only calculated once
+        jacobian_matrix, R_mat, X_mat, Z_mat = create_loss_jacobian_ass(
+            meas_P_line, P_Load_state, meas_P_load, P_Load_est, Q_Load_est, path_to_all_nodes,
+            meas_V, R_line, X_line, LineData_Z_pu, num_states, num_meas, count,
+            jacobian_matrix, R_mat, X_mat, Z_mat, x_est)
 
         # calculate h(x)
         hx = np.matmul(jacobian_matrix, x_est)

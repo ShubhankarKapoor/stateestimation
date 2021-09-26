@@ -111,7 +111,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
+num_plow_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -120,8 +120,8 @@ meas_P_line, meas_Q_line = subset_of_measurements(
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
-num_known = np.arange(len(non_zib_index))[:0:-1]
-# num_known = np.arange(len(non_zib_index))[:1:-1]
+num_known = np.arange(len(non_zib_index))[::-1]
+# num_known = np.arange(len(non_zib_index))[:0:-1]
 # num_known = np.array((9,8,5,4,3,2,1))
 # num_known = [20, 14, 1] # known number of measurements
 # number of known measurements
@@ -421,9 +421,9 @@ for row, i in enumerate(num_known):
         # print('Implementing loss based with a few assumptions')
         start = time.time()        
         x_est_la, emax_la, counts_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
-            x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
-            path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
-            X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes, 
+            non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, 
+            len(x_est), len(z), len(x), which)
         end = time.time()
         tot_time = end-start
         time_la+= tot_time                
