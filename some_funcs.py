@@ -75,8 +75,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         x: true state values
         x_estn: estimated state values
     '''
-    state_err = state_err if state_err is not None else True
-    V_err = V_err if V_err is not None else True
+    state_err = state_err if state_err is not None else True # if state var error needs to be calculated
+    V_err = V_err if V_err is not None else True # if voltage error needs to be calculated
     loss = 0 if loss is None else loss # term to reconstruct v using the loss term
     pflow = 0 if pflow is None else pflow # term to reconstruct v using the loss term
     # print('loss', loss, 'pflow', pflow)

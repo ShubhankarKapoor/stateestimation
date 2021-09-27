@@ -315,7 +315,7 @@ for row, i in enumerate(num_known):
         iters_n0+=countsn0
         print('GN-WLS based on linear jacobian with no feedback') 
         perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_nofeed = inc_avg(avg_perc_v_nofeed, total_counts_v, perc_v_nofeed)
         avg_perc_p_nofeed = inc_avg(avg_perc_p_nofeed, total_counts_p, perc_p_nofeed[non_zib_index])
@@ -347,7 +347,7 @@ for row, i in enumerate(num_known):
         iters_n1+=countsn1
         print('GN-WLS based on linear jacobian with V feedback')
         perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_vfeed = inc_avg(avg_perc_v_vfeed, total_counts_v, perc_v_vfeed)
         avg_perc_p_vfeed = inc_avg(avg_perc_p_vfeed, total_counts_p, perc_p_vfeed[non_zib_index])
@@ -375,7 +375,7 @@ for row, i in enumerate(num_known):
         iters_n2+=countsn2
         print('GN-WLS based on linear jacobian with P feedback')
         perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_pfeed = inc_avg(avg_perc_v_pfeed, total_counts_v, perc_v_pfeed)
         avg_perc_p_pfeed = inc_avg(avg_perc_p_pfeed, total_counts_p, perc_p_pfeed[non_zib_index])
@@ -403,7 +403,7 @@ for row, i in enumerate(num_known):
         iters_n+=countsn
         print('GN-WLS based on linear jacobian with both feedback')
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_bothfeed = inc_avg(avg_perc_v_bothfeed, total_counts_v, perc_v_n)
         avg_perc_p_bothfeed = inc_avg(avg_perc_p_bothfeed, total_counts_p, perc_p_n[non_zib_index])
