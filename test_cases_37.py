@@ -60,7 +60,7 @@ if data_full_ac == 1:
                                                                 P_Load, Q_Load, which)
     Vsq =  {key:val**2 for key, val in V_mag.items()} # square of V_mag
     V = Vsq
-    
+
     # when running full network
     P_line = {key:val.real for key, val in S_line.items()} # resistance of every line
     Q_line = {key:val.imag for key, val in S_line.items()} # reactancce of every line
@@ -123,7 +123,7 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 num_known = np.arange(len(non_zib_index))[::-1]
 # num_known = np.arange(len(non_zib_index))[:0:-1]
 # num_known = np.array((9,8,5,4,3,2,1))
-# num_known = [20, 14, 1] # known number of measurements
+# num_known = [20, 19, 1] # known number of measurements
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
@@ -163,7 +163,7 @@ def max_val_for_index(A, current_calc_error, non_zib_index, node):
     node26 = A[node] # error val for node 26   
     B = current_calc_error[non_zib_index]
     A[B>A] = B[B>A]
-    
+
     if node26 != A[node]:
         flag = 1
     return A, flag
@@ -215,11 +215,11 @@ heatmap_p_perc_la = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
 
 # all average variables
-avg_perc_v_nofeed, avg_perc_p_nofeed, avg_abs_p_nofeed = 0, 0, 0
-avg_perc_v_vfeed, avg_perc_p_vfeed, avg_abs_p_vfeed = 0, 0, 0
-avg_perc_v_pfeed, avg_perc_p_pfeed, avg_abs_p_pfeed = 0, 0, 0
-avg_perc_v_bothfeed, avg_perc_p_bothfeed, avg_abs_p_bothfeed = 0, 0, 0
-avg_perc_v_la, avg_perc_p_la, avg_abs_p_la = 0, 0, 0
+avg_perc_v_nofeed, avg_perc_p_nofeed, avg_abs_p_nofeed, avg_abs_v_nofeed = 0, 0, 0, 0
+avg_perc_v_vfeed, avg_perc_p_vfeed, avg_abs_p_vfeed, avg_abs_v_vfeed = 0, 0, 0, 0
+avg_perc_v_pfeed, avg_perc_p_pfeed, avg_abs_p_pfeed, avg_abs_v_pfeed = 0, 0, 0, 0
+avg_perc_v_bothfeed, avg_perc_p_bothfeed, avg_abs_p_bothfeed, avg_abs_v_bothfeed = 0, 0, 0, 0
+avg_perc_v_la, avg_perc_p_la, avg_abs_p_la, avg_abs_v_la = 0, 0, 0, 0
 total_counts_v, total_counts_p = 0, 0 # total number of vars for average
 
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
@@ -253,6 +253,8 @@ for row, i in enumerate(num_known):
     # different combs for known number of meas
     for indices in combs:
         count+=1
+        if count%10 == 0:
+            print(count)        
         indices = np.asarray(indices)
         # see the known meas
         if len(indices) !=0:
@@ -302,10 +304,11 @@ for row, i in enumerate(num_known):
                           'plines':meas_P_line.keys()}
 
         # to include non linear voltage feedback and pflow/qflow
+        print('GN-WLS based on linear jacobian with no feedback') 
         loss, pflow = 0, 0
         # LinDist
         start = time.time()
-        x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
             meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
@@ -313,11 +316,11 @@ for row, i in enumerate(num_known):
         time_n0+= tot_time
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n0+=countsn0
-        print('GN-WLS based on linear jacobian with no feedback') 
         perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_nofeed = inc_avg(avg_perc_v_nofeed, total_counts_v, perc_v_nofeed)
+        avg_abs_v_nofeed = inc_avg(avg_abs_v_nofeed, total_counts_v, abs_v_nofeed)
         avg_perc_p_nofeed = inc_avg(avg_perc_p_nofeed, total_counts_p, perc_p_nofeed[non_zib_index])
         avg_abs_p_nofeed = inc_avg(avg_abs_p_nofeed, total_counts_p, abs_p_nofeed[non_zib_index])
         # uncomment below to store all errors
@@ -333,11 +336,11 @@ for row, i in enumerate(num_known):
         volt_max_abs_nofeed = max_val(volt_max_abs_nofeed, abs_v_nofeed, all_index_array)
         p_max_abs_nofeed = max_val(p_max_abs_nofeed, abs_p_nofeed, non_zib_index)
         #######################################################################
-
+        print('GN-WLS based on linear jacobian with V feedback')
         loss, pflow = 1, 0
         # LinDist + Voltage Feedback
         start = time.time()
-        x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn, _ = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
             meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
@@ -345,11 +348,11 @@ for row, i in enumerate(num_known):
         time_n1+= tot_time
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n1+=countsn1
-        print('GN-WLS based on linear jacobian with V feedback')
         perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_vfeed = inc_avg(avg_perc_v_vfeed, total_counts_v, perc_v_vfeed)
+        avg_abs_v_vfeed = inc_avg(avg_abs_v_vfeed, total_counts_v, abs_v_vfeed)
         avg_perc_p_vfeed = inc_avg(avg_perc_p_vfeed, total_counts_p, perc_p_vfeed[non_zib_index])
         avg_abs_p_vfeed = inc_avg(avg_abs_p_vfeed, total_counts_p, abs_p_vfeed[non_zib_index])        
         # uncomment below to store all errors        
@@ -361,11 +364,11 @@ for row, i in enumerate(num_known):
         volt_max_abs_vfeed = max_val(volt_max_abs_vfeed, abs_v_vfeed, all_index_array)
         p_max_abs_vfeed = max_val(p_max_abs_vfeed, abs_p_vfeed, non_zib_index)
         #######################################################################
-
+        print('GN-WLS based on linear jacobian with P feedback')
         loss, pflow = 0, 1
         # LinDist + Pflow Feedback
         start = time.time()
-        x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn, _ = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
             meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
@@ -373,11 +376,11 @@ for row, i in enumerate(num_known):
         time_n2+= tot_time        
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n2+=countsn2
-        print('GN-WLS based on linear jacobian with P feedback')
         perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_pfeed = inc_avg(avg_perc_v_pfeed, total_counts_v, perc_v_pfeed)
+        avg_abs_v_pfeed = inc_avg(avg_abs_v_pfeed, total_counts_v, abs_v_pfeed)
         avg_perc_p_pfeed = inc_avg(avg_perc_p_pfeed, total_counts_p, perc_p_pfeed[non_zib_index])
         avg_abs_p_pfeed = inc_avg(avg_abs_p_pfeed, total_counts_p, abs_p_pfeed[non_zib_index])           
         # uncomment below to store all errors        
@@ -389,11 +392,11 @@ for row, i in enumerate(num_known):
         volt_max_abs_pfeed = max_val(volt_max_abs_pfeed, abs_v_pfeed, all_index_array)
         p_max_abs_pfeed = max_val(p_max_abs_pfeed, abs_p_pfeed, non_zib_index)
         #######################################################################
-
+        print('GN-WLS based on linear jacobian with both feedback')
         loss, pflow = 1, 1
         # LinDist + Voltage & Pflow Feedback
         start = time.time()
-        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
+        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn, _ = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
             meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
@@ -401,11 +404,11 @@ for row, i in enumerate(num_known):
         time_nn+= tot_time                
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n+=countsn
-        print('GN-WLS based on linear jacobian with both feedback')
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_bothfeed = inc_avg(avg_perc_v_bothfeed, total_counts_v, perc_v_n)
+        avg_abs_v_bothfeed = inc_avg(avg_abs_v_bothfeed, total_counts_v, abs_v_n)
         avg_perc_p_bothfeed = inc_avg(avg_perc_p_bothfeed, total_counts_p, perc_p_n[non_zib_index])
         avg_abs_p_bothfeed = inc_avg(avg_abs_p_bothfeed, total_counts_p, abs_p_n[non_zib_index])   
         # uncomment below to store all errors        
@@ -419,6 +422,7 @@ for row, i in enumerate(num_known):
 
         #######################################################################
         # print('Implementing loss based with a few assumptions')
+        print('GN-WLS based on non-linear with ass')
         start = time.time()        
         x_est_la, emax_la, counts_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes, 
@@ -429,11 +433,11 @@ for row, i in enumerate(num_known):
         time_la+= tot_time                
         iters_la+=counts_la
         #######################################################################
-        print('GN-WLS based on non-linear with ass')
         perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
         # average of all elements
         avg_perc_v_la = inc_avg(avg_perc_v_la, total_counts_v, perc_v_la)
+        avg_abs_v_la = inc_avg(avg_abs_v_la, total_counts_v, abs_v_la)
         avg_perc_p_la = inc_avg(avg_perc_p_la, total_counts_p, perc_p_la[non_zib_index])
         avg_abs_p_la = inc_avg(avg_abs_p_la, total_counts_p, abs_p_la[non_zib_index]) 
         # uncomment below to store all errors

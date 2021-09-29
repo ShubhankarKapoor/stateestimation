@@ -539,13 +539,18 @@ def grad_vnode_with_p_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, 
                 # sumzsq_p_temp = sum_of_com_path*P_Load_est[node_k]
                 # sumzsq_p+=sumzsq_p_temp
                 ## more compact form below
-                sumzsq_p += sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
-                sumzsq_q += sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
+                # sumzsq_p += sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
+                # sumzsq_q += sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
                 # vv.append(sumzsq_p)
                 # sumzsq_p = sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
                 # sumzsq_q = sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
                 # sumzsq_p = 2*sumzsq_p/V0
                 # sumzsq_q = 2*sumzsq_q/V0
+                ######
+                # temp_sumsq = sum((abs(Z_line[item])**2) for item in common_path)
+                # temp_sumsq= temp_sumsq * (P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
+                # sumzsq_pcomb+= temp_sumsq                
+    
             # print(sumzsq_q)
             sumzsq_p = 2*sumzsq_p/V0
             sumzsq_q = 2*sumzsq_q/V0
@@ -615,7 +620,7 @@ def grad_vnode_with_v0_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line,
                     sumzsq_pcomb+= temp_sumsq
                 else:
                     pass
-         
+
         grad_array_vnode_v[i] = 1 - (1/(V0**2) * (sumzsq_p)) - (2/(V0**2) * sumzsq_pcomb)
 
     return grad_array_vnode_v

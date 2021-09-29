@@ -140,7 +140,7 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
         count+=1
         # print(count, emax)
 
-    return x_est, emax, count, residuals_mat, delta_mat, results, costs
+    return x_est, emax, count, residuals_mat, delta_mat, results, costs, jacobian_matrix
 
 def se_wrr(x_est, z, jacobian_matrix, W, k, tol = None):
     ''' Weighted Least Square Estimate with L2 regularisation OR
