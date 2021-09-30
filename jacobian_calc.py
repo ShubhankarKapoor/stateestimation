@@ -571,8 +571,8 @@ def grad_vnode_with_p_loss_ass_new(meas_V, P_Load_state, path_to_all_nodes,
     # Z_hat_q = np.matmul(Z_mat,np.asarray(list(Q_Load_est.values())))
     Z_hat_q = Z_hat_q.reshape(len(meas_V), len(P_Load_state))
     # use the above ones to get the grads
-    grad_array_v_p = -2*R_mat + 2/V0*(Z_hat_p) # vnode_with_p
-    grad_array_v_q = -2*X_mat + 2/V0*(Z_hat_q) # vnode_with_q
+    grad_array_v_p = -2*R_mat - 2/V0*(Z_hat_p) # vnode_with_p
+    grad_array_v_q = -2*X_mat - 2/V0*(Z_hat_q) # vnode_with_q
     return grad_array_v_p, grad_array_v_q
 
 def grad_pline_with_vnode_loss_ass(P_line_meas, P_Load_state, path_to_all_nodes, 
@@ -654,7 +654,7 @@ def grad_vnode_with_v0_loss_ass_new(meas_V, P_Load_state, path_to_all_nodes,
                 double_term_temp = 2*(P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
                 double_term_temp = double_term_temp * com_path_sens
                 double_term+=double_term_temp
-            
-        grad_array_vnode_v[i] = 1 -  (1/(V0**2)) * (sq_term + double_term)
+
+        grad_array_vnode_v[i] = 1 +  (1/(V0**2)) * (sq_term + double_term)
 
     return grad_array_vnode_v
