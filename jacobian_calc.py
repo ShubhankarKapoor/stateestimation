@@ -460,7 +460,7 @@ def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est,
     # grad_array_vnode_v = grad_vnode_with_v0_loss_ass(Vsq_mes, P_Load_state, 
     #                                                   path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     grad_array_vnode_v = grad_vnode_with_v0_loss_ass_new(Vsq_mes, P_Load_state, 
-                                                      path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, x_est[-1])
+                                                      path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     meas_rows = grad_array_vnode_v.shape[0]
     jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols] = grad_array_vnode_v
 
@@ -496,7 +496,7 @@ def grad_pline_with_p_loss_ass(P_line_meas, P_Load_state, path_to_all_nodes, R_l
 
     return grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q
 
-def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, Z_line):
+def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu):
     ''' Returns the constant matrices used for grad_vnode_with_p_loss_ass'''
     R_mat, X_mat, Z_mat = np.zeros((len(meas_V), len(P_Load_state))), np.zeros((len(meas_V), len(P_Load_state))), \
         np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
@@ -514,7 +514,7 @@ def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, Z_lin
                 common_path = common_lines.intersection(path_to_all_nodes[node_k])
                 # break
             #     sumzsq_p = sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
-                Z_mat[a, k] = sum((abs(Z_line[item])**2) for item in common_path)
+                Z_mat[a, k] = sum((abs(LineData_Z_pu[item])**2) for item in common_path)
             a+=1    
     return R_mat, X_mat, Z_mat
 
@@ -539,8 +539,8 @@ def grad_vnode_with_p_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, 
                 # sumzsq_p_temp = sum_of_com_path*P_Load_est[node_k]
                 # sumzsq_p+=sumzsq_p_temp
                 ## more compact form below
-                # sumzsq_p += sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
-                # sumzsq_q += sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
+                sumzsq_p += sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
+                sumzsq_q += sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
                 # vv.append(sumzsq_p)
                 # sumzsq_p = sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
                 # sumzsq_q = sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
@@ -552,8 +552,8 @@ def grad_vnode_with_p_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, 
                 # sumzsq_pcomb+= temp_sumsq                
     
             # print(sumzsq_q)
-            sumzsq_p = 2*sumzsq_p/V0
-            sumzsq_q = 2*sumzsq_q/V0
+            sumzsq_p = -2*sumzsq_p/V0
+            sumzsq_q = -2*sumzsq_q/V0
             grad_array_v_p[i][j] += sumzsq_p
             grad_array_v_q[i][j] += sumzsq_q
         #     if f == 20:
@@ -621,7 +621,7 @@ def grad_vnode_with_v0_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line,
                 else:
                     pass
 
-        grad_array_vnode_v[i] = 1 - (1/(V0**2) * (sumzsq_p)) - (2/(V0**2) * sumzsq_pcomb)
+        grad_array_vnode_v[i] = 1 + (1/(V0**2) * (sumzsq_p)) + (2/(V0**2) * sumzsq_pcomb)
 
     return grad_array_vnode_v
 

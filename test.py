@@ -265,7 +265,7 @@ x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn, _ = se_wls(
 perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = 1, pflow = 1) # for WLS
 ##############################################################################
-# sum_residuals = np.sum(abs(residuals_mat[:,countsn-1]))
+sum_residuals = np.sum(abs(residuals_mat[:,countsn-1]))
 results = results.T
 ##############################################################################
 

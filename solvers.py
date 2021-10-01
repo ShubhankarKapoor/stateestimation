@@ -86,8 +86,8 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
     results = x_est
     emax = 100 # chosen higher than the tol
 
-    # while emax > tol and count<1000: # added the count to avoid error in some cases
-    while emax > tol and count<10000:
+    while emax > tol and count<1000: # added the count to avoid error in some cases
+    # while emax > tol:
 
         cur_cost = cost(x_est, jacobian_matrix, z, W)
         costs.append(cur_cost)
@@ -124,12 +124,12 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
 
         # calculate measurement residuals
         residuals = z - hx
-        # residuals_mat[:,count] = residuals
+        residuals_mat[:,count] = residuals
 
         # calculate deltax
         deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
         # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
-        # delta_mat[:,count] = deltax
+        delta_mat[:,count] = deltax
 
         # update values of state vars
         x_est = x_est + deltax
