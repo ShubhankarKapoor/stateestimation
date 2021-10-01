@@ -3,7 +3,7 @@ import time
 import torch
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from some_funcs import refactor_estimates
-from jacobian_calc import create_loss_jacobian
+from jacobian_calc import create_jacobian, create_loss_jacobian
 # import some_funcs
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
@@ -61,14 +61,20 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     
     return x_est, emax, count, residuals_mat, delta_mat, results
 
-def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, lossy_volt_est = None):
+def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+          meas_V, R_line, X_line, tol = None, loss = None, pflow = None, lossy_volt_est = None):
     ''' Weighted Least Square Estimate'''
 
     tol = tol if tol is not None else 10e-12
     loss = loss if loss is not None else 0
     pflow = pflow if pflow is not None else 0
     lossy_volt_est = lossy_volt_est if lossy_volt_est is not None else {}
+
+    # get jacobain matrix
+    jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+                                  meas_V, R_line, X_line, len(x_est), len(z))
     # some preprocessing for time saving during iterative newton method
+    # it is constant here becasue jacobian is constant
     G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
     # G = np.matmul(jacobian_matrix.T, jacobian_matrix) # OLS
     Ginv = np.linalg.inv(G) # constant because jacobian is constant
@@ -81,39 +87,41 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
     emax = 100 # chosen higher than the tol
 
     while emax > tol and count<1000: # added the count to avoid error in some cases
-        
+    # while emax > tol:
+
         cur_cost = cost(x_est, jacobian_matrix, z, W)
         costs.append(cur_cost)
-        # distflow backward sweep for calculating measurements
-
-        # distflow forward sweep for calculating measurements
 
         # calculate h(x)    
         hx = np.matmul(jacobian_matrix, x_est)
-        # get h(x) from the actual model?
+        # get h(x) from the actual model: nope, comes from jacobian
 
         # voltage/ pflow loss feedback
+        # update estimates if there is feedback
         if loss == 1 or pflow == 1: # voltage feedback using non linear estimates
             if len(lossy_volt_est) == 6: # to make sure lossy_volt_est has all info
                 full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
                                                                         x_est, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
                 V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
-                        P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], loss, pflow)
+                        P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], 
+                        loss, pflow, max_iter = 1)
+                        # loss, pflow)
 
                 # update the estimates -- after feedback calculation
-                # update the pline/qline
                 Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
                 Qline_known_meas = {k:Qline_est[k] for k in lossy_volt_est['plines']} # get qflow vals for known measurements
+                # update the pline/qline measurement estimates
                 hx[0:len(Pline_known_meas)]=list(Pline_known_meas.values()) # update values
                 hx[len(Pline_known_meas):2*len(Pline_known_meas)]=list(Qline_known_meas.values()) # update values
 
-                # update the voltage value for buses with measurements
+                # update the voltage estimates for buses with measurements
                 V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
                 # print('max volt diff', max(abs(np.asarray(hx[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
                 hx[-len(V_known_meas):]=list(V_known_meas.values()) # update values
             else:
                 raise ValueError('Length of lossy_volt_est should be 6')
             # print(k)
+
         # calculate measurement residuals
         residuals = z - hx
         residuals_mat[:,count] = residuals
@@ -123,16 +131,16 @@ def se_wls(x_est, z, jacobian_matrix, W, tol = None, loss = None, pflow = None, 
         # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
         delta_mat[:,count] = deltax
 
-        # get tolerance
-        emax = np.max(np.abs(deltax))
-
         # update values of state vars
         x_est = x_est + deltax
         results = np.vstack((results, x_est))
-        count+=1
-        # print(count)
 
-    return x_est, emax, count, residuals_mat, delta_mat, results, costs
+        # get tolerance
+        emax = np.max(np.abs(deltax))
+        count+=1
+        # print(count, emax)
+
+    return x_est, emax, count, residuals_mat, delta_mat, results, costs, jacobian_matrix
 
 def se_wrr(x_est, z, jacobian_matrix, W, k, tol = None):
     ''' Weighted Least Square Estimate with L2 regularisation OR

@@ -16,6 +16,8 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None,
     # giving an insanely high number below so it converges with tol when max_iters are missing
     max_iter = 10e12 if max_iter is None else max_iter # max iterations without considering tolerance  
 
+    # get the slack node
+    slack_node = BusNum[0] # assumed BusNum is ordered, which should be the case
     P_line, Q_line = {}, {}
     # for i in range(len(BusNum)-1,0,-1):
     for i in BusNum[:0:-1]:
@@ -27,7 +29,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None,
     for i in BusNum: #Note that bus 0 here shows the ideal secondary voltages of the transformer
         V[i] = 1 # square magnitude
     # should skip the line below for ausnet because 0 isn't the slack node        
-    V[0] = 1 if V0 is None else V0 # replace 0 with slack node
+    V[slack_node] = 1 if V0 is None else V0 # replace 0 with slack node
 
     #Initialization of iteration count
     k = 0 # iteration count
@@ -90,7 +92,8 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None,
         e_max = max(abs(V[i] - V_previous[i]) for i in BusNum)
         err_vec.append(e_max)
         if k == max_iter:
-            print('Maybe reconsider increasing iterations')
+            pass
+            # print('Maybe reconsider increasing iterations')
 
     # results
     Vmag = {key:np.sqrt(val) for key, val in V.items()} # sqrt of mag
@@ -105,5 +108,3 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None,
     # would want to return current as well in futuret
     # print('k is:', k)
     return(V, Vmag, P_line_ordered, Q_line_ordered, S_line, e_max,k)
-
-# LinDistFlowBackwardForwardSweep(P_Load=None, Q_Load=None, which=None, loss=1, pflow = 1, max_iter= 5)

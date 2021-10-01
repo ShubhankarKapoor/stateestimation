@@ -118,7 +118,7 @@ for i in BusNum:
         P_Load[i] = 0*LoadData.iloc[:,0] # 1440*1 zero vector
     Q_Load[i] = 0*LoadData.iloc[:,0] # 1440*1 zero vector
 
-scaling_factor = 1
+scaling_factor = 50 # 12, 16, 50
 # Let's just consider a specific time like t = 720 (data for 12pm)
 for i in BusNum:
     P_Load[i] = P_Load[i][720] * scaling_factor

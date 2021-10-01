@@ -1,0 +1,11 @@
+print(np.max(heatmap_p_abs_no_feed), np.max(heatmap_p_abs_v_feed), np.max(heatmap_p_abs_p_feed), np.max(heatmap_p_abs_both_feed), np.max(heatmap_p_abs_la))
+print(np.max(heatmap_p_perc_no_feed), np.max(heatmap_p_perc_v_feed), np.max(heatmap_p_perc_p_feed), np.max(heatmap_p_perc_both_feed), np.max(heatmap_p_perc_la))
+print(np.max(heatmap_volt_abs_no_feed), np.max(heatmap_volt_abs_v_feed), np.max(heatmap_volt_abs_p_feed), np.max(heatmap_volt_abs_both_feed), np.max(heatmap_volt_abs_la))
+print(np.max(heatmap_volt_perc_no_feed), np.max(heatmap_volt_perc_v_feed), np.max(heatmap_volt_perc_p_feed), np.max(heatmap_volt_perc_both_feed), np.max(heatmap_volt_perc_la))
+
+###################################################################################################
+
+print(avg_abs_p_nofeed, avg_abs_p_vfeed, avg_abs_p_pfeed, avg_abs_p_bothfeed, avg_abs_p_la)
+print(avg_perc_p_nofeed, avg_perc_p_vfeed, avg_perc_p_pfeed, avg_perc_p_bothfeed, avg_perc_p_la)
+print(avg_abs_v_nofeed, avg_abs_v_vfeed, avg_abs_v_pfeed, avg_abs_v_bothfeed, avg_abs_v_la)
+print(avg_perc_v_nofeed, avg_perc_v_vfeed, avg_perc_v_pfeed, avg_perc_v_bothfeed, avg_perc_v_la)

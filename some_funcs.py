@@ -7,6 +7,30 @@ from BackwardForwardSweep import BackwardForwardSweep
 import solvers
 import matplotlib.pyplot as plt
 # error function
+
+def get_index_for_keys_init_stat_var(P_Load):
+    ''' 
+    Returns zib/ non-zib keys; their index values for the entire x vector
+    Intializes the state variables: consider the state vars only for non ZIBs  
+    '''
+    P_Load_state = {}
+    zib_index, non_zib_index = [], [] # index of zibs and non zibs
+    zib_keys, non_zib_keys = [], [] # actual nodes or keys with zibs and non-zibs
+    # zib_index and zib_keys should be same where slack bus is 0 and node keys are incremented by 1
+    count_index = 0
+    for k,v in P_Load.items():
+        if v != 0:
+            P_Load_state[k] = v
+            non_zib_keys.append(k)
+            non_zib_index.append(count_index)
+        else:
+            # P_Load_state[k] = v # included to consider all nodes
+            # non_zib_index.append(k) # included to consider all nodes
+            zib_keys.append(k)
+            zib_index.append(count_index)
+        count_index+=1
+    return zib_index, non_zib_index, zib_keys, non_zib_keys, P_Load_state
+
 def error_calc(ground_truth, estimated):
     ''' function to calculate different types of errors '''
     # when gtruth is 0 it gives a warning in divide
@@ -51,11 +75,11 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         x: true state values
         x_estn: estimated state values
     '''
-    state_err = state_err if state_err is not None else True
-    V_err = V_err if V_err is not None else True
+    state_err = state_err if state_err is not None else True # if state var error needs to be calculated
+    V_err = V_err if V_err is not None else True # if voltage error needs to be calculated
     loss = 0 if loss is None else loss # term to reconstruct v using the loss term
     pflow = 0 if pflow is None else pflow # term to reconstruct v using the loss term
-    print('loss', loss, 'pflow', pflow)
+    # print('loss', loss, 'pflow', pflow)
 
     if state_err == True: # error between states
         # get the following for compatibility for error and power flow calc
@@ -78,7 +102,8 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # Regenerated measurements using the estimated states
         if est_lin == 1: # reconstruction using lindist or distflow depending on loss and pflow vals
             [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
-                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow) # using lindistflow
+                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow, max_iter =1) # using lindistflow
+                # P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow) # using lindistflow
             # print('lin')
         # using Full AC Network
         if est_full_ac == 1:
@@ -93,7 +118,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
             # print('full')
         # error calc between measurements
         # V_mag^2 and V_mag error
-        errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, _ = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
+        errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, max_index_v = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
         errperc_vector_vmag, mean_vmag_err, max_vmag_err, errabs_vectorv, mean_abs_vmag_err, max_abs_vmag_err, _ = error_calc(np.array(list(V_mag.values())), np.array(list(V_mag_con.values())))
         print('vmag bus err:', mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err)
 
@@ -116,7 +141,7 @@ def inc_avg(prev_avg, total_counts, new_array):
     new_array: new array that will update the average"""
 
     new_avg = prev_avg + (sum(new_array) - len(new_array)*prev_avg)/(total_counts+len(new_array))
- 
+
     return new_avg
 
 def noise_addition(z, sd, mu = None):
@@ -185,7 +210,10 @@ def subset_of_measurements(num_plow_meas, arcs, P_line, Q_line, V):
 def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p, 
                      primary_branch_flow_q, non_zib_index, zib_index, 
                      num_known_meas=None, indices = None):
-    ''' function for pseudo and known p, q, v bus measurements
+    # can change this func if not using equal distribution
+    # coz you are using 0 at the end of the func
+    ''' 
+    function for pseudo and known p, q, v bus measurements
     indices: array of index of known measurements in non_zib_index
     '''
     # indices are for index in non zib array for now
@@ -206,7 +234,6 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
             # else:
             #     known_meas_idx = np.insert(known_meas_idx, 0, int(0))
             #     known_meas_idx = known_meas_idx.astype(int)
-            
             # missing indices from known_meas_idx
             unknown_meas_idx = np.setdiff1d(np.arange(0,len(non_zib_index)), known_meas_idx) 
             # should fix the above mentioned issue here
@@ -219,7 +246,7 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     P_known_meas = dict(sorted(known_meas.items()))
     Q_known_meas = {k:Q_Load[k] for k in P_known_meas.keys()}
     V_known_meas = {k:V[k] for k in known_meas1.keys()} # get voltage vals for known measurements
-    
+
     # add some additional voltages
     # V_known_meas[36] = V[36]
     # V_known_meas[35] = V[35]
@@ -239,7 +266,6 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
     # V_known_meas[898] = V[898]
 
     # include slack bus voltage at all times
-
     # V_known_meas = {k: V[k] for k in P_Load.keys()}
     if 0 in V_known_meas.keys():
         V_known_meas = dict(sorted(V_known_meas.items()))
@@ -264,7 +290,7 @@ def bus_measurements_equal_distribution(P_Load, Q_Load, V, primary_branch_flow_p
 
 def measurements_estimated_from_states(x_est, P_line_meas, Vsq_meas, which, 
                                        non_zib_index, num_buses, tot_state_vars, max_iter=None):
-    
+
     max_iter = 1 if max_iter is None else max_iter
     full_x_est, P_Load_est, Q_Load_est = refactor_estimates(tot_state_vars, x_est,
                                                                 non_zib_index, num_buses)

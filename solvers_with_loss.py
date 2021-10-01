@@ -4,6 +4,72 @@ from some_funcs import refactor_estimates, measurements_estimated_from_states
 from jacobian_calc import create_loss_jacobian, create_loss_jacobian_ass
 from BackwardForwardSweep import BackwardForwardSweep
 
+def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
+           path_to_all_nodes, non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, 
+           num_states, num_meas, tot_state_vars, which, tol = None, iters= None):
+    ''' Weighted Least Square Estimate with assumptions on losses
+        num_states: state vars being estimated
+        tot_state_vars: state vars being estimated + zib buses
+    '''
+
+    tol = tol if tol is not None else 10e-12 #10e-14
+    iters = iters if iters is not None else 10e12 #10e-14
+
+    count = 0
+    delta_mat = np.zeros((num_states, 1000)) # delta in states
+    residuals_mat = np.zeros((num_meas, 1000)) # meas residuals
+    results = x_est
+    emax = 100 # chosen higher than the tol
+    while emax > tol and count < iters:
+
+        if count == 0:
+            jacobian_matrix = np.zeros((num_meas, num_states)) # initialize jacobian with zeros
+            R_mat, X_mat, Z_mat = np.zeros((len(meas_V), len(P_Load_state))), np.zeros((len(meas_V), len(P_Load_state))), \
+                np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state))) # initialize with zeros
+
+        # i think you are getting the below vals from PF: might be incorrect
+        # should be just getting the vals from jacobian * xest
+        # you are right
+        # hx, _, _, _, _, _, _ = measurements_estimated_from_states(x_est, meas_P_line, 
+        #         meas_V, which, non_zib_index, len(meas_P_load), tot_state_vars)
+
+        # used in jacobian calc
+        P_Load_est = dict(zip(P_Load_state.keys(), x_est[0:len(P_Load_state)]))
+        Q_Load_est = dict(zip(P_Load_state.keys(), x_est[len(P_Load_state):2*len(P_Load_state)]))
+
+        # recalculate jacobian: changes every iter here
+        # R_mat, X_mat, Z_mat remains consistent: only calculated once
+        jacobian_matrix, R_mat, X_mat, Z_mat = create_loss_jacobian_ass(
+            meas_P_line, P_Load_state, meas_P_load, P_Load_est, Q_Load_est, path_to_all_nodes,
+            meas_V, R_line, X_line, LineData_Z_pu, num_states, num_meas, count,
+            jacobian_matrix, R_mat, X_mat, Z_mat, x_est)
+
+        # calculate h(x)
+        hx = np.matmul(jacobian_matrix, x_est)
+
+        # calculate measurement residuals
+        residuals = z - hx
+        # residuals_mat[:,count] = residuals
+
+        # changes every iter unlike lindist based SE
+        G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
+        Ginv = np.linalg.inv(G)
+
+        # calculate deltax
+        deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
+        # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
+        # delta_mat[:,count] = deltax
+
+        # update values of state vars
+        x_est = x_est + deltax
+        results = np.vstack((results, x_est))
+
+        # get tolerance
+        emax = np.max(np.abs(deltax))
+        count+=1
+        # print(count, emax)
+    return x_est, emax, count, residuals_mat, delta_mat, results, jacobian_matrix
+
 def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_meas, 
         path_to_all_nodes_list, path_to_all_nodes, non_zib_index, Vsq_meas, R_line, 
         X_line, LineData_Z_pu, num_states, num_meas, which, tol = None, 
@@ -24,8 +90,6 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_me
     while emax > tol:
 
         # distflow backward sweep for calculating measurements
-        # i think you are getting the below vals from PF: might be incorrect
-        # should be just getting the vals from jacobian * xest
         hx, full_x_est, P_Load_est, Q_Load_est, V_est, Pline_est, Qline_est = measurements_estimated_from_states(
             x_est, P_line_meas, Vsq_meas, which, non_zib_index, len(P_Load_meas), 
             lossy_volt_est['tot_states'])
@@ -67,70 +131,6 @@ def se_wls_nonlin(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_me
         count+=1
         # print(count)
         # break
-    return x_est, emax, count, residuals_mat, delta_mat, results, jacobian_matrix
-
-def se_wls_nonlin_ass(x_est, z, W, P_line_meas, Q_line_meas, P_Load_state, P_Load_meas, path_to_all_nodes_list,
-           path_to_all_nodes, non_zib_index, Vsq_meas, R_line, X_line, LineData_Z_pu, 
-           num_states, num_meas, tot_state_vars, which, tol = None):
-    ''' Weighted Least Square Estimate with assumptions on losses
-        num_states: state vars being estimated
-        tot_state_vars: state vars being estimated + zib buses
-    '''
-
-    tol = tol if tol is not None else 10e-12 #10e-14
-
-    count = 0
-    delta_mat = np.zeros((num_states, 1000)) # delta in states
-    residuals_mat = np.zeros((num_meas, 1000)) # meas residuals
-    results = x_est
-    emax = 100 # chosen higher than the tol
-    iter_num = 0
-    while emax > tol:
-
-        # to reconstruct the measurement f(x)
-        # distflow backward sweep for calculating measurements
-        if iter_num == 0:
-            jacobian_matrix = np.zeros((num_meas, num_states))
-        hx, _, _, _, _, _, _ = measurements_estimated_from_states(x_est, P_line_meas, 
-                Vsq_meas, which, non_zib_index, len(P_Load_meas), tot_state_vars)
-        # distflow forward sweep for calculating measurements
-
-        # used in jacobian calc
-        P_Load_est = dict(zip(P_Load_state.keys(), x_est[0:len(P_Load_state)]))
-        Q_Load_est = dict(zip(P_Load_state.keys(), x_est[len(P_Load_state):2*len(P_Load_state)]))
-        
-        jacobian_matrix = create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
-                    Vsq_meas, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num,
-                    jacobian_matrix)
-
-        # changes every iter unlike lindist based SE
-        # jacobian changes every iter
-        G = np.matmul(np.matmul(jacobian_matrix.T, W), jacobian_matrix)
-        Ginv = np.linalg.inv(G)
-
-        # calculate h(x)
-        # some of these values should match fro, the above functions
-        # good way to check it
-        # hx = np.matmul(jacobian_matrix, x_est)
-
-        # calculate measurement residuals
-        residuals = z - hx
-        # residuals_mat[:,count] = residuals
-
-        # calculate deltax
-        deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
-        # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
-        # delta_mat[:,count] = deltax
-
-        # get tolerance
-        emax = np.max(np.abs(deltax))
-        # print(emax)
-        # update values of state vars
-        x_est = x_est + deltax
-        results = np.vstack((results, x_est))
-        count+=1
-        # print(count)
-        iter_num+=1
     return x_est, emax, count, residuals_mat, delta_mat, results, jacobian_matrix
 
 def cost(estimates, y, W):

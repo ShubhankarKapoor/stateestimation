@@ -19,7 +19,7 @@ from itertools import combinations
 import seaborn as sns
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
-                       error_calc_refactor, countour_plot, inc_avg
+                       error_calc_refactor, countour_plot, inc_avg, get_index_for_keys_init_stat_var
 import time
 import torch
 import matplotlib.pyplot as plt
@@ -60,15 +60,18 @@ if data_full_ac == 1:
                                                                 P_Load, Q_Load, which)
     Vsq =  {key:val**2 for key, val in V_mag.items()} # square of V_mag
     V = Vsq
-    
+
     # when running full network
     P_line = {key:val.real for key, val in S_line.items()} # resistance of every line
     Q_line = {key:val.imag for key, val in S_line.items()} # reactancce of every line
 
+slack_node = BusNum[0]
+# this is the (0,1) lineflow
+arc_from_slack_node = bus_arcs[slack_node]['from'][0] # make sure there is only one arc from slack node
 # ground truth
 gt_P_load = list(P_Load.values())
 gt_Q_load = list(Q_Load.values())
-gt_V = V[0]
+gt_V = V[slack_node]
 x = np.asarray(gt_P_load + gt_Q_load) # ground truth for states
 x = np.insert(x, len(x), gt_V) # ground truth for states
 
@@ -81,16 +84,7 @@ z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) +
 
 # initialze state vars
 # consider the state vars only for non ZIBs
-P_Load_state = {}
-zib_index, non_zib_index = [], [] # index of zibs and non zibs
-for k,v in P_Load.items():
-    if v != 0:
-        P_Load_state[k] = v
-        non_zib_index.append(k)
-    else:
-        # P_Load_state[k] = v # included to consider all nodes
-        # non_zib_index.append(k) # included to consider all nodes
-        zib_index.append(k)
+zib_index, non_zib_index, zib_keys, non_zib_keys, P_Load_state = get_index_for_keys_init_stat_var(P_Load)
 
 all_index_array = np.asarray(list(P_Load.keys()))
 non_zib_index_array = np.asarray(non_zib_index)
@@ -100,16 +94,16 @@ p_states = np.zeros((len(P_Load_state))) + p_distributed
 
 q_distributed = Q_line[(0,1)]/(len(P_Load_state))
 q_states = np.zeros((len(P_Load_state))) + q_distributed
-v0 = 1 # slack bus
 
 x_est = np.concatenate((p_states, q_states))
-x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 
 # random initialization of state vars instead of above
 torch.manual_seed(0)
 # x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
+v0 = 1 # slack bus
+x_est = np.insert(x_est, len(x_est), v0) #
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
@@ -117,8 +111,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
-num_voltage_meas = 1
+num_plow_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -128,7 +121,9 @@ path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
-num_known = [7, 1, ] # known number of measurements
+# num_known = np.arange(len(non_zib_index))[:0:-1]
+# num_known = np.array((9,8,5,4,3,2,1))
+# num_known = [20, 19, 1] # known number of measurements
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
@@ -143,15 +138,21 @@ ll_la_perc_v, ll_la_perc_p, ll_la_abs_v, ll_la_abs_p = [], [], [], []
 
 # function used to get max vals for each node
 def max_val(A, current_calc_error, non_zib_index):
-    # A prev_max_error for non zib buses
+    '''
+    A: prev_max_error for non zib buses
+    current_calc_error: new error vector
+    non_zib_index: nodes you are in interested in for errors
+    '''
+
     B = current_calc_error[non_zib_index]
     # B = current_calc_error
     A[B>A] = B[B>A]
     return A
 
 def max_val_for_index(A, current_calc_error, non_zib_index, node):
-    ''' returns a flag when a max value is changed for a specific node 
-        doing it for power only
+    ''' 
+    returns a flag when a max value is changed for a specific node 
+    doing it for power only
     '''
     # node is the index number and not the node number
     # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
@@ -162,7 +163,7 @@ def max_val_for_index(A, current_calc_error, non_zib_index, node):
     node26 = A[node] # error val for node 26   
     B = current_calc_error[non_zib_index]
     A[B>A] = B[B>A]
-    
+
     if node26 != A[node]:
         flag = 1
     return A, flag
@@ -214,33 +215,35 @@ heatmap_p_perc_la = np.zeros((len(num_known), len(non_zib_index)))
 ###############################################################################
 
 # all average variables
-avg_perc_v_nofeed, avg_perc_p_nofeed, avg_abs_p_nofeed = 0, 0, 0
-avg_perc_v_vfeed, avg_perc_p_vfeed, avg_abs_p_vfeed = 0, 0, 0
-avg_perc_v_pfeed, avg_perc_p_pfeed, avg_abs_p_pfeed = 0, 0, 0
-avg_perc_v_bothfeed, avg_perc_p_bothfeed, avg_abs_p_bothfeed = 0, 0, 0
-avg_perc_v_la, avg_perc_p_la, avg_abs_p_la = 0, 0, 0
+avg_perc_v_nofeed, avg_perc_p_nofeed, avg_abs_p_nofeed, avg_abs_v_nofeed = 0, 0, 0, 0
+avg_perc_v_vfeed, avg_perc_p_vfeed, avg_abs_p_vfeed, avg_abs_v_vfeed = 0, 0, 0, 0
+avg_perc_v_pfeed, avg_perc_p_pfeed, avg_abs_p_pfeed, avg_abs_v_pfeed = 0, 0, 0, 0
+avg_perc_v_bothfeed, avg_perc_p_bothfeed, avg_abs_p_bothfeed, avg_abs_v_bothfeed = 0, 0, 0, 0
+avg_perc_v_la, avg_perc_p_la, avg_abs_p_la, avg_abs_v_la = 0, 0, 0, 0
 total_counts_v, total_counts_p = 0, 0 # total number of vars for average
 
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
 count = 0 # total number of iters, should be sum of all combs at the end
-
+iters_n0, iters_n1, iters_n2, iters_n, iters_la = 0, 0, 0, 0, 0
+time_n0, time_n1, time_n2, time_nn, time_la = 0, 0, 0, 0, 0
+tot_counts = 0
 for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
     combs = list(combinations(arr,i))
 
-    # stores the max abs voltage error for each node
+    # stores the max perc voltage and power error for each node
+    volt_max_perc_nofeed, p_max_perc_nofeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
+    # stores the max abs voltage and power error for each node
     volt_max_abs_nofeed, p_max_abs_nofeed = np.zeros((len(P_Load))),  np.zeros((len(non_zib_index)))
-    volt_max_perc_nofeed = np.zeros((len(P_Load)))
-    p_max_perc_nofeed = np.zeros((len(non_zib_index)))
 
     volt_max_perc_vfeed, p_max_perc_vfeed, volt_max_abs_vfeed, p_max_abs_vfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
 
     volt_max_perc_pfeed, p_max_perc_pfeed, volt_max_abs_pfeed, p_max_abs_pfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
 
     volt_max_perc_bothfeed, p_max_perc_bothfeed, volt_max_abs_bothfeed, p_max_abs_bothfeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
-    
+
     volt_max_perc_la, p_max_perc_la, volt_max_abs_la, p_max_abs_la = np.zeros((len(P_Load))), np.zeros((len(non_zib_index))), np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
-    # to hold all eroors for all combinations for a fixed num of missing meass 
+    # to hold all eroors for all combinations for a fixed num of missing meass
     l_no_feed_perc_v, l_no_feed_perc_p, l_no_feed_abs_v, l_no_feed_abs_p = [], [], [], []
     l_v_feed_perc_v, l_v_feed_perc_p, l_v_feed_abs_v, l_v_feed_abs_p = [], [], [], []
     l_p_feed_perc_v, l_p_feed_perc_p, l_p_feed_abs_v, l_p_feed_abs_p = [], [], [], []
@@ -250,6 +253,8 @@ for row, i in enumerate(num_known):
     # different combs for known number of meas
     for indices in combs:
         count+=1
+        if count%10 == 0:
+            print(count)        
         indices = np.asarray(indices)
         # see the known meas
         if len(indices) !=0:
@@ -275,9 +280,9 @@ for row, i in enumerate(num_known):
         # static weights but different for pseudo and known measurements
         w1 = 1 # weight value for pflow, qflow
         w21 = 1 # known measurements for p,q at buses
-        w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
+        w22 = 100000 #1000000 # pseudo measurements for p,q at buses
         w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
-        print(w1, w21, w22, w3)
+        # print(w1, w21, w22, w3)
 
         weight_array1 = np.ones((len(meas_P_line)*2))*w1 # for pline and qline
         weight_array2 = np.ones((len(meas_P_load)))
@@ -290,8 +295,8 @@ for row, i in enumerate(num_known):
         W = np.diag(weight_array) # Weight mat
         W = np.linalg.inv(W)
 
-        jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-                                          meas_V, R_line, X_line, len(x_est), len(z))
+        # jacobian_matrix = create_jacobian(meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+        #                                   meas_V, R_line, X_line, len(x_est), len(z))
 
         # GN-WLS
         lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
@@ -299,16 +304,23 @@ for row, i in enumerate(num_known):
                           'plines':meas_P_line.keys()}
 
         # to include non linear voltage feedback and pflow/qflow
+        print('GN-WLS based on linear jacobian with no feedback') 
         loss, pflow = 0, 0
         # LinDist
-        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        start = time.time()
+        x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        end = time.time()
+        tot_time = end-start
+        time_n0+= tot_time
         # costsn = cost(x_estn, jacobian_matrix, z, W)
-        print('GN-WLS based on linear jacobian with no feedback/ feedback') 
-        perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+        iters_n0+=countsn0
+        perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_nofeed = inc_avg(avg_perc_v_nofeed, total_counts_v, perc_v_nofeed)
+        avg_abs_v_nofeed = inc_avg(avg_abs_v_nofeed, total_counts_v, abs_v_nofeed)
         avg_perc_p_nofeed = inc_avg(avg_perc_p_nofeed, total_counts_p, perc_p_nofeed[non_zib_index])
         avg_abs_p_nofeed = inc_avg(avg_abs_p_nofeed, total_counts_p, abs_p_nofeed[non_zib_index])
         # uncomment below to store all errors
@@ -324,17 +336,23 @@ for row, i in enumerate(num_known):
         volt_max_abs_nofeed = max_val(volt_max_abs_nofeed, abs_v_nofeed, all_index_array)
         p_max_abs_nofeed = max_val(p_max_abs_nofeed, abs_p_nofeed, non_zib_index)
         #######################################################################
-
+        print('GN-WLS based on linear jacobian with V feedback')
         loss, pflow = 1, 0
         # LinDist + Voltage Feedback
-        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        start = time.time()
+        x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn, _ = se_wls(
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        end = time.time()
+        tot_time = end-start
+        time_n1+= tot_time
         # costsn = cost(x_estn, jacobian_matrix, z, W)
-        print('GN-WLS based on linear jacobian with no feedback/ feedback')
-        perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+        iters_n1+=countsn1
+        perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_vfeed = inc_avg(avg_perc_v_vfeed, total_counts_v, perc_v_vfeed)
+        avg_abs_v_vfeed = inc_avg(avg_abs_v_vfeed, total_counts_v, abs_v_vfeed)
         avg_perc_p_vfeed = inc_avg(avg_perc_p_vfeed, total_counts_p, perc_p_vfeed[non_zib_index])
         avg_abs_p_vfeed = inc_avg(avg_abs_p_vfeed, total_counts_p, abs_p_vfeed[non_zib_index])        
         # uncomment below to store all errors        
@@ -346,17 +364,23 @@ for row, i in enumerate(num_known):
         volt_max_abs_vfeed = max_val(volt_max_abs_vfeed, abs_v_vfeed, all_index_array)
         p_max_abs_vfeed = max_val(p_max_abs_vfeed, abs_p_vfeed, non_zib_index)
         #######################################################################
-
+        print('GN-WLS based on linear jacobian with P feedback')
         loss, pflow = 0, 1
         # LinDist + Pflow Feedback
-        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        start = time.time()
+        x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn, _ = se_wls(
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        end = time.time()
+        tot_time = end-start
+        time_n2+= tot_time        
         # costsn = cost(x_estn, jacobian_matrix, z, W)
-        print('GN-WLS based on linear jacobian with no feedback/ feedback')
-        perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+        iters_n2+=countsn2
+        perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_pfeed = inc_avg(avg_perc_v_pfeed, total_counts_v, perc_v_pfeed)
+        avg_abs_v_pfeed = inc_avg(avg_abs_v_pfeed, total_counts_v, abs_v_pfeed)
         avg_perc_p_pfeed = inc_avg(avg_perc_p_pfeed, total_counts_p, perc_p_pfeed[non_zib_index])
         avg_abs_p_pfeed = inc_avg(avg_abs_p_pfeed, total_counts_p, abs_p_pfeed[non_zib_index])           
         # uncomment below to store all errors        
@@ -368,17 +392,23 @@ for row, i in enumerate(num_known):
         volt_max_abs_pfeed = max_val(volt_max_abs_pfeed, abs_v_pfeed, all_index_array)
         p_max_abs_pfeed = max_val(p_max_abs_pfeed, abs_p_pfeed, non_zib_index)
         #######################################################################
-
+        print('GN-WLS based on linear jacobian with both feedback')
         loss, pflow = 1, 1
         # LinDist + Voltage & Pflow Feedback
-        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-            x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-        # costsn = cost(x_estn, jacobian_matrix, z, W)   
-        print('GN-WLS based on linear jacobian with no feedback/ feedback')
+        start = time.time()
+        x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn, _ = se_wls(
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+        end = time.time()
+        tot_time = end-start
+        time_nn+= tot_time                
+        # costsn = cost(x_estn, jacobian_matrix, z, W)
+        iters_n+=countsn
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
         # average of all elements
         avg_perc_v_bothfeed = inc_avg(avg_perc_v_bothfeed, total_counts_v, perc_v_n)
+        avg_abs_v_bothfeed = inc_avg(avg_abs_v_bothfeed, total_counts_v, abs_v_n)
         avg_perc_p_bothfeed = inc_avg(avg_perc_p_bothfeed, total_counts_p, perc_p_n[non_zib_index])
         avg_abs_p_bothfeed = inc_avg(avg_abs_p_bothfeed, total_counts_p, abs_p_n[non_zib_index])   
         # uncomment below to store all errors        
@@ -391,18 +421,23 @@ for row, i in enumerate(num_known):
         p_max_abs_bothfeed = max_val(p_max_abs_bothfeed, abs_p_n, non_zib_index)
 
         #######################################################################
-        print('Implementing loss based with a few assumptions')
-        x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
-            x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
-            path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
-            X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
-
-        #######################################################################
+        # print('Implementing loss based with a few assumptions')
         print('GN-WLS based on non-linear with ass')
+        start = time.time()        
+        x_est_la, emax_la, counts_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
+            x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes, 
+            non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, 
+            len(x_est), len(z), len(x), which)
+        end = time.time()
+        tot_time = end-start
+        time_la+= tot_time                
+        iters_la+=counts_la
+        #######################################################################
         perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
         # average of all elements
         avg_perc_v_la = inc_avg(avg_perc_v_la, total_counts_v, perc_v_la)
+        avg_abs_v_la = inc_avg(avg_abs_v_la, total_counts_v, abs_v_la)
         avg_perc_p_la = inc_avg(avg_perc_p_la, total_counts_p, perc_p_la[non_zib_index])
         avg_abs_p_la = inc_avg(avg_abs_p_la, total_counts_p, abs_p_la[non_zib_index]) 
         # uncomment below to store all errors
@@ -419,6 +454,8 @@ for row, i in enumerate(num_known):
         total_counts_v+= len(perc_v_nofeed) # count * len(perc_v_nofeed)
         total_counts_p+= len(perc_p_nofeed[non_zib_index])
     # node_26_error_for_diff_known_meas.append(max_node_26_error) # append indices
+    print(iters_n, iters_la)
+    tot_counts+= len(combs)
     # insert the values for heatmap
     heatmap_volt_abs_no_feed[row,:] = volt_max_abs_nofeed * Vbase
     heatmap_p_abs_no_feed[row,:] = p_max_abs_nofeed * Sbase
@@ -566,6 +603,7 @@ plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 # fig3.delaxes(axn3[2][1])
 # fig3.tight_layout()
 
+'''
 # plot heatmap with different colorbar values
 fig0, axn0 = plt.subplots(5, 1, sharex=True, sharey=True)
 # cbar_ax = fig0.add_axes([.91, .3, .03, .4])
@@ -581,6 +619,7 @@ plt.subplot(5, 1,5)
 plot_heatmap(heatmap_volt_abs_la)
 # fig0.delaxes(axn0[2][1])
 # fig0.tight_layout()
+'''
 
 ########################## plot p abs error ###########################
 vmin = min(heatmap_p_abs_no_feed.min(), heatmap_p_abs_v_feed.min(), heatmap_p_abs_p_feed.min(), heatmap_p_abs_both_feed.min(), heatmap_p_abs_la.min())

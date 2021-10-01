@@ -12,10 +12,10 @@ from itertools import combinations
 import seaborn, time
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
-                       error_calc_refactor, countour_plot
+                       error_calc_refactor, countour_plot, get_index_for_keys_init_stat_var
 import torch
 import matplotlib.pyplot as plt
-which = 37 # IEEE 37-node or IEEE 906-node or ausnet
+which = 906 # IEEE 37-node or IEEE 906-node or ausnet
 
 if which == 37:
     from Network37 import *
@@ -70,36 +70,38 @@ z_true = np.asarray(list(P_line.values()) + list(Q_line.values()) +
 ##############################################################################
 ##############################################################################
 
+# initialze state vars and get diff indexes & keys
+zib_index, non_zib_index, zib_keys, non_zib_keys, P_Load_state = get_index_for_keys_init_stat_var(P_Load)
 # initialze state vars
 # consider the state vars only for non ZIBs
-P_Load_state = {}
-zib_index, non_zib_index = [], [] # index of zibs and non zibs
-for k,v in P_Load.items():
-    if v != 0:
-        P_Load_state[k] = v
-        non_zib_index.append(k)
-    else:
-        # P_Load_state[k] = v # included to consider all nodes
-        # non_zib_index.append(k) # included to consider all nodes
-        zib_index.append(k)
+# P_Load_state = {}
+# zib_index, non_zib_index = [], [] # index of zibs and non zibs
+# for k,v in P_Load.items():
+#     if v != 0:
+#         P_Load_state[k] = v
+#         non_zib_index.append(k)
+#     else:
+#         # P_Load_state[k] = v # included to consider all nodes
+#         # non_zib_index.append(k) # included to consider all nodes
+#         zib_index.append(k)
 
 non_zib_index_array = np.asarray(non_zib_index)
 # remove p0 = 0 and the rest have values equally divided from p_ij
-p_distributed = P_line[(0,1)]/(len(P_Load_state))
+p_distributed = P_line[arc_from_slack_node]/(len(P_Load_state))
 p_states = np.zeros((len(P_Load_state))) + p_distributed
 
-q_distributed = Q_line[(0,1)]/(len(P_Load_state))
+q_distributed = Q_line[arc_from_slack_node]/(len(P_Load_state))
 q_states = np.zeros((len(P_Load_state))) + q_distributed
-v0 = 1 # slack bus
 
 x_est = np.concatenate((p_states, q_states))
-x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 
 # random initialization of state vars instead of above
 torch.manual_seed(0)
 x_est = torch.rand(len(x_est)).double() # so that the initial condn is same as pytorch
-x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
+# x_est = torch.ones(len(x_est)).double() # so that the initial condn is same as pytorch
 x_est =  x_est.detach().cpu().numpy()
+v0 = 1 # slack bus
+x_est = np.insert(x_est, len(x_est), v0) # initialized state vars
 
 x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load)]))
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
@@ -108,18 +110,18 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 
 # get subset of lineflow measurement set
 num_plow_meas = 1 # 1
-num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 5
+i = 20 # number of known measurements
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
 indices = np.asarray(combs[5])
+# indices = np.asarray([0, 2, 4, 5, 6, 7, 8])
 # ----->>> full loss based system works most of the cases.
 # ----->>> might be a small bug in code or jacobian calc. worth checking
 # ----->>> an example when i = 8,  combs=5
@@ -140,7 +142,7 @@ indices = np.asarray(combs[5])
 
 # see the known meas
 if len(indices) !=0:
-    corresponding_nodes = non_zib_index_array[indices]
+    corresponding_nodes = non_zib_index_array[indices] #maybe keys instead?
 else:
     corresponding_nodes = np.asarray(())
 # unknown buses
@@ -148,11 +150,11 @@ not_considered = np.setdiff1d(non_zib_index_array, corresponding_nodes)
 not_considered_indices = np.setdiff1d(arr, indices)
 
 P_known_meas, P_pseudo_meas, Q_known_meas, Q_pseudo_meas, meas_V =  bus_measurements_equal_distribution(
-    P_Load, Q_Load, V, P_line[(0,1)], Q_line[(0,1)], 
+    P_Load, Q_Load, V, P_line[arc_from_slack_node], Q_line[arc_from_slack_node], 
     non_zib_index, zib_index, num_known_meas=len(indices), indices = indices)    
 
 meas_P_load = {**P_known_meas, **P_pseudo_meas}
-meas_P_load = dict(sorted(meas_P_load.items()))
+meas_P_load = dict(sorted(meas_P_load.items())) # how would it work if a higher node number is upstream of a lower node number
 meas_Q_load = {**Q_known_meas, **Q_pseudo_meas}
 meas_Q_load = dict(sorted(meas_Q_load.items()))
 # meas_V = {key: V[key] for key in not_considered}
@@ -163,14 +165,13 @@ meas_Q_load = dict(sorted(meas_Q_load.items()))
 z = np.asarray(list(meas_P_line.values()) + list(meas_Q_line.values()) + 
                list(meas_P_load.values()) + list(meas_Q_load.values()) + list(meas_V.values())) # meas set
 
-# noise addition
-sd = 0 # 0.01: 1% error
-z = noise_addition(z, sd)
-
+# maybe have a func for it
 # static weights but different for pseudo and known measurements
+# these are the variances here, and the weights are their inverse
+# inversed later
 w1 = 1 # weight value for pflow, qflow
 w21 = 1 # known measurements for p,q at buses
-w22 = 1000000 #100000000000 # pseudo measurements for p,q at buses
+w22 = 100000 #1000000 # pseudo measurements for p,q at buses
 w3 = 0.1 # weight for voltage value; use 0.1 for grad descent & 0.0001 for WLS
 print(w1, w21, w22, w3)
 
@@ -182,6 +183,7 @@ weight_array2 = np.concatenate((weight_array2, weight_array2)) # for p and q bus
 weight_array3 = np.ones((len(meas_V)))*w3 # for v mag
 weight_array = np.concatenate((weight_array1, weight_array2,weight_array3)) # entire weight vector
 
+# rather than below, just iverse the values of the matrix?
 W = np.diag(weight_array) # Weight mat
 W = np.linalg.inv(W)
 
@@ -216,12 +218,13 @@ lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index,
 ###############################################################################
 # no feedback case
 # constant jacobian in this case
+print('GN-WLS based on linear jacobian with no feedback/ feedback')
 loss, pflow = 0, 0
 # LinDist
-x_estn0, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
+    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
-print('GN-WLS based on linear jacobian with no feedback/ feedback')
 _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
 # print(x_estn)
@@ -229,32 +232,38 @@ _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est
 ###############################################################################
 # LinDist + Voltage Feedback
 # constant jacobian in this case
+print('GN-WLS based on linear jacobian with V feedback')
 loss, pflow = 1, 0
-x_estn1, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn, _ = se_wls(
+    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
-print('GN-WLS based on linear jacobian with no feedback/ feedback')
 _,_,_,p3error2 = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+                        which, V, V_mag, loss = 1, pflow = 1) # for WLS
 # print(x_estn)
 ###############################################################################
 # LinDist + Pflow Feedback
 # constant jacobian in this case
+print('GN-WLS based on linear jacobian with P feedback')
 loss, pflow = 0, 1
-x_estn2, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn, _ = se_wls(
+    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
-print('GN-WLS based on linear jacobian with no feedback/ feedback')
 _,_,_,p3error3 = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+                        which, V, V_mag, loss = 1, pflow = 1) # for WLS
 # print(x_estn)
 ###############################################################################
 # LinDist + Voltage & Pflow Feedback
 # constant jacobian in this case
+print('GN-WLS based on linear jacobian with both feedback')
 loss, pflow = 1, 1
-x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn = se_wls(
-    x_est, z, jacobian_matrix, W, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn, _ = se_wls(
+    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
+perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = 1, pflow = 1) # for WLS
 ##############################################################################
 sum_residuals = np.sum(abs(residuals_mat[:,countsn-1]))
 results = results.T
@@ -272,9 +281,13 @@ results = results.T
 ###############################################################################
 print('Implementing loss based with a few assumptions')
 x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
-    x_est, z, W, meas_P_line, meas_Q_line, P_Load_state, meas_P_load, 
-    path_to_all_nodes_list, path_to_all_nodes, non_zib_index, meas_V, R_line, 
+    x_est, z, W, meas_P_line,  P_Load_state, meas_P_load, path_to_all_nodes, 
+    non_zib_index, meas_V, R_line, 
     X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+###############################################################################
+print('GN-WLS based on non-linear with ass')
+perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                        which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
 ###############################################################################
 ###############################################################################
 costs_lagd, tot_iters_la = [], 0
@@ -341,12 +354,6 @@ lr, iterations, = 0.1, 300 # Learning Rate and Number of iterations
 # Error Calculations with reconstructing meas
 
 # the following function is used when the states are non zib buses
-print('GN-WLS based on linear jacobian with no feedback/ feedback')
-perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-print('GN-WLS based on non-linear with ass')
-perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
 # print('GN-WLS based on non-linear jacobian')
 # error_calc_refactor(x, x_estloss, non_zib_index, len(P_Load), est_lin, est_full_ac, 
 #                         which, V, V_mag, loss = 1, pflow = 1) # non linear GN WLS
