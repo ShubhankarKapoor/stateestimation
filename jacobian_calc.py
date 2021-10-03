@@ -383,7 +383,7 @@ def grad_vnode_with_v0(v_meas):
 ###############################################################################
 ###############################################################################
 
-def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
+def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
                     Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num,
                     jacobian_matrix_la, R_mat, X_mat, Z_mat, x_est):
     ''' creates jacobian while considering losses and some assumptions'''
@@ -393,7 +393,9 @@ def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est,
     # grad for pline_p, pline_q, qline_p, qline_q
     # this changes every iteration
     grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass(
-        P_line_meas, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)
+        meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)
+    # grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass_updated(
+    #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)    
     meas_rows = grad_array_pline_p.shape[0]
     state_cols = grad_array_pline_p.shape[1]
     # for pflow
@@ -441,7 +443,7 @@ def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est,
     # gradient for pflow/ qflow with v0^2
     # this changes every iteration
     grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass(
-        P_line_meas, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
+        meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
     meas_rows = grad_array_pline_vnode.shape[0]
 
     # for pflow
@@ -466,14 +468,14 @@ def create_loss_jacobian_ass(P_line_meas, P_Load_state, P_Load_meas, P_Load_est,
 
     return jacobian_matrix_la, R_mat, X_mat, Z_mat
 
-def grad_pline_with_p_loss_ass(P_line_meas, P_Load_state, path_to_all_nodes, R_line, X_line, V0, P_Load_est, Q_Load_est):
+def grad_pline_with_p_loss_ass(meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, V0, P_Load_est, Q_Load_est):
 
-    grad_array_pline_p = np.zeros((len(P_line_meas), len(P_Load_state))) # meas*states
-    grad_array_pline_q = np.zeros((len(P_line_meas), len(P_Load_state))) # meas*states
-    grad_array_qline_p = np.zeros((len(P_line_meas), len(P_Load_state))) # meas*states
-    grad_array_qline_q = np.zeros((len(P_line_meas), len(P_Load_state))) # meas*states
+    grad_array_pline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+    grad_array_pline_q = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+    grad_array_qline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+    grad_array_qline_q = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
 
-    for i , (k,v) in enumerate(P_line_meas.items()): # iterate over measurements line
+    for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
         # print(i,k)
         sum_p, sum_q = 0, 0 # sum of p and q downstream to that line
         idx = np.asarray(()) # indices where the nodes contribute to pflow/ qflow
@@ -493,6 +495,42 @@ def grad_pline_with_p_loss_ass(P_line_meas, P_Load_state, path_to_all_nodes, R_l
         grad_array_pline_q[i, idx.astype(int)] = grad_pline_with_q
         grad_array_qline_p[i, idx.astype(int)] = grad_qline_with_p
         grad_array_qline_q[i, idx.astype(int)] = grad_qline_with_q
+
+    return grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q
+
+def grad_pline_with_p_loss_ass_updated(meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, V0, P_Load_est, Q_Load_est):
+
+    grad_array_pline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+    grad_array_pline_q = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+    grad_array_qline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+    grad_array_qline_q = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+
+    for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
+        # print(i,k)
+        sum_p, sum_q = 0, 0 # sum of p and q downstream to that line
+        idx = np.asarray(()) # indices where the nodes contribute to pflow/ qflow
+        for j, node_a in enumerate(P_Load_state.keys()): # iterate over states node
+            # print(j, node_a)
+            if k in path_to_all_nodes[node_a]: # if node is downstream
+                for _, node_k in enumerate(P_Load_state.keys()): # iterate over states node
+                    common_path = path_to_all_nodes[node_a].intersection(path_to_all_nodes[node_k])
+                    sum_R = sum(R_line[item] for item in common_path)
+                    sum_X = sum(X_line[item] for item in common_path)
+                    temp_sum_p = P_Load_est[node_k] * sum_R
+                    temp_sum_q = P_Load_est[node_k] * sum_X
+                sum_p+=temp_sum_p
+                sum_q+=temp_sum_q
+                idx = np.append(idx, j)
+                # print(i, k, node)
+            # grad_array_pline_p[i, j] = 1 
+            # grad_array_pline_q[i, j] = 2
+            # grad_array_qline_p[i, j] = 2
+            # grad_array_qline_q[i, j] = 1
+            # print(j)
+            grad_array_pline_p[i, j] = 1 + 2 * sum_p/V0
+            grad_array_pline_q[i, j] = 2 * sum_q/V0
+            grad_array_qline_p[i, j] = 2 * sum_p/V0
+            grad_array_qline_q[i, j] = 1 + 2 * sum_q/V0
 
     return grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q
 
@@ -575,13 +613,13 @@ def grad_vnode_with_p_loss_ass_new(meas_V, P_Load_state, path_to_all_nodes,
     grad_array_v_q = -2*X_mat - 2/V0*(Z_hat_q) # vnode_with_q
     return grad_array_v_p, grad_array_v_q
 
-def grad_pline_with_vnode_loss_ass(P_line_meas, P_Load_state, path_to_all_nodes, 
+def grad_pline_with_vnode_loss_ass(meas_P_line, P_Load_state, path_to_all_nodes, 
                                    R_line, X_line, P_Load_est, Q_Load_est, V0):
     ''' V0 is sq of voltage at slack bus '''
-    grad_array_pline_vnode = np.zeros((len(P_line_meas))) # meas*states
-    grad_array_qline_vnode = np.zeros((len(P_line_meas))) # meas*states
+    grad_array_pline_vnode = np.zeros((len(meas_P_line))) # meas*states
+    grad_array_qline_vnode = np.zeros((len(meas_P_line))) # meas*states
 
-    for i , (k,v) in enumerate(P_line_meas.items()): # iterate over measurements line
+    for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
         # print(i,k)
         sum_p, sum_q = 0, 0 # sum of p and q contributing to pflow/ qflow
         idx = np.asarray(()) # indices where the nodes contribute to pflow/ qflow
