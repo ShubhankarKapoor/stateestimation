@@ -392,10 +392,10 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     
     # grad for pline_p, pline_q, qline_p, qline_q
     # this changes every iteration
-    grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass(
-        meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)
-    # grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass_updated(
-    #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)    
+    # grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass(
+    #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)
+    grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass_updated(
+        meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)    
     meas_rows = grad_array_pline_p.shape[0]
     state_cols = grad_array_pline_p.shape[1]
     # for pflow
@@ -616,6 +616,29 @@ def grad_vnode_with_p_loss_ass_new(meas_V, P_Load_state, path_to_all_nodes,
 def grad_pline_with_vnode_loss_ass(meas_P_line, P_Load_state, path_to_all_nodes, 
                                    R_line, X_line, P_Load_est, Q_Load_est, V0):
     ''' V0 is sq of voltage at slack bus '''
+    grad_array_pline_vnode = np.zeros((len(meas_P_line))) # meas*states
+    grad_array_qline_vnode = np.zeros((len(meas_P_line))) # meas*states
+
+    for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
+        # print(i,k)
+        sum_p, sum_q = 0, 0 # sum of p and q contributing to pflow/ qflow
+        idx = np.asarray(()) # indices where the nodes contribute to pflow/ qflow
+        for j, node in enumerate(P_Load_state.keys()): # iterate over states node
+            # print(j, node)
+            if k in path_to_all_nodes[node]:
+                sum_p+=P_Load_est[node] # sum of nodes downstream of branch k
+                sum_q+=Q_Load_est[node]
+                # print(i, k, node)
+        # print(sum_p, sum_q)
+        grad_array_pline_vnode[i] = -R_line[k]/(V0**2) * (sum_p**2 + sum_q**2)
+        grad_array_qline_vnode[i] = -X_line[k]/(V0**2) * (sum_p**2 + sum_q**2)
+
+    return grad_array_pline_vnode, grad_array_qline_vnode
+
+def grad_pline_with_vnode_loss_ass_updated(meas_P_line, P_Load_state, path_to_all_nodes, 
+                                   R_line, X_line, P_Load_est, Q_Load_est, V0):
+    ''' V0 is sq of voltage at slack bus '''
+    # use grad_vnode_with_v0_loss_ass_new to generate combs of nodes
     grad_array_pline_vnode = np.zeros((len(meas_P_line))) # meas*states
     grad_array_qline_vnode = np.zeros((len(meas_P_line))) # meas*states
 
