@@ -544,6 +544,7 @@ def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineD
         np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
     a = 0
     for i, node_i in enumerate(meas_V.keys()): # meas node
+        path_to_node_i = path_to_all_nodes[node_i]
         for j, node_j in enumerate(P_Load_state.keys()): # state node
             # print(node_i, node_j)
             common_lines = path_to_all_nodes[node_i].intersection(path_to_all_nodes[node_j])
@@ -557,7 +558,32 @@ def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineD
                 # break
             #     sumzsq_p = sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
                 Z_mat[a, k] = sum((abs(LineData_Z_pu[item])**2) for item in common_path)
-            a+=1    
+            a+=1
+
+    a = 0
+    additional_mat_r = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
+    additional_mat_x = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
+    for i, node_i in enumerate(meas_V.keys()): # meas node
+        path_to_node_i = path_to_all_nodes[node_i]
+        for path in path_to_node_i: # each line param to node_i, r_ij
+            for j, node_j in enumerate(P_Load_state.keys()): # state node, p_a
+                # print(path)
+                for k, node_k in enumerate(P_Load_state): # p_n', for sum of resistance and reactance with each power term, see formula
+                    # if node is downstream of ij and not node j
+                    if path in path_to_all_nodes[node_k] and node_k!=path[1]:
+                        common_path = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+                        R_hat = sum(R_line[item] for item in common_path)
+                        X_hat = sum(X_line[item] for item in common_path)
+                        temp_term_r = R_line[path] * R_hat
+                        temp_term_x = X_line[path] * X_hat
+                        additional_mat_r[a][k] += temp_term_r
+                        additional_mat_x[a][k] += temp_term_x
+                    # print(a,k)
+                # if first_path_run == 0:
+                a=i*len(P_Load_state)+j
+                # print(i, j, a)
+        # break
+
     return R_mat, X_mat, Z_mat
 
 def grad_vnode_with_p_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, Z_line, P_Load_est, Q_Load_est, V0):
@@ -571,6 +597,52 @@ def grad_vnode_with_p_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, 
             grad_array_v_p[i][j] = -(sum(R_line[item] for item in common_lines)) * 2
             grad_array_v_q[i][j] = -(sum(X_line[item] for item in common_lines)) * 2
             sumzsq_p, sumzsq_q = 0, 0
+            f+=1
+            # vv = []
+            for k, node_k in enumerate(P_Load_state): # for sum of sq of impedance with each power term, see formula
+                # print(node_i, node_j, node_k)
+                common_path = common_lines.intersection(path_to_all_nodes[node_k])
+                ##
+                # sum_of_com_path = sum(abs(Z_line[item])**2 for item in common_path)
+                # sumzsq_p_temp = sum_of_com_path*P_Load_est[node_k]
+                # sumzsq_p+=sumzsq_p_temp
+                ## more compact form below
+                sumzsq_p += sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
+                sumzsq_q += sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
+                # vv.append(sumzsq_p)
+                # sumzsq_p = sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
+                # sumzsq_q = sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
+                # sumzsq_p = 2*sumzsq_p/V0
+                # sumzsq_q = 2*sumzsq_q/V0
+                ######
+                # temp_sumsq = sum((abs(Z_line[item])**2) for item in common_path)
+                # temp_sumsq= temp_sumsq * (P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
+                # sumzsq_pcomb+= temp_sumsq                
+                # if k in path_to_all_nodes[node_a]: # if node is downstream
+            # print(sumzsq_q)
+            sumzsq_p = -2*sumzsq_p/V0
+            sumzsq_q = -2*sumzsq_q/V0
+            grad_array_v_p[i][j] += sumzsq_p
+            grad_array_v_q[i][j] += sumzsq_q
+        #     if f == 20:
+        #         break
+        # if f == 20:
+        #     break
+    return grad_array_v_p, grad_array_v_q
+
+def grad_vnode_with_p_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, Z_line, P_Load_est, Q_Load_est, V0):
+    grad_array_v_p = np.zeros((len(meas_V), len(P_Load_state))) # vnode_with_p
+    grad_array_v_q = np.zeros((len(meas_V), len(P_Load_state))) # vnode_with_q
+    f = 0
+    for i, node_i in enumerate(meas_V.keys()): # meas node
+        path_node_i = path_to_all_nodes[node_i]
+        for j, node_j in enumerate(P_Load_state.keys()): # state node
+            # print(node_i, node_j)
+            common_lines = path_to_all_nodes[node_i].intersection(path_to_all_nodes[node_j])
+            grad_array_v_p[i][j] = -(sum(R_line[item] for item in common_lines)) * 2
+            grad_array_v_q[i][j] = -(sum(X_line[item] for item in common_lines)) * 2
+            sumzsq_p, sumzsq_q = 0, 0
+            additional_p_term, additional_q_term = 0, 0 
             f+=1
             # vv = []
             for k, node_k in enumerate(P_Load_state): # for sum of sq of impedance with each power term, see formula

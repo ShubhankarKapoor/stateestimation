@@ -20,7 +20,7 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
     residuals_mat = np.zeros((num_meas, 1000)) # meas residuals
     results = x_est
     emax = 100 # chosen higher than the tol
-    while emax > tol and count < 300:
+    while emax > tol:
 
         if count == 0:
             jacobian_matrix = np.zeros((num_meas, num_states)) # initialize jacobian with zeros
