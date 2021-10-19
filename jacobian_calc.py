@@ -385,7 +385,8 @@ def grad_vnode_with_v0(v_meas):
 
 def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
                     Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num,
-                    jacobian_matrix_la, R_mat, X_mat, Z_mat, x_est):
+                    jacobian_matrix_la, R_mat, X_mat, Z_mat, 
+                    additional_mat_r, additional_mat_x, x_est):
     ''' creates jacobian while considering losses and some assumptions'''
 
     # jacobian_matrix_la = np.zeros((num_meas, num_states)) # jacobian with loss assumption
@@ -423,16 +424,19 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
         last_row_inserted += meas_rows
 
         # get R_mat, X_mat, Z_mat: only needs to be calculated once
-        R_mat, X_mat, Z_mat = get_r_x_z_mat(Vsq_mes, P_Load_state, path_to_all_nodes, 
-                                            R_line, X_line, LineData_Z_pu)
+        R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(Vsq_mes, 
+                                P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
     else:
         last_row_inserted+= len(P_Load_meas)*2
     # gradient for vnode^2 with p and q
     # this changes every iteration
     # grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass(Vsq_mes, P_Load_state, path_to_all_nodes, 
     #                                 R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
-    grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass_new(Vsq_mes, P_Load_state, path_to_all_nodes, 
-                                    R_mat, X_mat, Z_mat, x_est, P_Load_est, Q_Load_est, Vsq_mes[0])
+    # grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass_new(Vsq_mes, P_Load_state, path_to_all_nodes, 
+    #                                 R_mat, X_mat, Z_mat, x_est, P_Load_est, Q_Load_est, Vsq_mes[0])
+    grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass_updated(Vsq_mes, P_Load_state, path_to_all_nodes, 
+                       R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x, 
+                           x_est, P_Load_est, Q_Load_est, Vsq_mes[0])
     meas_rows = grad_array_v_p.shape[0]
     state_cols = grad_array_v_p.shape[1]
     # for vsq with p
@@ -468,7 +472,7 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     meas_rows = grad_array_vnode_v.shape[0]
     jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols] = grad_array_vnode_v
 
-    return jacobian_matrix_la, R_mat, X_mat, Z_mat
+    return jacobian_matrix_la, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x
 
 def grad_pline_with_p_loss_ass(meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, V0, P_Load_est, Q_Load_est):
 
@@ -574,6 +578,9 @@ def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineD
                     # if node is downstream of ij and not node j
                     if path in path_to_all_nodes[node_k] and node_k!=path[1]:
                         common_path = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+                        # only consider the nodes downstream of ij
+                        common_path = common_path-path_to_all_nodes[path[1]]
+                        
                         R_hat = sum(R_line[item] for item in common_path)
                         X_hat = sum(X_line[item] for item in common_path)
                         temp_term_r = R_line[path] * R_hat
@@ -583,10 +590,10 @@ def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineD
                     # print(a,k)
                 # if first_path_run == 0:
                 # a=i*len(P_Load_state)+j
-                print(i, j, a)
+                # print(i, j, a)
         # break
 
-    return R_mat, X_mat, Z_mat
+    return R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x
 
 def grad_vnode_with_p_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, Z_line, P_Load_est, Q_Load_est, V0):
     grad_array_v_p = np.zeros((len(meas_V), len(P_Load_state))) # vnode_with_p
@@ -633,7 +640,7 @@ def grad_vnode_with_p_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, 
     return grad_array_v_p, grad_array_v_q
 
 def grad_vnode_with_p_loss_ass_new(meas_V, P_Load_state, path_to_all_nodes, 
-                                   R_mat, X_mat, Z_mat, x_est,  P_Load_est, Q_Load_est, V0):
+                                   R_mat, X_mat, Z_mat, x_est, P_Load_est, Q_Load_est, V0):
     Z_hat_p = np.matmul(Z_mat,x_est[0:len(P_Load_state)])
     # Z_hat_p = np.matmul(Z_mat,np.asarray(list(P_Load_est.values())))
     Z_hat_p = Z_hat_p.reshape(len(meas_V), len(P_Load_state))
@@ -813,5 +820,59 @@ def grad_vnode_with_v0_loss_ass_new(meas_V, P_Load_state, path_to_all_nodes,
                 double_term+=double_term_temp
 
         grad_array_vnode_v[i] = 1 +  (1/(V0**2)) * (sq_term + double_term)
+
+    return grad_array_vnode_v
+
+def grad_vnode_with_v0_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, Z_line, P_Load_est, Q_Load_est, V0):
+    grad_array_vnode_v = np.zeros((len(meas_V))) # vnode_with_p
+
+    # get combs of elements
+    elems = list(P_Load_state.keys())
+    elems_comb = [] # all elements in square of p and q
+    for i,elema  in enumerate(elems):
+        for j, elemb in enumerate(elems):
+            if j>=i:
+                elems_comb.append((elema,elemb))
+
+    for i, node_i in enumerate(meas_V.keys()): # meas node
+
+        sq_term, double_term = 0, 0
+        for (node_j, node_k) in elems_comb:
+            # print(node_j, node_k)
+            if node_j == node_k:
+                common_lines = path_to_all_nodes[node_i].intersection(path_to_all_nodes[node_j])
+                com_path_sens = sum((abs(Z_line[item])**2) for item in common_lines)
+                sq_term_temp = (P_Load_est[node_j]**2 + Q_Load_est[node_j]**2)
+                sq_term_temp = sq_term_temp * com_path_sens
+                sq_term+=sq_term_temp
+            else:
+                common_lines = path_to_all_nodes[node_i].intersection(path_to_all_nodes[node_j]).intersection(path_to_all_nodes[node_k])
+                com_path_sens = sum((abs(Z_line[item])**2) for item in common_lines)
+                double_term_temp = 2*(P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
+                double_term_temp = double_term_temp * com_path_sens
+                double_term+=double_term_temp
+
+        grad_array_vnode_v[i] = 1 +  (1/(V0**2)) * (sq_term + double_term)
+        
+    for i, node_i in enumerate(meas_V.keys()): # meas node
+        path_to_node_i = path_to_all_nodes[node_i]
+        # break
+        for path in path_to_node_i: # each line param to node_i, r_ij
+            for (node_j, node_k) in elems_comb:
+                if node_j == node_k: # sq terms
+                    # if node is downstream of ij and not node j
+                    if path in path_to_all_nodes[node_k] and node_k!=path[1]:
+                        common_path = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+                        R_hat = sum(R_line[item] for item in common_path)
+                        X_hat = sum(X_line[item] for item in common_path)
+                        temp_term_r = R_line[path] * R_hat
+                        temp_term_x = X_line[path] * X_hat
+                        # additional_mat_r[a][k] += temp_term_r
+                        # additional_mat_x[a][k] += temp_term_x
+                else:
+                    if path in path_to_all_nodes[node_j] and path in path_to_all_nodes[node_k] and node_j!=path[1] and node_k!=path[1]:
+                        pass
+        grad_array_vnode_v[i] += 0
 
     return grad_array_vnode_v
