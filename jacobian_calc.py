@@ -565,9 +565,11 @@ def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineD
     additional_mat_x = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
     for i, node_i in enumerate(meas_V.keys()): # meas node
         path_to_node_i = path_to_all_nodes[node_i]
+        # break
         for path in path_to_node_i: # each line param to node_i, r_ij
             for j, node_j in enumerate(P_Load_state.keys()): # state node, p_a
                 # print(path)
+                a=i*len(P_Load_state)+j
                 for k, node_k in enumerate(P_Load_state): # p_n', for sum of resistance and reactance with each power term, see formula
                     # if node is downstream of ij and not node j
                     if path in path_to_all_nodes[node_k] and node_k!=path[1]:
@@ -580,8 +582,8 @@ def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineD
                         additional_mat_x[a][k] += temp_term_x
                     # print(a,k)
                 # if first_path_run == 0:
-                a=i*len(P_Load_state)+j
-                # print(i, j, a)
+                # a=i*len(P_Load_state)+j
+                print(i, j, a)
         # break
 
     return R_mat, X_mat, Z_mat
@@ -630,52 +632,6 @@ def grad_vnode_with_p_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, 
         #     break
     return grad_array_v_p, grad_array_v_q
 
-def grad_vnode_with_p_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, Z_line, P_Load_est, Q_Load_est, V0):
-    grad_array_v_p = np.zeros((len(meas_V), len(P_Load_state))) # vnode_with_p
-    grad_array_v_q = np.zeros((len(meas_V), len(P_Load_state))) # vnode_with_q
-    f = 0
-    for i, node_i in enumerate(meas_V.keys()): # meas node
-        path_node_i = path_to_all_nodes[node_i]
-        for j, node_j in enumerate(P_Load_state.keys()): # state node
-            # print(node_i, node_j)
-            common_lines = path_to_all_nodes[node_i].intersection(path_to_all_nodes[node_j])
-            grad_array_v_p[i][j] = -(sum(R_line[item] for item in common_lines)) * 2
-            grad_array_v_q[i][j] = -(sum(X_line[item] for item in common_lines)) * 2
-            sumzsq_p, sumzsq_q = 0, 0
-            additional_p_term, additional_q_term = 0, 0 
-            f+=1
-            # vv = []
-            for k, node_k in enumerate(P_Load_state): # for sum of sq of impedance with each power term, see formula
-                # print(node_i, node_j, node_k)
-                common_path = common_lines.intersection(path_to_all_nodes[node_k])
-                ##
-                # sum_of_com_path = sum(abs(Z_line[item])**2 for item in common_path)
-                # sumzsq_p_temp = sum_of_com_path*P_Load_est[node_k]
-                # sumzsq_p+=sumzsq_p_temp
-                ## more compact form below
-                sumzsq_p += sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
-                sumzsq_q += sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
-                # vv.append(sumzsq_p)
-                # sumzsq_p = sum(((abs(Z_line[item])**2)*P_Load_est[node_k]) for item in common_path)
-                # sumzsq_q = sum(((abs(Z_line[item])**2)*Q_Load_est[node_k]) for item in common_path)
-                # sumzsq_p = 2*sumzsq_p/V0
-                # sumzsq_q = 2*sumzsq_q/V0
-                ######
-                # temp_sumsq = sum((abs(Z_line[item])**2) for item in common_path)
-                # temp_sumsq= temp_sumsq * (P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
-                # sumzsq_pcomb+= temp_sumsq                
-
-            # print(sumzsq_q)
-            sumzsq_p = -2*sumzsq_p/V0
-            sumzsq_q = -2*sumzsq_q/V0
-            grad_array_v_p[i][j] += sumzsq_p
-            grad_array_v_q[i][j] += sumzsq_q
-        #     if f == 20:
-        #         break
-        # if f == 20:
-        #     break
-    return grad_array_v_p, grad_array_v_q
-
 def grad_vnode_with_p_loss_ass_new(meas_V, P_Load_state, path_to_all_nodes, 
                                    R_mat, X_mat, Z_mat, x_est,  P_Load_est, Q_Load_est, V0):
     Z_hat_p = np.matmul(Z_mat,x_est[0:len(P_Load_state)])
@@ -687,6 +643,30 @@ def grad_vnode_with_p_loss_ass_new(meas_V, P_Load_state, path_to_all_nodes,
     # use the above ones to get the grads
     grad_array_v_p = -2*R_mat - 2/V0*(Z_hat_p) # vnode_with_p
     grad_array_v_q = -2*X_mat - 2/V0*(Z_hat_q) # vnode_with_q
+    return grad_array_v_p, grad_array_v_q
+
+def grad_vnode_with_p_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes, 
+                       R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x, 
+                           x_est, P_Load_est, Q_Load_est, V0):
+    Z_hat_p = np.matmul(Z_mat,x_est[0:len(P_Load_state)])
+    # Z_hat_p = np.matmul(Z_mat,np.asarray(list(P_Load_est.values())))
+    Z_hat_p = Z_hat_p.reshape(len(meas_V), len(P_Load_state))
+    Z_hat_q = np.matmul(Z_mat,x_est[len(P_Load_state):2*len(P_Load_state)])
+    # Z_hat_q = np.matmul(Z_mat,np.asarray(list(Q_Load_est.values())))
+    Z_hat_q = Z_hat_q.reshape(len(meas_V), len(P_Load_state))
+    # for the additional term
+    r_p_term = np.matmul(additional_mat_r,x_est[0:len(P_Load_state)])
+    x_p_term = np.matmul(additional_mat_x,x_est[0:len(P_Load_state)])
+    r_q_term = np.matmul(additional_mat_r,x_est[len(P_Load_state):2*len(P_Load_state)])
+    x_q_term = np.matmul(additional_mat_x,x_est[len(P_Load_state):2*len(P_Load_state)])
+    # reshape them
+    r_p_term = r_p_term.reshape(len(meas_V), len(P_Load_state))
+    x_p_term = x_p_term.reshape(len(meas_V), len(P_Load_state))
+    r_q_term = r_q_term.reshape(len(meas_V), len(P_Load_state))
+    x_q_term = x_q_term.reshape(len(meas_V), len(P_Load_state))
+    # use the above ones to get the grads
+    grad_array_v_p = -2*R_mat - 2/V0*(Z_hat_p) - 4/V0*(r_p_term + x_p_term) # vnode_with_p
+    grad_array_v_q = -2*X_mat - 2/V0*(Z_hat_q) - 4/V0*(r_q_term + x_q_term) # vnode_with_q
     return grad_array_v_p, grad_array_v_q
 
 def grad_pline_with_vnode_loss_ass(meas_P_line, P_Load_state, path_to_all_nodes, 
