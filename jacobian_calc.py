@@ -467,10 +467,10 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     # this changes every iteration
     # grad_array_vnode_v = grad_vnode_with_v0_loss_ass(Vsq_mes, P_Load_state, 
     #                                                   path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
-    grad_array_vnode_v = grad_vnode_with_v0_loss_ass_new(Vsq_mes, P_Load_state, 
-                                                      path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
-    # grad_array_vnode_v = grad_vnode_with_v0_loss_ass_updated(Vsq_mes, P_Load_state, path_to_all_nodes, 
-    #                         R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
+    # grad_array_vnode_v = grad_vnode_with_v0_loss_ass_new(Vsq_mes, P_Load_state, 
+    #                                                   path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
+    grad_array_vnode_v = grad_vnode_with_v0_loss_ass_updated(Vsq_mes, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     meas_rows = grad_array_vnode_v.shape[0]
     jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols] = grad_array_vnode_v
 
@@ -525,6 +525,7 @@ def grad_pline_with_p_loss_ass_updated(meas_P_line, P_Load_state, path_to_all_no
                 for _, node_k in enumerate(P_Load_state.keys()): # iterate over states node
                     if k in path_to_all_nodes[node_k]: # if node is downstream    
                         common_path = path_to_all_nodes[node_a].intersection(path_to_all_nodes[node_k])
+                        # common_path = common_path-path_to_all_nodes[k[0]]
                         sum_R = sum(R_line[item] for item in common_path)
                         sum_X = sum(X_line[item] for item in common_path)
                         # print(node_a, node_k, common_path)
@@ -750,7 +751,7 @@ def grad_pline_with_vnode_loss_ass_updated(meas_P_line, P_Load_state, path_to_al
             sum_R = sum(R_line[item] for item in common_lines)
             sum_X = sum(X_line[item] for item in common_lines)
             double_term_temp = 2*(P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
-            
+        
             pline_double_term_temp = double_term_temp * sum_R
             qline_double_term_temp = double_term_temp * sum_X
             double_pline_term+=pline_double_term_temp
@@ -887,6 +888,6 @@ def grad_vnode_with_v0_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes,
                         double_temp_term2 = X_line[path] * X_hat * double_temp_term
                         double_term = double_temp_term1 + double_temp_term2
                         pass
-        grad_array_vnode_v[i] += (2/(V0**4)) * (sq_term + double_term)
+        grad_array_vnode_v[i] += (2/(V0**2)) * (sq_term + double_term)
 
     return grad_array_vnode_v
