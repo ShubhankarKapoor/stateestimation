@@ -175,7 +175,7 @@ def se_wls_la_bgd(x_est, z, W, lr, iterations, P_line_meas, Q_line_meas, P_Load_
     count = 0
     emax = 100 # chosen higher than the tol
 
-    while emax > tol and count < iterations :
+    while emax > tol :
         # print(count)
         x_ests = x_est # to see emax without storing results
 

@@ -469,6 +469,8 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     #                                                   path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     grad_array_vnode_v = grad_vnode_with_v0_loss_ass_new(Vsq_mes, P_Load_state, 
                                                       path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
+    # grad_array_vnode_v = grad_vnode_with_v0_loss_ass_updated(Vsq_mes, P_Load_state, path_to_all_nodes, 
+    #                         R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     meas_rows = grad_array_vnode_v.shape[0]
     jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols] = grad_array_vnode_v
 
@@ -756,8 +758,9 @@ def grad_pline_with_vnode_loss_ass_updated(meas_P_line, P_Load_state, path_to_al
     
     # also fix the index here
     # hardcoded for one line here
-    grad_array_pline_vnode[0] = - (1/(V0**2)) * (sq_pline_term + double_pline_term)
-    grad_array_qline_vnode[0] = - (1/(V0**2)) * (sq_qline_term + double_qline_term)
+    if len(meas_P_line) == 1:
+        grad_array_pline_vnode[0] = - (1/(V0**2)) * (sq_pline_term + double_pline_term)
+        grad_array_qline_vnode[0] = - (1/(V0**2)) * (sq_qline_term + double_qline_term)
         
     return grad_array_pline_vnode, grad_array_qline_vnode
 
@@ -858,21 +861,32 @@ def grad_vnode_with_v0_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes,
     for i, node_i in enumerate(meas_V.keys()): # meas node
         path_to_node_i = path_to_all_nodes[node_i]
         # break
+        sq_term, double_term = 0, 0
         for path in path_to_node_i: # each line param to node_i, r_ij
             for (node_j, node_k) in elems_comb:
                 if node_j == node_k: # sq terms
                     # if node is downstream of ij and not node j
                     if path in path_to_all_nodes[node_k] and node_k!=path[1]:
-                        common_path = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+                        common_path = path_to_all_nodes[node_j]
+                        common_path = common_path-path_to_all_nodes[path[1]]
                         R_hat = sum(R_line[item] for item in common_path)
                         X_hat = sum(X_line[item] for item in common_path)
-                        temp_term_r = R_line[path] * R_hat
-                        temp_term_x = X_line[path] * X_hat
-                        # additional_mat_r[a][k] += temp_term_r
-                        # additional_mat_x[a][k] += temp_term_x
+                        sq_temp_term = (P_Load_est[node_j]**2 + Q_Load_est[node_j]**2)
+                        sq_temp_term1 = R_line[path] * R_hat * sq_temp_term
+                        sq_temp_term2 = X_line[path] * X_hat * sq_temp_term
+                        sq_term = sq_temp_term1 + sq_temp_term2
                 else:
+                    # if node is downstream of ij and not node j
                     if path in path_to_all_nodes[node_j] and path in path_to_all_nodes[node_k] and node_j!=path[1] and node_k!=path[1]:
+                        common_path = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+                        common_path = common_path-path_to_all_nodes[path[1]]
+                        R_hat = sum(R_line[item] for item in common_path)
+                        X_hat = sum(X_line[item] for item in common_path)
+                        double_temp_term = 2*(P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
+                        double_temp_term1 = R_line[path] * R_hat * double_temp_term
+                        double_temp_term2 = X_line[path] * X_hat * double_temp_term
+                        double_term = double_temp_term1 + double_temp_term2
                         pass
-        grad_array_vnode_v[i] += 0
+        grad_array_vnode_v[i] += (2/(V0**4)) * (sq_term + double_term)
 
     return grad_array_vnode_v
