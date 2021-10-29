@@ -918,55 +918,98 @@ def grad_vnode_with_v0_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes,
                 elems_comb.append((elema,elemb))
 
     for i, node_i in enumerate(meas_V.keys()): # meas node
-
+        path_to_node_i = path_to_all_nodes[node_i]
         sq_term, double_term = 0, 0
+        addn_sq_term, addn_double_term = 0, 0
         for (node_j, node_k) in elems_comb:
             # print(node_j, node_k)
             if node_j == node_k:
-                common_lines = path_to_all_nodes[node_i].intersection(path_to_all_nodes[node_j])
+                common_lines_power_nodes = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+                common_lines = path_to_all_nodes[node_i].intersection(common_lines_power_nodes)
                 com_path_sens = sum((abs(LineData_Z_pu[item])**2) for item in common_lines)
-                sq_term_temp = (P_Load_est[node_j]**2 + Q_Load_est[node_j]**2)
-                sq_term_temp = sq_term_temp * com_path_sens
+                sq_term_load = (P_Load_est[node_j]**2 + Q_Load_est[node_j]**2)
+                sq_term_temp = sq_term_load * com_path_sens
                 sq_term+=sq_term_temp
+                # sum of lines in common_path that are downstream of every line
+                # R_hat, X_hat = 0, 0
+                # for line in path_to_node_i:
+                #    for item in path_to_p_nodes:
+                #        # print(item)
+                #        if line in path_to_all_nodes[item[0]]:
+                #            # print(line, item)
+                #            R_hat+= R_line[line]*R_line[item]
+                #            X_hat+= X_line[line]*X_line[item]
+                # RX_hat = R_hat + X_hat
+                # path_to_node_i =  path_to_all_nodes[node_v]
+                R_hat, X_hat = 0, 0
+                for line in path_to_node_i:
+                   for item in common_lines_power_nodes:
+                       if line in path_to_all_nodes[item[0]]:
+                           # print(line, item)
+                           R_hat+= R_line[line]*R_line[item]
+                           X_hat+= X_line[line]*X_line[item]
+                RX_hat = R_hat + X_hat
+                
+                addn_sq_term_temp = sq_term_load * RX_hat
+                addn_sq_term+=addn_sq_term_temp
+                # additional_loss+= sum_RX_comb * power_term
             else:
-                common_lines = path_to_all_nodes[node_i].intersection(path_to_all_nodes[node_j]).intersection(path_to_all_nodes[node_k])
+                common_lines_power_nodes = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+                common_lines = path_to_all_nodes[node_i].intersection(common_lines_power_nodes)
                 com_path_sens = sum((abs(LineData_Z_pu[item])**2) for item in common_lines)
-                double_term_temp = 2*(P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
-                double_term_temp = double_term_temp * com_path_sens
+                double_term_load = 2*(P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
+                double_term_temp = double_term_load * com_path_sens
                 double_term+=double_term_temp
+                # for line in path_to_node_i:
+                #     R_hat = sum(R_line[item] for item in common_lines if line in path_to_all_nodes[item[0]])
+                #     X_hat = sum(X_line[item] for item in common_lines if line in path_to_all_nodes[item[0]])
+                #     R_sum = R_line[line] * R_hat
+                #     X_sum = R_line[line] * X_hat
+                #     addn_double_term_temp = double_term_load * (R_sum + X_sum)
+                #     addn_double_term+=addn_double_term_temp
+                R_hat, X_hat = 0, 0
+                for line in path_to_node_i:
+                   for item in common_lines_power_nodes:
+                       if line in path_to_all_nodes[item[0]]:
+                           # print(line, item)
+                           R_hat+= R_line[line]*R_line[item]
+                           X_hat+= X_line[line]*X_line[item]
+                RX_hat = R_hat + X_hat
+                addn_double_term_temp = double_term_load * RX_hat
+                addn_double_term+=addn_double_term_temp
 
-        grad_array_vnode_v[i] = 1 +  (1/(V0**2)) * (sq_term + double_term)
+        grad_array_vnode_v[i] = 1 +  (1/(V0**2)) * (sq_term + double_term) +  (2/(V0**2)) * (addn_sq_term + addn_double_term)
         
-    for i, node_i in enumerate(meas_V.keys()): # meas node
-        path_to_node_i = path_to_all_nodes[node_i]
-        # break
-        sq_term, double_term = 0, 0
-        for path in path_to_node_i: # each line param to node_i, r_ij
-            for (node_j, node_k) in elems_comb:
-                if node_j == node_k: # sq terms
-                    # if node is downstream of ij and not node j
-                    if path in path_to_all_nodes[node_k] and node_k!=path[1]:
-                        common_path = path_to_all_nodes[node_j]
-                        common_path = common_path-path_to_all_nodes[path[1]]
-                        R_hat = sum(R_line[item] for item in common_path)
-                        X_hat = sum(X_line[item] for item in common_path)
-                        sq_temp_term = (P_Load_est[node_j]**2 + Q_Load_est[node_j]**2)
-                        sq_temp_term1 = R_line[path] * R_hat * sq_temp_term
-                        sq_temp_term2 = X_line[path] * X_hat * sq_temp_term
-                        sq_term = sq_temp_term1 + sq_temp_term2
-                else:
-                    # if node is downstream of ij and not node j
-                    if path in path_to_all_nodes[node_j] and path in path_to_all_nodes[node_k] and node_j!=path[1] and node_k!=path[1]:
-                        common_path = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
-                        common_path = common_path-path_to_all_nodes[path[1]]
-                        R_hat = sum(R_line[item] for item in common_path)
-                        X_hat = sum(X_line[item] for item in common_path)
-                        double_temp_term = 2*(P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
-                        double_temp_term1 = R_line[path] * R_hat * double_temp_term
-                        double_temp_term2 = X_line[path] * X_hat * double_temp_term
-                        double_term = double_temp_term1 + double_temp_term2
-                        pass
-        grad_array_vnode_v[i] += (2/(V0**2)) * (sq_term + double_term)
+    # for i, node_i in enumerate(meas_V.keys()): # meas node
+    #     path_to_node_i = path_to_all_nodes[node_i]
+    #     # break
+    #     sq_term, double_term = 0, 0
+    #     for path in path_to_node_i: # each line param to node_i, r_ij
+    #         for (node_j, node_k) in elems_comb:
+    #             if node_j == node_k: # sq terms
+    #                 # if node is downstream of ij and not node j
+    #                 if path in path_to_all_nodes[node_k] and node_k!=path[1]:
+    #                     common_path = path_to_all_nodes[node_j]
+    #                     common_path = common_path-path_to_all_nodes[path[1]]
+    #                     R_hat = sum(R_line[item] for item in common_path)
+    #                     X_hat = sum(X_line[item] for item in common_path)
+    #                     sq_temp_term = (P_Load_est[node_j]**2 + Q_Load_est[node_j]**2)
+    #                     sq_temp_term1 = R_line[path] * R_hat * sq_temp_term
+    #                     sq_temp_term2 = X_line[path] * X_hat * sq_temp_term
+    #                     sq_term = sq_temp_term1 + sq_temp_term2
+    #             else:
+    #                 # if node is downstream of ij and not node j
+    #                 if path in path_to_all_nodes[node_j] and path in path_to_all_nodes[node_k] and node_j!=path[1] and node_k!=path[1]:
+    #                     common_path = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+    #                     common_path = common_path-path_to_all_nodes[path[1]]
+    #                     R_hat = sum(R_line[item] for item in common_path)
+    #                     X_hat = sum(X_line[item] for item in common_path)
+    #                     double_temp_term = 2*(P_Load_est[node_j] * P_Load_est[node_k]  + Q_Load_est[node_j] * Q_Load_est[node_k])
+    #                     double_temp_term1 = R_line[path] * R_hat * double_temp_term
+    #                     double_temp_term2 = X_line[path] * X_hat * double_temp_term
+    #                     double_term = double_temp_term1 + double_temp_term2
+    #                     pass
+    #     grad_array_vnode_v[i] += (2/(V0**2)) * (sq_term + double_term)
 
     return grad_array_vnode_v
 
@@ -1006,13 +1049,13 @@ def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_no
         
     # sum up R and X for above combs
     # can be directly used for additional loss
-    sum_R_comb, sum_X_comb, sum_RX_comb = {}, {}, {}
-    for key, val in lines_comb.items():
-        # print(key, val[0])
-        R_hat = sum(R_line[item[0]]*R_line[item[1]] for item in val)
-        X_hat = sum(X_line[item[0]]*X_line[item[1]] for item in val)
-        sum_RX_hat = R_hat + X_hat
-        sum_RX_comb[key] = sum_RX_hat
+    # sum_R_comb, sum_X_comb, sum_RX_comb = {}, {}, {}
+    # for key, val in lines_comb.items():
+    #     # print(key, val[0])
+    #     R_hat = sum(R_line[item[0]]*R_line[item[1]] for item in val)
+    #     X_hat = sum(X_line[item[0]]*X_line[item[1]] for item in val)
+    #     sum_RX_hat = R_hat + X_hat
+    #     sum_RX_comb[key] = sum_RX_hat
     # ---------<<<<<<<<<<<< till here
 
     for idxv, (node_v, val) in enumerate(meas_V.items()):
@@ -1026,10 +1069,9 @@ def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_no
             # print(node_j, node_k)
             # print(node_j, node_k, sum_RX_comb[(node_j, node_k)])
             if node_j == node_k and node_j: # square terms
-                common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j])
+                common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j]) # for original loss
                 power_term = P_Load_est[node_j]**2 + Q_Load_est[node_j]**2
-                
-                # no additional term for first node on the power line from slack bus
+                # no additional term for first node on the line from slack bus
                 # the line comb terms should always have a line that is in path of vnode
                 # else shouldn't be considered
                 # in this node 1, wont affect becasue it is 0
@@ -1041,20 +1083,43 @@ def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_no
             # print(common_path)    
             Z_hat = sum((abs(LineData_Z_pu[item]))**2 for item in common_path)
             original_loss+= Z_hat * power_term
-            # if node_j != 2 and node_k!=2 :
+            # for additional loss
+            common_lines_power_nodes = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
             _, _, sum_RX_comb = comb_of_lines(lines_comb[(node_j, node_k)], path_to_all_nodes, node_v, R_line, X_line)
+            _, _, sum_RX_comb2 = comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
+            ff = 0
+            # print(sum_RX_comb, sum_RX_comb2)
+            if sum_RX_comb!= sum_RX_comb2:
+                print(node_v, node_j, node_k, sum_RX_comb, sum_RX_comb2)
+                # break
+                ff = 1
+        # if ff == 1:
+        #     break
             additional_loss+= sum_RX_comb * power_term
             # get lines combs for node
         
-        grad_array_vnode_v[idxv] = 1 + 1/V0*original_loss + 2/V0**2*additional_loss
+        grad_array_vnode_v[idxv] = 1 + 1/V0*original_loss + 2/(V0**2)*additional_loss
     return grad_array_vnode_v
 
 def comb_of_lines(lines_comb_for_nodes, path_to_all_nodes, node_v, R_line, X_line):
+    # only need to be run once
     path_to_node_v = path_to_all_nodes[node_v]
 
     R_hat = sum(R_line[item[0]]*R_line[item[1]] for item in lines_comb_for_nodes if path_to_node_v.intersection(item))
     X_hat = sum(X_line[item[0]]*X_line[item[1]] for item in lines_comb_for_nodes if path_to_node_v.intersection(item))
     sum_RX_hat = R_hat + X_hat
-        # sum_RX_comb[key] = sum_RX_hat
      
     return R_hat, X_hat, sum_RX_hat
+
+def comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes):
+    path_to_node_i =  path_to_all_nodes[node_v]
+    R_hat, X_hat = 0, 0
+    for line in path_to_node_i:
+       for item in common_lines_power_nodes:
+           if line in path_to_all_nodes[item[0]]:
+               # print(line, item)
+               R_hat+= R_line[line]*R_line[item]
+               X_hat+= X_line[line]*X_line[item]
+    RX_hat = R_hat + X_hat
+    
+    return R_hat, X_hat, RX_hat
