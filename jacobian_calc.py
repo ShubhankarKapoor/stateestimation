@@ -791,12 +791,7 @@ def grad_pline_with_vnode_loss_ass_updated(meas_P_line, P_Load_state, path_to_al
     # get combs of elements
     # make sure fix it for nodes downstream for line ij
     # at this stage it would work because everything is downstream of ij
-    elems = list(P_Load_state.keys())
-    elems_comb = [] # all elements in square of p and q
-    for i,elema  in enumerate(elems):
-        for j, elemb in enumerate(elems):
-            if j>=i:
-                elems_comb.append((elema,elemb))
+    elems_comb = combination_of_loads(P_Load_state)
 
     for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
         # print(i,k,v)
@@ -837,12 +832,8 @@ def grad_pline_with_vnode_loss_ass_updated_new(meas_P_line, P_Load_state, path_t
     grad_array_pline_vnode = np.zeros((len(meas_P_line))) # meas*states
     grad_array_qline_vnode = np.zeros((len(meas_P_line))) # meas*states
 
-    elems = list(P_Load_state.keys())
-    elems_comb = [] # all elements in square of p and q
-    for i,elema  in enumerate(elems):
-        for j, elemb in enumerate(elems):
-            if j>=i:
-                elems_comb.append((elema,elemb))
+    # get combs of elements
+    elems_comb = combination_of_loads(P_Load_state)
                 
     for i, (line,v) in enumerate(meas_P_line.items()):
         # print(i, line, v)
@@ -901,12 +892,7 @@ def grad_vnode_with_v0_loss_ass_new(meas_V, P_Load_state, path_to_all_nodes,
     grad_array_vnode_v = np.zeros((len(meas_V))) # vnode_with_p
 
     # get combs of elements
-    elems = list(P_Load_state.keys())
-    elems_comb = [] # all elements in square of p and q
-    for i,elema  in enumerate(elems):
-        for j, elemb in enumerate(elems):
-            if j>=i:
-                elems_comb.append((elema,elemb))
+    elems_comb = combination_of_loads(P_Load_state)
 
     for i, node_i in enumerate(meas_V.keys()): # meas node
 
@@ -935,12 +921,7 @@ def grad_vnode_with_v0_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes,
     grad_array_vnode_v = np.zeros((len(meas_V))) # vnode_with_p
 
     # get combs of elements
-    elems = list(P_Load_state.keys())
-    elems_comb = [] # all elements in square of p and q
-    for i,elema  in enumerate(elems):
-        for j, elemb in enumerate(elems):
-            if j>=i:
-                elems_comb.append((elema,elemb))
+    elems_comb = combination_of_loads(P_Load_state)
 
     for i, node_i in enumerate(meas_V.keys()): # meas node
         path_to_node_i = path_to_all_nodes[node_i]
@@ -1029,12 +1010,7 @@ def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_no
     grad_array_vnode_v = np.zeros((len(meas_V))) # vnode_with_v
     
     # get combs of elements
-    elems = list(P_Load_state.keys())
-    elems_comb = [] # all elements in square of p and q
-    for i,elema  in enumerate(elems):
-        for j, elemb in enumerate(elems):
-            if j>=i:
-                elems_comb.append((elema,elemb))
+    elems_comb = combination_of_loads(P_Load_state)
 
     # can put it in a func from herre ----->>>>>>>>>>>>>
     # common path to coupled and squared node terms
