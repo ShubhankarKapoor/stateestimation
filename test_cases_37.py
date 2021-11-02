@@ -36,7 +36,7 @@ plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)
 
-which = 37 # IEEE 37-node or IEEE 906-node
+which = 906 # IEEE 37-node or IEEE 906-node
 
 if which == 37:
     from Network37 import *

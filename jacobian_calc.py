@@ -1075,12 +1075,12 @@ def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_no
             common_lines_power_nodes = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k]) # for additional loss
             _, _, sum_RX_comb = sum_comb_of_lines(lines_comb[(node_j, node_k)], path_to_all_nodes, node_v, R_line, X_line)
             _, _, sum_RX_comb2 = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
-            ff = 0
+            # ff = 0
             # print(sum_RX_comb, sum_RX_comb2)
-            if sum_RX_comb!= sum_RX_comb2:
-                print(node_v, node_j, node_k, sum_RX_comb, sum_RX_comb2)
-                # break
-                ff = 1
+            # if sum_RX_comb!= sum_RX_comb2:
+            #     print(node_v, node_j, node_k, sum_RX_comb, sum_RX_comb2)
+            #     # break
+            #     ff = 1
         # if ff == 1:
         #     break
             additional_loss+= sum_RX_comb * power_term
