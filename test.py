@@ -15,7 +15,7 @@ from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        error_calc_refactor, countour_plot, get_index_for_keys_init_stat_var
 import torch
 import matplotlib.pyplot as plt
-which = 906 # IEEE 37-node or IEEE 906-node or ausnet
+which = 37 # IEEE 37-node or IEEE 906-node or ausnet
 
 if which == 37:
     from Network37 import *
@@ -115,7 +115,7 @@ meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
 
 # different combinations of known nodes
-i = 20 # number of known measurements
+i = 5 # number of known measurements
 arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers

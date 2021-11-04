@@ -20,13 +20,13 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
     residuals_mat = np.zeros((num_meas, 1000)) # meas residuals
     results = x_est
     emax = 100 # chosen higher than the tol
-    while emax > tol and count < iters:
+    while emax > tol:
 
         if count == 0:
             jacobian_matrix = np.zeros((num_meas, num_states)) # initialize jacobian with zeros
             R_mat, X_mat, Z_mat = np.zeros((len(meas_V), len(P_Load_state))), np.zeros((len(meas_V), len(P_Load_state))), \
                 np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state))) # initialize with zeros
-
+            additional_mat_r, additional_mat_x = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state))), np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
         # i think you are getting the below vals from PF: might be incorrect
         # should be just getting the vals from jacobian * xest
         # you are right
@@ -39,10 +39,10 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
 
         # recalculate jacobian: changes every iter here
         # R_mat, X_mat, Z_mat remains consistent: only calculated once
-        jacobian_matrix, R_mat, X_mat, Z_mat = create_loss_jacobian_ass(
+        jacobian_matrix, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = create_loss_jacobian_ass(
             meas_P_line, P_Load_state, meas_P_load, P_Load_est, Q_Load_est, path_to_all_nodes,
             meas_V, R_line, X_line, LineData_Z_pu, num_states, num_meas, count,
-            jacobian_matrix, R_mat, X_mat, Z_mat, x_est)
+            jacobian_matrix, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x, x_est)
 
         # calculate h(x)
         hx = np.matmul(jacobian_matrix, x_est)
@@ -175,7 +175,7 @@ def se_wls_la_bgd(x_est, z, W, lr, iterations, P_line_meas, Q_line_meas, P_Load_
     count = 0
     emax = 100 # chosen higher than the tol
 
-    while emax > tol and count < iterations :
+    while emax > tol and count < iterations:
         # print(count)
         x_ests = x_est # to see emax without storing results
 
