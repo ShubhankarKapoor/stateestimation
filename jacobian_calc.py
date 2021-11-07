@@ -1012,38 +1012,8 @@ def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_no
     # get combs of elements
     elems_comb = combination_of_loads(P_Load_state)
 
-    # can put it in a func from herre ----->>>>>>>>>>>>>
-    # common path to coupled and squared node terms
-    common_path_of_combs = {}
-    for (node_j, node_k) in elems_comb:
-        # print(node_j, node_k)
-        # could use this straight away rather than calculating at every iteration for grad calc
-        common_path_of_combs[(node_j, node_k)] = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+    common_path_of_combs, lines_comb = combination_of_lines_to_nodes(elems_comb, path_to_all_nodes)
 
-    # get lines combs for each node for the additional loss term
-    # only needs to be done once
-    lines_comb = {}
-    for key,val in common_path_of_combs.items():
-        # print(key,val)
-        # if key == (1,2):
-        #     break
-        lines_comb_entries = []
-        for i,elema  in enumerate(val):
-            for j, elemb in enumerate(val):
-                if j>i:
-                    lines_comb_entries.append((elema,elemb))
-        lines_comb[key] = lines_comb_entries
-        
-    # sum up R and X for above combs
-    # can be directly used for additional loss
-    # sum_R_comb, sum_X_comb, sum_RX_comb = {}, {}, {}
-    # for key, val in lines_comb.items():
-    #     # print(key, val[0])
-    #     R_hat = sum(R_line[item[0]]*R_line[item[1]] for item in val)
-    #     X_hat = sum(X_line[item[0]]*X_line[item[1]] for item in val)
-    #     sum_RX_hat = R_hat + X_hat
-    #     sum_RX_comb[key] = sum_RX_hat
-    # ---------<<<<<<<<<<<< till here
 
     for idxv, (node_v, val) in enumerate(meas_V.items()):
         # print (idxv, node_v, val)

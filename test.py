@@ -218,40 +218,40 @@ lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index,
 ###############################################################################
 # no feedback case
 # constant jacobian in this case
-print('GN-WLS based on linear jacobian with no feedback/ feedback')
-loss, pflow = 0, 0
-# LinDist
-x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
-    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-# costsn = cost(x_estn, jacobian_matrix, z, W)
-_,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = loss, pflow = pflow) # for WLS
-# print(x_estn)
+# print('GN-WLS based on linear jacobian with no feedback/ feedback')
+# loss, pflow = 0, 0
+# # LinDist
+# x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
+#     x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+#     meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+# # costsn = cost(x_estn, jacobian_matrix, z, W)
+# _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+#                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+# # print(x_estn)
 
-###############################################################################
-# LinDist + Voltage Feedback
-# constant jacobian in this case
-print('GN-WLS based on linear jacobian with V feedback')
-loss, pflow = 1, 0
-x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn, _ = se_wls(
-    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-# costsn = cost(x_estn, jacobian_matrix, z, W)
-_,_,_,p3error2 = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = 1, pflow = 1) # for WLS
-# print(x_estn)
-###############################################################################
-# LinDist + Pflow Feedback
-# constant jacobian in this case
-print('GN-WLS based on linear jacobian with P feedback')
-loss, pflow = 0, 1
-x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn, _ = se_wls(
-    x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-# costsn = cost(x_estn, jacobian_matrix, z, W)
-_,_,_,p3error3 = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                        which, V, V_mag, loss = 1, pflow = 1) # for WLS
+# ###############################################################################
+# # LinDist + Voltage Feedback
+# # constant jacobian in this case
+# print('GN-WLS based on linear jacobian with V feedback')
+# loss, pflow = 1, 0
+# x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn, _ = se_wls(
+#     x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+#     meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+# # costsn = cost(x_estn, jacobian_matrix, z, W)
+# _,_,_,p3error2 = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+#                         which, V, V_mag, loss = 1, pflow = 1) # for WLS
+# # print(x_estn)
+# ###############################################################################
+# # LinDist + Pflow Feedback
+# # constant jacobian in this case
+# print('GN-WLS based on linear jacobian with P feedback')
+# loss, pflow = 0, 1
+# x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn, _ = se_wls(
+#     x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
+#     meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+# # costsn = cost(x_estn, jacobian_matrix, z, W)
+# _,_,_,p3error3 = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+#                         which, V, V_mag, loss = 1, pflow = 1) # for WLS
 # print(x_estn)
 ###############################################################################
 # LinDist + Voltage & Pflow Feedback
