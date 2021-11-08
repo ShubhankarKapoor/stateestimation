@@ -86,7 +86,7 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
     results = x_est
     emax = 100 # chosen higher than the tol
 
-    while emax > tol and count<1000: # added the count to avoid error in some cases
+    while emax > tol: # added the count to avoid error in some cases
     # while emax > tol:
 
         cur_cost = cost(x_est, jacobian_matrix, z, W)
