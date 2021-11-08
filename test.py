@@ -283,8 +283,9 @@ results = results.T
 pre_calculated_info = {}
 # add node 0 in non zibs if it doesnt exist for the precalculated values for v meas
 # as we always have slack bus voltage in the meas set
-meas_nodes = np.insert(non_zib_index_array, 0, 0)
-v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_nodes, P_Load_state, path_to_all_nodes, 
+meas_V_nodes = np.insert(non_zib_index_array, 0, 0) if 0 not in non_zib_index_array else non_zib_index_array
+meas_V_nodes_index = np.arange((len(meas_V_nodes)))
+v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_V_nodes, P_Load_state, path_to_all_nodes, 
                             R_line, X_line, LineData_Z_pu)
 elems_comb = combination_of_loads(P_Load_state)
 pre_calculated_info['v_node_RX_comb'] = v_node_RX_comb

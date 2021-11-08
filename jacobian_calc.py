@@ -538,6 +538,7 @@ def grad_pline_with_p_loss_ass_updated(meas_P_line, P_Load_state, path_to_all_no
                         sum_R = sum(R_line[item] for item in common_path)
                         sum_X = sum(X_line[item] for item in common_path)
                         # print(node_a, node_k, common_path)
+                        # pre calculate sum_R and sum_X
                         temp_sum_pline_p = P_Load_est[node_k] * sum_R
                         temp_sum_pline_q = Q_Load_est[node_k] * sum_R
                         temp_sum_qline_p = P_Load_est[node_k] * sum_X
@@ -588,10 +589,13 @@ def grad_pline_with_p_loss_ass_updated_new(meas_P_line, P_Load_state, path_to_al
 
 def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu):
     ''' Returns the constant matrices used for grad_vnode_with_p_loss_ass'''
-    R_mat, X_mat, Z_mat = np.zeros((len(meas_V), len(P_Load_state))), np.zeros((len(meas_V), len(P_Load_state))), \
-        np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
+    # somehow define it in the beginning
+    # and extract a part of it depending on the problem
+    #sensitivity matrices
+    R_mat, X_mat, Z_mat = np.zeros((len(meas_V_nodes), len(P_Load_state))), np.zeros((len(meas_V_nodes), len(P_Load_state))), \
+        np.zeros((len(meas_V_nodes)*len(P_Load_state), len(P_Load_state)))
     a = 0
-    for i, node_i in enumerate(meas_V.keys()): # meas node
+    for i, node_i in enumerate(meas_V_nodes): # meas node
         path_to_node_i = path_to_all_nodes[node_i]
         for j, node_j in enumerate(P_Load_state.keys()): # state node
             # print(node_i, node_j)
@@ -1005,7 +1009,7 @@ def grad_vnode_with_v0_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes,
     #     grad_array_vnode_v[i] += (2/(V0**2)) * (sq_term + double_term)
 
     return grad_array_vnode_v
-
+    
 def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_nodes, 
                             R_line, X_line, LineData_Z_pu, pre_calculated_info, 
                             P_Load_est, Q_Load_est, V0):
