@@ -1,7 +1,7 @@
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
-from jacobian_calc import create_jacobian
+from jacobian_calc import create_jacobian, vnode_with_v0_pre_calculated_terms
 from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
     stochastic_gradient_descent, stochastic_gradient_descent2, \
     WLeastSquaresRegressorTorch, cost
@@ -278,12 +278,22 @@ results = results.T
 # costsloss = cost(x_estloss, jacobian_matrix, z, W)
 
 ###############################################################################
+# get characteristics beforehand that can be used to calc jacobians
+# add node 0 in non zibs if it doesnt exist for the precalculated values for v meas
+# as we always have slack bus voltage in the meas set
+meas_nodes = non_zib_index.insert(0,0)
+v_node_RX_comb, z_common_path =     vnode_with_v0_pre_calculated_terms(P_Load_state, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, LineData_Z_pu)
+
+
+
+###############################################################################
 ###############################################################################
 print('Implementing loss based with a few assumptions')
 x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
     x_est, z, W, meas_P_line,  P_Load_state, meas_P_load, path_to_all_nodes, 
-    non_zib_index, meas_V, R_line, 
-    X_line, LineData_Z_pu, len(x_est), len(z), len(x), which)
+    non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, v_node_RX_comb, z_common_path,
+    len(x_est), len(z), len(x), which)
 ###############################################################################
 print('GN-WLS based on non-linear with ass')
 perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 

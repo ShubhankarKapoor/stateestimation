@@ -6,7 +6,8 @@ from BackwardForwardSweep import BackwardForwardSweep
 
 def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
            path_to_all_nodes, non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, 
-           num_states, num_meas, tot_state_vars, which, tol = None, iters= None):
+           v_node_RX_comb, z_common_path, num_states, num_meas, tot_state_vars, which, 
+           tol = None, iters= None):
     ''' Weighted Least Square Estimate with assumptions on losses
         num_states: state vars being estimated
         tot_state_vars: state vars being estimated + zib buses
@@ -42,7 +43,8 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
         jacobian_matrix, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = create_loss_jacobian_ass(
             meas_P_line, P_Load_state, meas_P_load, P_Load_est, Q_Load_est, path_to_all_nodes,
             meas_V, R_line, X_line, LineData_Z_pu, num_states, num_meas, count,
-            jacobian_matrix, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x, x_est)
+            jacobian_matrix, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x, v_node_RX_comb, z_common_path, 
+            x_est)
 
         # calculate h(x)
         hx = np.matmul(jacobian_matrix, x_est)
