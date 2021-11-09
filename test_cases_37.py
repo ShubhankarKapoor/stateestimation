@@ -223,6 +223,21 @@ avg_perc_v_bothfeed, avg_perc_p_bothfeed, avg_abs_p_bothfeed, avg_abs_v_bothfeed
 avg_perc_v_la, avg_perc_p_la, avg_abs_p_la, avg_abs_v_la = 0, 0, 0, 0
 total_counts_v, total_counts_p = 0, 0 # total number of vars for average
 
+###############################################################################
+# pre calculated once to reduce comp time for LA method
+# add node 0 in non zibs if it doesnt exist for the precalculated values for v meas
+# as we always have slack bus voltage in the meas set
+meas_V_nodes = np.insert(non_zib_index_array, 0, 0) if 0 not in non_zib_index_array else non_zib_index_array # consist all possible locs of V meas
+# used for vnode with V0
+v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_V_nodes, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, LineData_Z_pu)
+# combination of elems of non-zib nodes
+elems_comb = combination_of_loads(P_Load_state)
+# used for vnode with p
+R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(
+    meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
+###############################################################################
+
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
 count = 0 # total number of iters, should be sum of all combs at the end
 iters_n0, iters_n1, iters_n2, iters_n, iters_la = 0, 0, 0, 0, 0
@@ -421,70 +436,29 @@ for row, i in enumerate(num_known):
         volt_max_abs_bothfeed = max_val(volt_max_abs_bothfeed, abs_v_n, all_index_array)
         p_max_abs_bothfeed = max_val(p_max_abs_bothfeed, abs_p_n, non_zib_index)
 
-        
-
         ###############################################################################
-        # get characteristics beforehand that can be used to calc jacobians
+        # get characteristics beforehand that can be used to calc jacobians for LA
         pre_calculated_info = {}
-        # add node 0 in non zibs if it doesnt exist for the precalculated values for v meas
-        # as we always have slack bus voltage in the meas set
-        meas_V_nodes = np.insert(non_zib_index_array, 0, 0) if 0 not in non_zib_index_array else non_zib_index_array # consist all possible locs of V meas
-        meas_V_nodes_index = np.arange((len(meas_V_nodes))) # index corresponding to all v nodes
-        # used for vnode with V0
-        v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_V_nodes, P_Load_state, path_to_all_nodes, 
-                                    R_line, X_line, LineData_Z_pu)
-        # combination of elems of non-zib nodes
-        elems_comb = combination_of_loads(P_Load_state)
-        # used for vnode with p
-        # R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(
-        #     meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
         # V meas indices considered
-        # meas_V_idx = np.nonzero(np.in1d(meas_V_nodes,cc))[0]
-        # R_mat = R_mat[meas_V_idx, :]
-        # X_mat = X_mat[meas_V_idx, :]
+        meas_V_keys = np.array(list(meas_V.keys()))
+        meas_V_idx = np.nonzero(np.in1d(meas_V_nodes,meas_V_keys))[0]
+        R_mat_req = R_mat[meas_V_idx, :]
+        X_mat_req = X_mat[meas_V_idx, :]
         
-        # start = time.time()
-        # Z_mm2 = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
-        # a_rr2 = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
-        # a_xx2 = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
-        # for i, node_idx in enumerate(meas_V_idx):
-        #     # print(i, node_idx)
-        #     # Z_mm2 = np.concatenate((Z_mat[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)]),axis=0)
-        #     # print(Z_mat[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)].shape)
-        #     Z_mm2[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] = Z_mat[node_idx*len(P_Load_state):node_idx*len(P_Load_state) + len(P_Load_state)]
-        #     a_rr2[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] = additional_mat_r[node_idx*len(P_Load_state):node_idx*len(P_Load_state) + len(P_Load_state)]
-        #     a_xx2[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] = additional_mat_x[node_idx*len(P_Load_state):node_idx*len(P_Load_state) + len(P_Load_state)]
-        # stop = time.time()
-        # print(stop - start)
-        # see the time between and above
-        
-        # start = time.time()
-        # Z_mm = np.concatenate([Z_mat[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
-        # a_rr = np.concatenate([additional_mat_r[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
-        # a_xx = np.concatenate([additional_mat_x[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
-        # stop = time.time()
-        # print(stop - start)
-        
+        Z_mm = np.concatenate([Z_mat[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
+        addn_rr = np.concatenate([additional_mat_r[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
+        addn_xx = np.concatenate([additional_mat_x[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
         
         pre_calculated_info['v_node_RX_comb'] = v_node_RX_comb
         pre_calculated_info['z_common_path'] = z_common_path
         pre_calculated_info['elems_comb'] = elems_comb
-        
+        pre_calculated_info['R_mat'] = R_mat_req
+        pre_calculated_info['X_mat'] = X_mat_req
+        pre_calculated_info['Z_mat'] = Z_mm
+        pre_calculated_info['additional_mat_r'] = addn_rr
+        pre_calculated_info['additional_mat_x'] = addn_xx
         ###############################################################################
         ###############################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         #######################################################################
         # print('Implementing loss based with a few assumptions')

@@ -293,8 +293,7 @@ elems_comb = combination_of_loads(P_Load_state)
 # used for vnode with p
 R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(
     meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
-# V meas indices considered
-meas_V_keys = np.array(list(meas_V.keys()))
+meas_V_keys = np.array(list(meas_V.keys())) # V meas indices considered
 meas_V_idx = np.nonzero(np.in1d(meas_V_nodes,meas_V_keys))[0]
 R_mat_req = R_mat[meas_V_idx, :]
 X_mat_req = X_mat[meas_V_idx, :]
