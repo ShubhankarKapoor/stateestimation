@@ -385,8 +385,7 @@ def grad_vnode_with_v0(v_meas):
 
 def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
                     Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num,
-                    jacobian_matrix_la, R_mat, X_mat, Z_mat, additional_mat_r, 
-                    additional_mat_x, pre_calculated_info, x_est):
+                    jacobian_matrix_la, pre_calculated_info, x_est):
     ''' creates jacobian while considering losses and some assumptions'''
 
     # jacobian_matrix_la = np.zeros((num_meas, num_states)) # jacobian with loss assumption
@@ -425,9 +424,6 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
         jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
         last_row_inserted += meas_rows
 
-        # get R_mat, X_mat, Z_mat: only needs to be calculated once
-        R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(Vsq_mes, 
-                                P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
     else:
         last_row_inserted+= len(P_Load_meas)*2
     # gradient for vnode^2 with p and q
@@ -437,8 +433,9 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     # grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass_new(Vsq_mes, P_Load_state, path_to_all_nodes, 
     #                                 R_mat, X_mat, Z_mat, x_est, P_Load_est, Q_Load_est, Vsq_mes[0])
     grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass_updated(Vsq_mes, P_Load_state, path_to_all_nodes, 
-                        R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x, 
-                            x_est, P_Load_est, Q_Load_est, Vsq_mes[0])
+                        pre_calculated_info['R_mat'], pre_calculated_info['X_mat'], 
+                        pre_calculated_info['Z_mat'], pre_calculated_info['additional_mat_r'], 
+                        pre_calculated_info['additional_mat_x'], x_est, P_Load_est, Q_Load_est, Vsq_mes[0])
     # grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass_updated_new(Vsq_mes, P_Load_state, path_to_all_nodes, 
     #                    R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     meas_rows = grad_array_v_p.shape[0]
@@ -483,7 +480,7 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     meas_rows = grad_array_vnode_v.shape[0]
     jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols] = grad_array_vnode_v
 
-    return jacobian_matrix_la, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x
+    return jacobian_matrix_la
 
 def grad_pline_with_p_loss_ass(meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, V0, P_Load_est, Q_Load_est):
 
@@ -587,7 +584,7 @@ def grad_pline_with_p_loss_ass_updated_new(meas_P_line, P_Load_state, path_to_al
             
     return grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q
 
-def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu):
+def get_r_x_z_mat(meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu):
     ''' Returns the constant matrices used for grad_vnode_with_p_loss_ass'''
     # somehow define it in the beginning
     # and extract a part of it depending on the problem
@@ -613,9 +610,9 @@ def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineD
             a+=1
 
     a = 0
-    additional_mat_r = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
-    additional_mat_x = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
-    for i, node_i in enumerate(meas_V.keys()): # meas node
+    additional_mat_r = np.zeros((len(meas_V_nodes)*len(P_Load_state), len(P_Load_state)))
+    additional_mat_x = np.zeros((len(meas_V_nodes)*len(P_Load_state), len(P_Load_state)))
+    for i, node_i in enumerate(meas_V_nodes): # meas node
         path_to_node_i = path_to_all_nodes[node_i]
         # break
         for path in path_to_node_i: # each line param to node_i, r_ij

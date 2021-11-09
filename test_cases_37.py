@@ -8,7 +8,8 @@ Created on Mon Feb  8 11:01:17 2021
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
-from jacobian_calc import create_jacobian
+from jacobian_calc import create_jacobian, vnode_with_v0_pre_calculated_terms, \
+    combination_of_loads, get_r_x_z_mat
 from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
     stochastic_gradient_descent, stochastic_gradient_descent2, \
     WLeastSquaresRegressorTorch, cost
@@ -420,13 +421,78 @@ for row, i in enumerate(num_known):
         volt_max_abs_bothfeed = max_val(volt_max_abs_bothfeed, abs_v_n, all_index_array)
         p_max_abs_bothfeed = max_val(p_max_abs_bothfeed, abs_p_n, non_zib_index)
 
+        
+
+        ###############################################################################
+        # get characteristics beforehand that can be used to calc jacobians
+        pre_calculated_info = {}
+        # add node 0 in non zibs if it doesnt exist for the precalculated values for v meas
+        # as we always have slack bus voltage in the meas set
+        meas_V_nodes = np.insert(non_zib_index_array, 0, 0) if 0 not in non_zib_index_array else non_zib_index_array # consist all possible locs of V meas
+        meas_V_nodes_index = np.arange((len(meas_V_nodes))) # index corresponding to all v nodes
+        # used for vnode with V0
+        v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_V_nodes, P_Load_state, path_to_all_nodes, 
+                                    R_line, X_line, LineData_Z_pu)
+        # combination of elems of non-zib nodes
+        elems_comb = combination_of_loads(P_Load_state)
+        # used for vnode with p
+        # R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(
+        #     meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
+        # V meas indices considered
+        # meas_V_idx = np.nonzero(np.in1d(meas_V_nodes,cc))[0]
+        # R_mat = R_mat[meas_V_idx, :]
+        # X_mat = X_mat[meas_V_idx, :]
+        
+        # start = time.time()
+        # Z_mm2 = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
+        # a_rr2 = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
+        # a_xx2 = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
+        # for i, node_idx in enumerate(meas_V_idx):
+        #     # print(i, node_idx)
+        #     # Z_mm2 = np.concatenate((Z_mat[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)]),axis=0)
+        #     # print(Z_mat[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)].shape)
+        #     Z_mm2[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] = Z_mat[node_idx*len(P_Load_state):node_idx*len(P_Load_state) + len(P_Load_state)]
+        #     a_rr2[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] = additional_mat_r[node_idx*len(P_Load_state):node_idx*len(P_Load_state) + len(P_Load_state)]
+        #     a_xx2[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] = additional_mat_x[node_idx*len(P_Load_state):node_idx*len(P_Load_state) + len(P_Load_state)]
+        # stop = time.time()
+        # print(stop - start)
+        # see the time between and above
+        
+        # start = time.time()
+        # Z_mm = np.concatenate([Z_mat[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
+        # a_rr = np.concatenate([additional_mat_r[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
+        # a_xx = np.concatenate([additional_mat_x[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
+        # stop = time.time()
+        # print(stop - start)
+        
+        
+        pre_calculated_info['v_node_RX_comb'] = v_node_RX_comb
+        pre_calculated_info['z_common_path'] = z_common_path
+        pre_calculated_info['elems_comb'] = elems_comb
+        
+        ###############################################################################
+        ###############################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         #######################################################################
         # print('Implementing loss based with a few assumptions')
         print('GN-WLS based on non-linear with ass')
         start = time.time()        
         x_est_la, emax_la, counts_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes, 
-            non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, 
+            non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, pre_calculated_info,
             len(x_est), len(z), len(x), which)
         end = time.time()
         tot_time = end-start
