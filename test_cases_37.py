@@ -9,7 +9,7 @@ from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
 from jacobian_calc import create_jacobian, vnode_with_v0_pre_calculated_terms, \
-    combination_of_loads, get_r_x_z_mat
+    combination_of_loads, get_r_x_z_mat, pline_with_p_pre_calculated_terms
 from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
     stochastic_gradient_descent, stochastic_gradient_descent2, \
     WLeastSquaresRegressorTorch, cost
@@ -236,6 +236,10 @@ elems_comb = combination_of_loads(P_Load_state)
 # used for vnode with p
 R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(
     meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
+
+# used for pline with p
+r_hat, x_hat = pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line)
 ###############################################################################
 
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
@@ -457,6 +461,8 @@ for row, i in enumerate(num_known):
         pre_calculated_info['Z_mat'] = Z_mm
         pre_calculated_info['additional_mat_r'] = addn_rr
         pre_calculated_info['additional_mat_x'] = addn_xx
+        pre_calculated_info['r_hat'] = r_hat
+        pre_calculated_info['x_hat'] = x_hat
         ###############################################################################
         ###############################################################################
 
