@@ -6,7 +6,7 @@ Created on Fri Nov 27 13:44:59 2020
 @author: shub
 """
 import numpy as np
-
+import pandas as pd
 def create_loss_jacobian(P_Load_state, P_line_meas, Q_line_meas, P_Load_meas, 
                          Vsq_mes, path_to_all_nodes_list, path_to_all_nodes, R_line, X_line, LineData_Z_pu, V_est, 
                          Pline_est, Qline_est, num_states, num_meas):
@@ -397,7 +397,7 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     # grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass_updated(
     #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est, x_est)
     grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass_updated_fast(
-        pre_calculated_info['r_hat'], pre_calculated_info['x_hat'], x_est, P_Load_state, x_est[-1])
+        meas_P_line, pre_calculated_info['r_hat'], pre_calculated_info['x_hat'], x_est, P_Load_state, x_est[-1])
     # grad_array_pline_p2, grad_array_pline_q2, grad_array_qline_p2, grad_array_qline_q2 = grad_pline_with_p_loss_ass_updated_new(
     #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)
     meas_rows = grad_array_pline_p.shape[0]
@@ -451,8 +451,11 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     # this changes every iteration
     # grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass(
     #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
-    grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass_updated(
-        meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
+    # grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass_updated(
+    #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
+    grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass_fast(
+        meas_P_line, pre_calculated_info['comb_idx1'], pre_calculated_info['comb_idx2'], 
+        pre_calculated_info['sum_r'], pre_calculated_info['sum_x'], P_Load_state, x_est, x_est[-1])
     # grad_array_pline_vnode2, grad_array_qline_vnode2 = grad_pline_with_vnode_loss_ass_updated_new(
     #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
     meas_rows = grad_array_pline_vnode.shape[0]
@@ -577,11 +580,19 @@ def pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path_to_all_nod
                     x_hat[j][k] = sum_X
     return r_hat, x_hat
                     
-def grad_pline_with_p_loss_ass_updated_fast(r_hat, x_hat, x_est, P_Load_state, V0):
-    grad_array_pline_p = (1 + 2 * np.matmul(r_hat,x_est[0:len(P_Load_state)])/ V0).reshape(1,-1)
-    grad_array_pline_q = (    2 * np.matmul(r_hat,x_est[len(P_Load_state):2*len(P_Load_state)])/V0).reshape(1,-1)
-    grad_array_qline_p = (    2 * np.matmul(x_hat,x_est[0:len(P_Load_state)])/V0).reshape(1,-1)
-    grad_array_qline_q = (1 + 2 * np.matmul(x_hat,x_est[len(P_Load_state):2*len(P_Load_state)])/V0 ).reshape(1,-1)
+def grad_pline_with_p_loss_ass_updated_fast(meas_P_line, r_hat, x_hat, x_est, P_Load_state, V0):
+    # would only wprk for (0,1) flow
+    # could be modified to include more line flows
+    if meas_P_line:
+        grad_array_pline_p = (1 + 2 * np.matmul(r_hat,x_est[0:len(P_Load_state)])/ V0).reshape(1,-1)
+        grad_array_pline_q = (    2 * np.matmul(r_hat,x_est[len(P_Load_state):2*len(P_Load_state)])/V0).reshape(1,-1)
+        grad_array_qline_p = (    2 * np.matmul(x_hat,x_est[0:len(P_Load_state)])/V0).reshape(1,-1)
+        grad_array_qline_q = (1 + 2 * np.matmul(x_hat,x_est[len(P_Load_state):2*len(P_Load_state)])/V0 ).reshape(1,-1)
+    else:
+        grad_array_pline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+        grad_array_pline_q = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+        grad_array_qline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+        grad_array_qline_q = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
     return grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q
                        
 def grad_pline_with_p_loss_ass_updated_new(meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, V0, P_Load_est, Q_Load_est):
@@ -860,6 +871,51 @@ def grad_pline_with_vnode_loss_ass_updated(meas_P_line, P_Load_state, path_to_al
         
     return grad_array_pline_vnode, grad_array_qline_vnode
 
+def pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, elems_comb, non_zib_index_array):
+# maybe create a df for pline with vnode and see if it works
+# elems_comb[1] elems_comb[2] indices_for_elems_comb R_hat X_hat calc_PQ(could use indices) Final_result()
+
+    data = []
+    meas_P_nodes_index = np.arange((len(P_Load_state)))
+    for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
+        # print(i,k,v)
+        sq_pline_term, sq_qline_term, double_pline_term, double_qline_term = 0, 0, 0, 0
+        for (node_j, node_k) in elems_comb:
+            # print(node_j, node_k)
+            if k in path_to_all_nodes[node_j] and k in path_to_all_nodes[node_k]:
+                if node_j == node_k:
+                    common_lines = path_to_all_nodes[node_j]
+                    common_lines = common_lines - path_to_all_nodes[k[0]]
+                    sum_R = sum(R_line[item] for item in common_lines)
+                    sum_X = sum(X_line[item] for item in common_lines)
+                    idx1 = np.where(node_j == non_zib_index_array)[0][0]
+                    data.append([node_j, node_k, idx1, idx1, sum_R, sum_X])
+                else:
+                    common_lines = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+                    common_lines = common_lines - path_to_all_nodes[k[0]]
+                    sum_R = sum(R_line[item] for item in common_lines) * 2 # 2 comes from 2P1P2 terms
+                    sum_X = sum(X_line[item] for item in common_lines) * 2 
+                    idx1 = np.where(node_j == non_zib_index_array)[0][0]
+                    idx2 = np.where(node_k == non_zib_index_array)[0][0]
+                    data.append([node_j, node_k, idx1, idx2, sum_R, sum_X])
+    df = pd.DataFrame(data, columns=['elem1', 'elem2', 'idx1', 'idx2', 'sum_r', 'sum_x'])   
+    return df
+
+def grad_pline_with_vnode_loss_ass_fast(meas_P_line, comb_idx1, comb_idx2, sum_r, sum_x, P_Load_state, x_est, V0):
+    # had to separate from df as the pd wrapper around np is expensive
+    # would only work for 0,1 lineflow
+    if meas_P_line:
+        p_term = x_est[comb_idx1]*x_est[comb_idx2]
+        q_term = x_est[comb_idx1 + len(P_Load_state)]*x_est[comb_idx2 + len(P_Load_state)]
+        pq_term = p_term + q_term
+        grad_array_pline_vnode = np.array([(-1/V0**2)*(sum(pq_term * sum_r))])
+        grad_array_qline_vnode = np.array([(-1/V0**2)*(sum(pq_term * sum_x))])
+    else:
+        grad_array_pline_vnode = np.zeros((len(meas_P_line))) # meas*states
+        grad_array_qline_vnode = np.zeros((len(meas_P_line))) # meas*states
+    return grad_array_pline_vnode, grad_array_qline_vnode
+
 def grad_pline_with_vnode_loss_ass_updated_new(meas_P_line, P_Load_state, path_to_all_nodes, 
                                    R_line, X_line, P_Load_est, Q_Load_est, V0):
 
@@ -868,7 +924,7 @@ def grad_pline_with_vnode_loss_ass_updated_new(meas_P_line, P_Load_state, path_t
 
     # get combs of elements
     elems_comb = combination_of_loads(P_Load_state)
-                
+    pqs = []                
     for i, (line,v) in enumerate(meas_P_line.items()):
         # print(i, line, v)
         grad_line_p, grad_line_q = 0, 0 
@@ -882,6 +938,7 @@ def grad_pline_with_vnode_loss_ass_updated_new(meas_P_line, P_Load_state, path_t
                     common_path = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
                     pq_sum = 2*(P_Load_est[node_j] * P_Load_est[node_k] + Q_Load_est[node_j] * Q_Load_est[node_k])
 
+                pqs.append(pq_sum)
                 common_path = common_path - path_to_all_nodes[line[0]] # only consider lines downstream of line[0] as per the formulation
                 R_hat = sum(R_line[item] for item in common_path)
                 X_hat = sum(X_line[item] for item in common_path)
@@ -890,7 +947,7 @@ def grad_pline_with_vnode_loss_ass_updated_new(meas_P_line, P_Load_state, path_t
                 # print(node_j, node_k, R_hat, X_hat, grad_line_p, grad_line_q)
         grad_array_pline_vnode[i] = (-1/V0**2)*grad_line_p
         grad_array_qline_vnode[i] = (-1/V0**2)*grad_line_q
-        
+        pqs = np.array(pqs)
     return grad_array_pline_vnode, grad_array_qline_vnode
 
 def grad_vnode_with_v0_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, V0):

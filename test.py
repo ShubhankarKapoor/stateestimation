@@ -2,7 +2,8 @@ from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
 from jacobian_calc import create_jacobian, vnode_with_v0_pre_calculated_terms, \
-    combination_of_loads, get_r_x_z_mat, pline_with_p_pre_calculated_terms
+    combination_of_loads, get_r_x_z_mat, pline_with_p_pre_calculated_terms, \
+    pline_with_vnode_calculated_terms
 from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
     stochastic_gradient_descent, stochastic_gradient_descent2, \
     WLeastSquaresRegressorTorch, cost
@@ -279,8 +280,9 @@ results = results.T
 # costsloss = cost(x_estloss, jacobian_matrix, z, W)
 
 ###############################################################################
-# get characteristics beforehand that can be used to calc jacobians
+# get pre calculated info beforehand that can be used to calc jacobians
 pre_calculated_info = {}
+
 # add node 0 in non zibs if it doesnt exist for the precalculated values for v meas
 # as we always have slack bus voltage in the meas set
 meas_V_nodes = np.insert(non_zib_index_array, 0, 0) if 0 not in non_zib_index_array else non_zib_index_array # consist all possible locs of V meas
@@ -288,6 +290,7 @@ meas_V_nodes_index = np.arange((len(meas_V_nodes))) # index corresponding to all
 # used for vnode with V0
 v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_V_nodes, P_Load_state, path_to_all_nodes, 
                             R_line, X_line, LineData_Z_pu)
+
 # combination of elems of non-zib nodes
 elems_comb = combination_of_loads(P_Load_state)
 
@@ -302,6 +305,10 @@ X_mat_req = X_mat[meas_V_idx, :]
 # used for pline with p
 r_hat, x_hat = pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
                             R_line, X_line)
+
+# used for pline with vnode
+df_pline_with_vnode =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, elems_comb, non_zib_index_array)
 # start = time.time()
 # Z_mm2 = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
 # a_rr2 = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
@@ -335,6 +342,10 @@ pre_calculated_info['additional_mat_r'] = addn_rr
 pre_calculated_info['additional_mat_x'] = addn_xx
 pre_calculated_info['r_hat'] = r_hat
 pre_calculated_info['x_hat'] = x_hat
+pre_calculated_info['comb_idx1'] = np.array(df_pline_with_vnode.idx1)
+pre_calculated_info['comb_idx2'] = np.array(df_pline_with_vnode.idx2)
+pre_calculated_info['sum_r'] = np.array(df_pline_with_vnode.sum_r)
+pre_calculated_info['sum_x'] = np.array(df_pline_with_vnode.sum_x)
 ###############################################################################
 ###############################################################################
 print('Implementing loss based with a few assumptions')

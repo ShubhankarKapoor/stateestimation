@@ -9,7 +9,8 @@ from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
 from jacobian_calc import create_jacobian, vnode_with_v0_pre_calculated_terms, \
-    combination_of_loads, get_r_x_z_mat, pline_with_p_pre_calculated_terms
+    combination_of_loads, get_r_x_z_mat, pline_with_p_pre_calculated_terms, \
+    pline_with_vnode_calculated_terms
 from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
     stochastic_gradient_descent, stochastic_gradient_descent2, \
     WLeastSquaresRegressorTorch, cost
@@ -231,8 +232,10 @@ meas_V_nodes = np.insert(non_zib_index_array, 0, 0) if 0 not in non_zib_index_ar
 # used for vnode with V0
 v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_V_nodes, P_Load_state, path_to_all_nodes, 
                             R_line, X_line, LineData_Z_pu)
+
 # combination of elems of non-zib nodes
 elems_comb = combination_of_loads(P_Load_state)
+
 # used for vnode with p
 R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(
     meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
@@ -240,6 +243,10 @@ R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(
 # used for pline with p
 r_hat, x_hat = pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
                             R_line, X_line)
+
+# used for pline with vnode
+df_pline_with_vnode =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, elems_comb, non_zib_index_array)
 ###############################################################################
 
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
@@ -463,6 +470,10 @@ for row, i in enumerate(num_known):
         pre_calculated_info['additional_mat_x'] = addn_xx
         pre_calculated_info['r_hat'] = r_hat
         pre_calculated_info['x_hat'] = x_hat
+        pre_calculated_info['comb_idx1'] = np.array(df_pline_with_vnode.idx1)
+        pre_calculated_info['comb_idx2'] = np.array(df_pline_with_vnode.idx2)
+        pre_calculated_info['sum_r'] = np.array(df_pline_with_vnode.sum_r)
+        pre_calculated_info['sum_x'] = np.array(df_pline_with_vnode.sum_x)        
         ###############################################################################
         ###############################################################################
 
