@@ -7,7 +7,9 @@ Created on Mon Feb  8 11:01:17 2021
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 import numpy as np
-from jacobian_calc import create_jacobian
+from jacobian_calc import create_jacobian, vnode_with_v0_pre_calculated_terms, \
+    combination_of_loads, get_r_x_z_mat, pline_with_p_pre_calculated_terms, \
+    pline_with_vnode_calculated_terms, vnode_with_v0_pre_calc_terms_fast
 from solvers import se_wls, se_ols, se_wrr, se_rr, batch_gradient_descent, \
     stochastic_gradient_descent, stochastic_gradient_descent2, \
     WLeastSquaresRegressorTorch, cost
@@ -220,6 +222,39 @@ avg_perc_v_bothfeed, avg_perc_p_bothfeed, avg_abs_p_bothfeed, avg_abs_v_bothfeed
 avg_perc_v_la, avg_perc_p_la, avg_abs_p_la, avg_abs_v_la = 0, 0, 0, 0
 total_counts_v, total_counts_p = 0, 0 # total number of vars for average
 
+###############################################################################
+# get pre calculated info beforehand that can be used to calc jacobians for LA
+pre_calculated_info = {}
+
+# add node 0 in non zibs if it doesnt exist for the precalculated values for v meas
+# as we always have slack bus voltage in the meas set
+meas_V_nodes = np.insert(non_zib_index_array, 0, 0) if 0 not in non_zib_index_array else non_zib_index_array # consist all possible locs of V meas
+meas_V_nodes_index = np.arange((len(meas_V_nodes))) # index corresponding to all v nodes
+
+# used for vnode with p
+R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(
+    meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
+
+# combination of elems of non-zib nodes
+elems_comb = combination_of_loads(P_Load_state)
+
+# used for vnode with V0
+v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_V_nodes, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, LineData_Z_pu)
+
+# used for vode with V0 fast
+df, v_RX_Z_comb = vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_nodes, 
+                                      R_line, X_line, LineData_Z_pu, non_zib_index_array)
+
+# used for pline with p
+r_hat, x_hat = pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line)
+
+# used for pline with vnode
+df_pline_with_v0 =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, elems_comb, non_zib_index_array)
+###############################################################################
+
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
 count = 0 # total number of iters, should be sum of all combs at the end
 iters_n0, iters_n1, iters_n2, iters_n, iters_la = 0, 0, 0, 0, 0
@@ -425,12 +460,44 @@ for row, i in enumerate(num_known):
         p_max_abs_bothfeed = max_val(p_max_abs_bothfeed, abs_p_n, non_zib_index)
 
         #######################################################################
+        # get characteristics beforehand that can be used to calc jacobians for LA
+        pre_calculated_info = {}
+        # V meas indices considered
+        meas_V_keys = np.array(list(meas_V.keys()))
+        meas_V_idx = np.nonzero(np.in1d(meas_V_nodes,meas_V_keys))[0]
+        R_mat_req = R_mat[meas_V_idx, :]
+        X_mat_req = X_mat[meas_V_idx, :]
+        v_RX_Z_comb_req = v_RX_Z_comb[meas_V_idx, :]
+        
+        Z_mm = np.concatenate([Z_mat[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
+        addn_rr = np.concatenate([additional_mat_r[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
+        addn_xx = np.concatenate([additional_mat_x[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
+        
+        pre_calculated_info['v_node_RX_comb'] = v_node_RX_comb
+        pre_calculated_info['z_common_path'] = z_common_path
+        pre_calculated_info['elems_comb'] = elems_comb
+        pre_calculated_info['R_mat'] = R_mat_req
+        pre_calculated_info['X_mat'] = X_mat_req
+        pre_calculated_info['Z_mat'] = Z_mm
+        pre_calculated_info['additional_mat_r'] = addn_rr
+        pre_calculated_info['additional_mat_x'] = addn_xx
+        pre_calculated_info['r_hat'] = r_hat
+        pre_calculated_info['x_hat'] = x_hat
+        pre_calculated_info['comb_idx1'] = np.array(df_pline_with_v0.idx1)
+        pre_calculated_info['comb_idx2'] = np.array(df_pline_with_v0.idx2)
+        pre_calculated_info['sum_r'] = np.array(df_pline_with_v0.sum_r)
+        pre_calculated_info['sum_x'] = np.array(df_pline_with_v0.sum_x)      
+        pre_calculated_info['v_RX_Z_comb_req'] = v_RX_Z_comb_req
+        # same comb_idx can be used for vnode_wit_V0 as above?
+        #######################################################################
+
+        #######################################################################
         # print('Implementing loss based with a few assumptions')
         print('GN-WLS based on non-linear with ass')
         start = time.time()        
         x_est_la, emax_la, counts_la, residuals_mat_la, delta_mat_la, results_la, jacobian_matrix_la = se_wls_nonlin_ass(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes, 
-            non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, 
+            non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, pre_calculated_info,
             len(x_est), len(z), len(x), which)
         end = time.time()
         tot_time = end-start

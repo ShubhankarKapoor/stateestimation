@@ -225,7 +225,7 @@ avg_perc_v_la, avg_perc_p_la, avg_abs_p_la, avg_abs_v_la = 0, 0, 0, 0
 total_counts_v, total_counts_p = 0, 0 # total number of vars for average
 
 ###############################################################################
-# get pre calculated info beforehand that can be used to calc jacobians
+# get pre calculated info beforehand that can be used to calc jacobians for LA
 pre_calculated_info = {}
 
 # add node 0 in non zibs if it doesnt exist for the precalculated values for v meas
@@ -455,7 +455,7 @@ for row, i in enumerate(num_known):
         volt_max_abs_bothfeed = max_val(volt_max_abs_bothfeed, abs_v_n, all_index_array)
         p_max_abs_bothfeed = max_val(p_max_abs_bothfeed, abs_p_n, non_zib_index)
 
-        ###############################################################################
+        #######################################################################
         # get characteristics beforehand that can be used to calc jacobians for LA
         pre_calculated_info = {}
         # V meas indices considered
@@ -485,8 +485,7 @@ for row, i in enumerate(num_known):
         pre_calculated_info['sum_x'] = np.array(df_pline_with_v0.sum_x)      
         pre_calculated_info['v_RX_Z_comb_req'] = v_RX_Z_comb_req
         # same comb_idx can be used for vnode_wit_V0 as above?
-        ###############################################################################
-        ###############################################################################
+        #######################################################################
 
         #######################################################################
         # print('Implementing loss based with a few assumptions')
@@ -498,7 +497,7 @@ for row, i in enumerate(num_known):
             len(x_est), len(z), len(x), which)
         end = time.time()
         tot_time = end-start
-        time_la+= tot_time                
+        time_la+= tot_time
         iters_la+=counts_la
         #######################################################################
         perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
