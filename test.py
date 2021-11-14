@@ -111,7 +111,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 1 # 1
+num_plow_meas = 0 # 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -304,7 +304,7 @@ v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_V_nodes,
                             R_line, X_line, LineData_Z_pu)
 
 # used for vode with V0 fast
-df, v_RX_Z_comb = vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_nodes, 
+df_vnode_with_v0, v_RX_Z_comb = vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_nodes, 
                                       R_line, X_line, LineData_Z_pu, non_zib_index_array)
 v_RX_Z_comb_req = v_RX_Z_comb[meas_V_idx, :]
 
@@ -348,12 +348,18 @@ pre_calculated_info['additional_mat_r'] = addn_rr
 pre_calculated_info['additional_mat_x'] = addn_xx
 pre_calculated_info['r_hat'] = r_hat
 pre_calculated_info['x_hat'] = x_hat
-pre_calculated_info['comb_idx1'] = np.array(df_pline_with_v0.idx1)
-pre_calculated_info['comb_idx2'] = np.array(df_pline_with_v0.idx2)
+if num_plow_meas!=0:
+    pre_calculated_info['comb_idx1'] = np.array(df_pline_with_v0.idx1)
+    pre_calculated_info['comb_idx2'] = np.array(df_pline_with_v0.idx2)
+else:
+    pre_calculated_info['comb_idx1'] = np.array(df_vnode_with_v0.idx1)
+    pre_calculated_info['comb_idx2'] = np.array(df_vnode_with_v0.idx2)    
+
 pre_calculated_info['sum_r'] = np.array(df_pline_with_v0.sum_r)
 pre_calculated_info['sum_x'] = np.array(df_pline_with_v0.sum_x)
 pre_calculated_info['v_RX_Z_comb_req'] = v_RX_Z_comb_req
 # same comb_idx can be used for vnode_wit_V0 as above?
+# -- No, it would be empty df when num pflow is 0
 ###############################################################################
 ###############################################################################
 print('Implementing loss based with a few assumptions')

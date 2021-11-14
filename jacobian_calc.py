@@ -1241,7 +1241,7 @@ def grad_vnode_with_v0_loss_ass_updated_fast(comb_idx1, comb_idx2, v_RX_Z_comb,
     p_term = x_est[comb_idx1]*x_est[comb_idx2]
     q_term = x_est[comb_idx1 + len(P_Load_state)]*x_est[comb_idx2 + len(P_Load_state)]
     pq_term = p_term + q_term
-    
+
     grad_array_vnode_v = 1 + 1/V0*(np.matmul(v_RX_Z_comb, pq_term))
     return grad_array_vnode_v
 
