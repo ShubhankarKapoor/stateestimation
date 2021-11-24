@@ -726,20 +726,18 @@ plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 
 ########################## computational time plot #######################
 # creating the dataset
-
 approaches = ['LN', 'LV', 'LP', 'LB', 'LA']
 comp_time = [time_n0, time_n1, time_n2, time_nn, time_la]
 
 fig = plt.figure(figsize = (10, 5))
-
 # creating the bar plot
 plt.bar(approaches, comp_time, color ='maroon',
         width = 0.4)
-
 plt.xlabel("Model")
-plt.ylabel("Computational Time")
-plt.title("Computational Times for Different Models")
+plt.ylabel("Computational Time (s)")
+plt.title("Total Computational Times for Different Models")
 plt.show()
+
 # plot histogram
 
 # plot histogram for different methods but same number of missing nodes on 1 graph

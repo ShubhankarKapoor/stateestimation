@@ -118,7 +118,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 1
+num_plow_meas = 0
 num_voltage_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
@@ -243,7 +243,7 @@ v_node_RX_comb, z_common_path = vnode_with_v0_pre_calculated_terms(meas_V_nodes,
                             R_line, X_line, LineData_Z_pu)
 
 # used for vode with V0 fast
-df, v_RX_Z_comb = vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_nodes, 
+df_vnode_with_v0, v_RX_Z_comb = vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_nodes, 
                                       R_line, X_line, LineData_Z_pu, non_zib_index_array)
 
 # used for pline with p
@@ -483,8 +483,12 @@ for row, i in enumerate(num_known):
         pre_calculated_info['additional_mat_x'] = addn_xx
         pre_calculated_info['r_hat'] = r_hat
         pre_calculated_info['x_hat'] = x_hat
-        pre_calculated_info['comb_idx1'] = np.array(df_pline_with_v0.idx1)
-        pre_calculated_info['comb_idx2'] = np.array(df_pline_with_v0.idx2)
+        if num_plow_meas!=0:
+            pre_calculated_info['comb_idx1'] = np.array(df_pline_with_v0.idx1)
+            pre_calculated_info['comb_idx2'] = np.array(df_pline_with_v0.idx2)
+        else:
+            pre_calculated_info['comb_idx1'] = np.array(df_vnode_with_v0.idx1)
+            pre_calculated_info['comb_idx2'] = np.array(df_vnode_with_v0.idx2)   
         pre_calculated_info['sum_r'] = np.array(df_pline_with_v0.sum_r)
         pre_calculated_info['sum_x'] = np.array(df_pline_with_v0.sum_x)      
         pre_calculated_info['v_RX_Z_comb_req'] = v_RX_Z_comb_req
@@ -720,6 +724,20 @@ fig4.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vert
 plt.subplots_adjust(left, bottom, right, top, wspace, hspace)
 # fig4.delaxes(axn4[2][1])
 # fig4.tight_layout()
+
+########################## computational time plot #######################
+# creating the dataset
+approaches = ['LN', 'LV', 'LP', 'LB', 'LA']
+comp_time = [time_n0, time_n1, time_n2, time_nn, time_la]
+
+fig = plt.figure(figsize = (10, 5))
+# creating the bar plot
+plt.bar(approaches, comp_time, color ='maroon',
+        width = 0.4)
+plt.xlabel("Model")
+plt.ylabel("Computational Time (s)")
+plt.title("Total Computational Times for Different Models")
+plt.show()
 
 # plot histogram
 
