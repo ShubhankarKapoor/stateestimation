@@ -185,9 +185,11 @@ weight_array2 = np.concatenate((weight_array2, weight_array2)) # for p and q bus
 weight_array3 = np.ones((len(meas_V)))*w3 # for v mag
 weight_array = np.concatenate((weight_array1, weight_array2,weight_array3)) # entire weight vector
 
-# rather than below, just iverse the values of the matrix?
-W = np.diag(weight_array) # Weight mat
-W = np.linalg.inv(W)
+# hacky modification to weight array
+weight_array = 0.1*weight_array
+
+# convert from diagonal variances to diagonal weights
+W = np.diag(1/weight_array)     # more efficient and accurate as its diagonal
 
 ##############################################################################
 ##############################################################################
@@ -226,9 +228,41 @@ loss, pflow = 0, 0
 x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
     x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
     meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+
+# a rough calc for the measurement variances (separated into actually measured, and pretend measured)
+inds = weight_array > 1     # hacky way of getting the fake measurement indices
+err = z - jacobian_matrix @ x_estn0   # this should be using h(x) not Hx
+z_std2 = np.std(err[inds])      # numerical standard deviation for the fake measurements
+z_std1 = np.std(err[~inds])     # numerical standard deviation for the actual measurements
+z_var = np.zeros(weight_array.shape)
+z_var[inds] = z_std2**2
+z_var[~inds] = z_std1**2
+
+## calculate the fisher information matrix (remember W is inverse of measurement variances)
+FI = jacobian_matrix.T @ (np.diag(1/z_var) @ jacobian_matrix)
+# get a lower bound on the variance of x_est
+var_x_estn0 = np.linalg.inv(FI)
+# get teh diagonal standard deviations for these
+std_x_estn0 = np.sqrt(np.diag(var_x_estn0))
+
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
+
+plt.plot(np.arange(len(x_estn0)), x_true, label='true states')
+plt.plot(np.arange(len(x_estn0)), x_estn0, label='mean estimate')
+plt.fill_between(np.arange(len(x_estn0)),x_estn0-std_x_estn0,x_estn0+std_x_estn0, alpha=0.1, label="68% CI")
+plt.title("GN-WLS based on linear jacobian with no feedback")
+plt.legend()
+plt.ylim((np.min(x_true)-.5,np.max(x_true)+0.5))
+plt.show()
+
+plt.loglog(np.abs(x_estn0-x_true),std_x_estn0,'*')
+plt.title('GN-WLS based on linear jacobian with no feedback')
+plt.xlabel('Estimated State Error')
+plt.ylabel('std of state estimate')
+plt.show()
+
 # # print(x_estn)
 
 # ###############################################################################
@@ -260,10 +294,42 @@ _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est
 # constant jacobian in this case
 print('GN-WLS based on linear jacobian with both feedback')
 loss, pflow = 1, 1
-x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn, _ = se_wls(
+x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
     x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
     meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
-# costsn = cost(x_estn, jacobian_matrix, z, W)
+
+
+# a rough calc for the measurement variances (separated into actually measured, and pretend measured)
+inds = weight_array > 1     # hacky way of getting the fake measurement indices
+err = z - jacobian_matrix @ x_estn   # this should be using h(x) not Hx
+z_std2 = np.std(err[inds])      # numerical standard deviation for the fake measurements
+z_std1 = np.std(err[~inds])     # numerical standard deviation for the actual measurements
+z_var = np.zeros(weight_array.shape)
+z_var[inds] = z_std2**2
+z_var[~inds] = z_std1**2
+
+## calculate the fisher information matrix (remember W is inverse of measurement variances)
+FI = jacobian_matrix.T @ (np.diag(1/z_var) @ jacobian_matrix)
+# get a lower bound on the variance of x_est
+var_x_estn = np.linalg.inv(FI)
+# get teh diagonal standard deviations for these
+std_x_estn = np.sqrt(np.diag(var_x_estn))
+
+plt.plot(np.arange(len(x_estn)), x_true, label='true states')
+plt.plot(np.arange(len(x_estn)), x_estn, label='mean estimate')
+plt.fill_between(np.arange(len(x_estn)),x_estn-std_x_estn,x_estn+std_x_estn, alpha=0.1, label="68% CI")
+plt.title("GN-WLS based on linear jacobian with both feedback")
+plt.legend()
+plt.ylim((np.min(x_true)-.5,np.max(x_true)+0.5))
+plt.show()
+
+plt.loglog(np.abs(x_estn-x_true),std_x_estn,'*')
+plt.title('GN-WLS based on linear jacobian with both feedback')
+plt.xlabel('Estimated State Error')
+plt.ylabel('std of state estimate')
+plt.show()
+
+
 perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = 1, pflow = 1) # for WLS
 ##############################################################################
@@ -367,6 +433,41 @@ x_est_la, emax_la, count_la, residuals_mat_la, delta_mat_la, results_la, jacobia
     x_est, z, W, meas_P_line,  P_Load_state, meas_P_load, path_to_all_nodes, 
     non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, pre_calculated_info,
     len(x_est), len(z), len(x), which)
+
+# a rough calc for the measurement variances (separated into actually measured, and pretend measured)
+inds = weight_array > 1     # hacky way of getting the fake measurement indices
+err = z - jacobian_matrix_la @ x_est_la # this should be using h(x) not Hx
+z_std2 = np.std(err[inds])      # numerical standard deviation for the fake measurements
+z_std1 = np.std(err[~inds])     # numerical standard deviation for the actual measurements
+z_var = np.zeros(weight_array.shape)
+z_var[inds] = z_std2**2
+z_var[~inds] = z_std1**2
+
+## calculate the fisher information matrix (remember W is inverse of measurement variances)
+FI = jacobian_matrix_la.T @ (np.diag(1/z_var) @ jacobian_matrix_la)
+# get a lower bound on the variance of x_est
+var_x_estla = np.linalg.inv(FI)
+# get teh diagonal standard deviations for these
+std_x_estla = np.sqrt(np.diag(var_x_estla))
+
+
+
+plt.plot(np.arange(len(x_est_la)), x_true, label='true states')
+plt.plot(np.arange(len(x_est_la)), x_est_la, label='mean estimate')
+plt.fill_between(np.arange(len(x_est_la)),x_est_la-2*std_x_estla,x_est_la+2*std_x_estla, alpha=0.1, label="95% CI")
+plt.title("GN-WLS based on non-linear with ass")
+plt.legend()
+plt.ylim((np.min(x_true)-.5,np.max(x_true)+0.5))
+plt.show()
+
+plt.loglog(np.abs(x_est_la-x_true),std_x_estla,'*')
+plt.title('GN-WLS based on non-linear with ass')
+plt.xlabel('Estimated State Error')
+plt.ylabel('std of state estimate')
+plt.show()
+
+
+
 ###############################################################################
 print('GN-WLS based on non-linear with ass')
 perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
