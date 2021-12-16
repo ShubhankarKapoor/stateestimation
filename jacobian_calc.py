@@ -634,7 +634,7 @@ def get_r_x_z_mat(meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line,
     ''' Returns the constant matrices used for grad_vnode_with_p_loss_ass'''
     # somehow define it in the beginning
     # and extract a part of it depending on the problem
-    #sensitivity matrices
+    # sensitivity matrices
     R_mat, X_mat, Z_mat = np.zeros((len(meas_V_nodes), len(P_Load_state))), np.zeros((len(meas_V_nodes), len(P_Load_state))), \
         np.zeros((len(meas_V_nodes)*len(P_Load_state), len(P_Load_state)))
     a = 0
@@ -1180,7 +1180,7 @@ def vnode_with_v0_pre_calculated_terms(meas_V_nodes, P_Load_state, path_to_all_n
         for (node_j, node_k) in elems_comb:
             # print(node_j, node_k)
             # print(node_j, node_k, sum_RX_comb[(node_j, node_k)])
-            if node_j == node_k and node_j: # square terms
+            if node_j == node_k: # square terms
                 common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j]) # for original loss
             else: # other coupled terms
                 common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j]).intersection(path_to_all_nodes[node_k])
@@ -1200,13 +1200,13 @@ def vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_node
     data = []
     v_node_RX_comb = np.zeros((len(meas_V_nodes), len(elems_comb)))
     z_common_path = np.zeros((len(meas_V_nodes), len(elems_comb)))
-    
+
     for idxv, node_v in enumerate(meas_V_nodes):
         # all downstream nodes
         # common impedance bw subscripts of power terms and voltage node
         for idx_elem, (node_j, node_k) in enumerate(elems_comb):
             # print(idx_elem, node_j, node_k)
-            if node_j == node_k and node_j: # square terms
+            if node_j == node_k: # square terms
                 common_lines_power_nodes = path_to_all_nodes[node_j] # for additional loss
                 common_path = path_to_all_nodes[node_v].intersection(common_lines_power_nodes) # for original loss
                 _, _, sum_RX_comb = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
@@ -1232,7 +1232,7 @@ def vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_node
     df = pd.DataFrame(data, columns=['elem1', 'elem2', 'idx1', 'idx2'])
     return df, v_RX_Z_comb
 
-def grad_vnode_with_v0_loss_ass_updated_fast(comb_idx1, comb_idx2, v_RX_Z_comb, 
+def grad_vnode_with_v0_loss_ass_updated_fast(comb_idx1, comb_idx2, v_RX_Z_comb_req, 
                                              P_Load_state, x_est, V0):
     # had to separate from df as the pd wrapper around np is expensive
     # would only work for 0,1 lineflow
@@ -1242,7 +1242,7 @@ def grad_vnode_with_v0_loss_ass_updated_fast(comb_idx1, comb_idx2, v_RX_Z_comb,
     q_term = x_est[comb_idx1 + len(P_Load_state)]*x_est[comb_idx2 + len(P_Load_state)]
     pq_term = p_term + q_term
 
-    grad_array_vnode_v = 1 + 1/V0*(np.matmul(v_RX_Z_comb, pq_term))
+    grad_array_vnode_v = 1 + 1/V0*(np.matmul(v_RX_Z_comb_req, pq_term))
     return grad_array_vnode_v
 
 

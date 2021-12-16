@@ -111,7 +111,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 
 # get subset of lineflow measurement set
-num_plow_meas = 0 # 1
+num_plow_meas = 1 # 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -122,7 +122,7 @@ arr = np.arange(len(non_zib_index)) # used for combinations
 combs = list(combinations(arr,i))
 # chosing bus powers
 # indices = np.array(np.arange(5))
-indices = np.asarray(combs[5])
+indices = np.asarray(combs[25])
 # indices = np.asarray([0, 2, 4, 5, 6, 7, 8])
 # ----->>> full loss based system works most of the cases.
 # ----->>> might be a small bug in code or jacobian calc. worth checking

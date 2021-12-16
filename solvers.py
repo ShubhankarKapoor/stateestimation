@@ -26,7 +26,7 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     count = 0
     delta_mat = np.zeros((jacobian_matrix.shape[1], 1000)) # delta in states
     residuals_mat = np.zeros((jacobian_matrix.shape[0], 1000)) # meas residuals
-    tol = tol if tol is not None else 10e-12
+    tol = tol if tol is not None else 10e-3
     results = x_est
     emax = 100 # chosen higher than the tol
 
