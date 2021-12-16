@@ -48,9 +48,9 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
 
         # calculate h(x)
         hx = np.matmul(jacobian_matrix, x_est)
-        
+        # print('b', hx[-len(meas_V):])
         # try to get estimate from full approx distflow model
-        hx = meas_from_approx_distflow(x_est, P_Load_state, pre_calculated_info['comb_idx1'], 
+        hx = meas_from_approx_distflow(x_est, meas_P_line, P_Load_state, pre_calculated_info['comb_idx1'], 
                 pre_calculated_info['comb_idx2'], pre_calculated_info['sum_r'], 
                 pre_calculated_info['sum_x'], pre_calculated_info['R_mat'], 
                 pre_calculated_info['X_mat'], pre_calculated_info['v_RX_Z_comb_req'], 

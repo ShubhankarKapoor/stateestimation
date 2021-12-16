@@ -1,7 +1,7 @@
 import numpy as np
 # measurement set for approx distflow
 
-def meas_from_approx_distflow(x_est, P_Load_state, comb_idx1, comb_idx2, 
+def meas_from_approx_distflow(x_est, meas_P_line, P_Load_state, comb_idx1, comb_idx2, 
                 sum_r, sum_x, R_mat_req, X_mat_req, v_RX_Z_comb_req, V0, hx):
 
     # input: 
@@ -16,11 +16,12 @@ def meas_from_approx_distflow(x_est, P_Load_state, comb_idx1, comb_idx2,
     q_term = x_est[comb_idx1 + len(P_Load_state)]*x_est[comb_idx2 + len(P_Load_state)]
     pq_term = p_term + q_term
 
-    # hacky way for line 01, wont work for 
-    p_01 = sum(x_est[0:len(P_Load_state)]) + (1/V0)*(sum(pq_term * sum_r))
-    q_01 = sum(x_est[len(P_Load_state):2*len(P_Load_state)]) + (1/V0)*(sum(pq_term * sum_x))
-    hx[0] = p_01
-    hx[1] = q_01
+    # hacky way for line 01, wont work for other cases
+    if meas_P_line:    
+        p_01 = sum(x_est[0:len(P_Load_state)]) + (1/V0)*(sum(pq_term * sum_r))
+        q_01 = sum(x_est[len(P_Load_state):2*len(P_Load_state)]) + (1/V0)*(sum(pq_term * sum_x))
+        hx[0] = p_01
+        hx[1] = q_01
 
     # v_i
     # calculate v_i again
