@@ -63,6 +63,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None,
             #Backward sweep
             # for i in range(len(BusNum)-1,0,-1):
             # sum_loss_p = 0
+            # cc, pp, qq = [], [], []
             for i in BusNum[:0:-1]:
                 # if no loss included in pflow/ qflow
                 P_line[bus_arcs[i]["To"][0]] = P_Load[i] + sum(P_line[g] for g in bus_arcs[i]["from"] )
@@ -70,8 +71,12 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None,
                 if pflow == 1: # pflow/qflow loss term
                     # print(V[i], (1/V[i]))
                     current_sq = (P_line[bus_arcs[i]["To"][0]]**2 + Q_line[bus_arcs[i]["To"][0]]**2)* (1/V[i])
+                    # print(P_line[bus_arcs[i]["To"][0]]**2+ Q_line[bus_arcs[i]["To"][0]]**2)
+                    # cc.append(current_sq)
                     loss_term_p = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].real
                     loss_term_q = current_sq * LineData_Z_pu[bus_arcs[i]["To"][0]].imag
+                    # pp.append(loss_term_p)
+                    # qq.append(loss_term_q)
                     # sum_loss_p+=loss_term_p
                     # print(bus_arcs[i]["To"][0], P_line[bus_arcs[i]["To"][0]], loss_term_p)
                     P_line[bus_arcs[i]["To"][0]] = P_line[bus_arcs[i]["To"][0]] + loss_term_p
