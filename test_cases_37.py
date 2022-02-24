@@ -22,6 +22,7 @@ import seaborn as sns
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
                        error_calc_refactor, countour_plot, inc_avg, get_index_for_keys_init_stat_var
+from power_flow_modelling.networks import Network
 import time
 import torch
 import matplotlib.pyplot as plt
@@ -111,7 +112,10 @@ x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 ###############################################################################
-
+# load the network object for sped up distflow
+network37 = Network('network37', sparse=False)
+###############################################################################
+###############################################################################
 # get subset of lineflow measurement set
 num_plow_meas = 1
 # chose lineflows
@@ -345,7 +349,7 @@ for row, i in enumerate(num_known):
         start = time.time()
         x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            meas_V, R_line, X_line, network37, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_n0+= tot_time
@@ -377,7 +381,7 @@ for row, i in enumerate(num_known):
         start = time.time()
         x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn, _ = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            meas_V, R_line, X_line, network37, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_n1+= tot_time
@@ -405,7 +409,7 @@ for row, i in enumerate(num_known):
         start = time.time()
         x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn, _ = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            meas_V, R_line, X_line, network37, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_n2+= tot_time        
@@ -421,7 +425,7 @@ for row, i in enumerate(num_known):
         # uncomment below to store all errors        
         # l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
         # l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
-        ################### HEATMAP ##########################################
+        ################### HEATMAP ###########################################
         volt_max_perc_pfeed = max_val(volt_max_perc_pfeed, perc_v_pfeed, all_index_array)
         p_max_perc_pfeed = max_val(p_max_perc_pfeed, perc_p_pfeed, non_zib_index)       
         volt_max_abs_pfeed = max_val(volt_max_abs_pfeed, abs_v_pfeed, all_index_array)
@@ -433,7 +437,7 @@ for row, i in enumerate(num_known):
         start = time.time()
         x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn, _ = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            meas_V, R_line, X_line, network37, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_nn+= tot_time                
@@ -881,7 +885,7 @@ if separate_plots == 1:
 ###############################################################################
 # SUBPLOT FOR 3 CASES OF MISSING MEASUREMENTS #
 ###############################################################################
-
+'''
 plt.figure()
 data = [ll_no_feed_perc_v[0], ll_v_feed_perc_v[0], ll_p_feed_perc_v[0], 
         ll_both_feed_perc_v[0], ll_la_perc_v[0]]
@@ -1091,7 +1095,7 @@ sns.boxplot(data=data, orient="h")
 plt.xlabel('(h) Absolute P Error')
 # plt.title('Absolute P Error for Different SE Models')
 plt.yticks([0, 1, 2,], ['N', 'LB', 'LA'])
-'''
+
 # saving different errors
 list_of_errors_p, list_of_errors_q, list_of_errors_v = [], [], [] # max abs error
 list_of_all_errors_p, list_of_all_errors_q = [], [] # all abs error

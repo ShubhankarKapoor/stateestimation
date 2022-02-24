@@ -4,6 +4,8 @@ import torch
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from some_funcs import refactor_estimates
 from jacobian_calc import create_jacobian, create_loss_jacobian
+from power_flow_modelling.newton import newton_no_jacob
+from power_flow_modelling.networks import Network
 # import some_funcs
 
 def se_ols(x_est, z, jacobian_matrix, W, tol = None):
@@ -62,7 +64,8 @@ def se_ols(x_est, z, jacobian_matrix, W, tol = None):
     return x_est, emax, count, residuals_mat, delta_mat, results
 
 def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-          meas_V, R_line, X_line, tol = None, loss = None, pflow = None, lossy_volt_est = None):
+          meas_V, R_line, X_line, network, tol = None, loss = None, pflow = None, 
+          lossy_volt_est = None):
     ''' Weighted Least Square Estimate'''
 
     tol = tol if tol is not None else 10e-12
@@ -88,7 +91,7 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
 
     while emax > tol: # added the count to avoid error in some cases
     # while emax > tol:
-
+        # print(emax, tol)
         cur_cost = cost(x_est, jacobian_matrix, z, W)
         costs.append(cur_cost)
 
@@ -102,22 +105,48 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
             if len(lossy_volt_est) == 6: # to make sure lossy_volt_est has all info
                 full_x_est, P_Load_est, Q_Load_est = refactor_estimates(lossy_volt_est['tot_states'], 
                                                                         x_est, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
-                V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
-                        P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], 
-                        loss, pflow, max_iter = 1)
-                        # loss, pflow)
 
+                ###############################################################
+                # V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
+                #         P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], 
+                #         loss, pflow)
+                #         # loss, pflow)
+
+                # # update the estimates -- after feedback calculation
+                # Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
+                # Qline_known_meas = {k:Qline_est[k] for k in lossy_volt_est['plines']} # get qflow vals for known measurements
+                # # update the pline/qline measurement estimates
+                # hx[0:len(Pline_known_meas)]=list(Pline_known_meas.values()) # update values
+                # hx[len(Pline_known_meas):2*len(Pline_known_meas)]=list(Qline_known_meas.values()) # update values
+
+                # # update the voltage estimates for buses with measurements
+                # V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
+                # # print('max volt diff', max(abs(np.asarray(hx[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
+                # hx[-len(V_known_meas):]=list(V_known_meas.values()) # update values
+                ###############################################################
+
+                # --------------->>>>>>>>>>>><<<<<<<<<<<<-------------#
+                # updated distflow
+                # could clean up P_Load_est, Q_Load_est more
+                P_Load_est = np.asarray(list(P_Load_est.values()))
+                P_Load_est = np.expand_dims(P_Load_est, axis=1)
+                Q_Load_est = np.asarray(list(Q_Load_est.values()))
+                Q_Load_est = np.expand_dims(Q_Load_est, axis=1)
+                # x_line, V_est, _, _ = newton_no_jacob(network37, P_Load_est, 
+                # Q_Load_est, V0=full_x_est[-1], loss=loss, pflow = pflow)
+                x_line, V_est = newton_no_jacob(network, P_Load_est, 
+                Q_Load_est, V0=full_x_est[-1], loss=loss, pflow = pflow)
                 # update the estimates -- after feedback calculation
-                Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
-                Qline_known_meas = {k:Qline_est[k] for k in lossy_volt_est['plines']} # get qflow vals for known measurements
                 # update the pline/qline measurement estimates
-                hx[0:len(Pline_known_meas)]=list(Pline_known_meas.values()) # update values
-                hx[len(Pline_known_meas):2*len(Pline_known_meas)]=list(Qline_known_meas.values()) # update values
+                # doing it for 0,1 only
+                hx[0:len(meas_P_line)]=x_line[0] # update values
+                hx[len(meas_P_line):2*len(meas_P_line)]=x_line[int(len(x_line)/2+0)] # update values
 
                 # update the voltage estimates for buses with measurements
-                V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
                 # print('max volt diff', max(abs(np.asarray(hx[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
-                hx[-len(V_known_meas):]=list(V_known_meas.values()) # update values
+                hx[-len(meas_V):]=V_est[list(lossy_volt_est['volt_buses'])].ravel() # update values
+                ###############################################################
+
             else:
                 raise ValueError('Length of lossy_volt_est should be 6')
             # print(k)
@@ -133,7 +162,7 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
 
         # update values of state vars
         x_est = x_est + deltax
-        results = np.vstack((results, x_est))
+        # results = np.vstack((results, x_est))
 
         # get tolerance
         emax = np.max(np.abs(deltax))
@@ -231,7 +260,7 @@ def se_rr(x_est, z, jacobian_matrix, W_rr, k = None, tol = None):
 
         # update values of state vars
         x_est = x_est + deltax
-        results = np.vstack((results, x_est))
+        # results = np.vstack((results, x_est))
         count+=1
 
     return x_est, emax, count, residuals_mat, delta_mat, results

@@ -11,16 +11,22 @@ class Network:
         self.sbase = None            # kVA apparent power for normalisation
         self.node_a = None           # node a for each line
         self.node_b = None           # node b for each line
+        self.num_lines =  None       # number of lines
         self.current_graph = None    # connection matrix for KCL
         self.voltage_graph = None    # connection matrix for KVL
         self.downstream_branch = None
         self.line_z_pu = None        # impedance of each line
         self.slack_bus_num = 0       # //todo: this is currently not used and is assumed zero
         self.load_powers = None      # power load connected to each node (including slack)
-        self.V_slack = None           # voltage of slack node (normalised if loads are normalised)
+        self.V_slack = None          # voltage of slack node (normalised if loads are normalised)
         self.node_voltages = None
         self.line_currents = None
-        self.sparse = sparse        # whether to store graphs in sparse format or not
+        self.sparse = sparse         # whether to store graphs in sparse format or not
+        self.load_mat = None         # pre calc matrix for func_calc_lineflow
+        self.line_flow_mat = None    # pre calc matrix for func_calc_lineflow
+        self.line_flow_mat_V = None  # pre calc matrix for func_calc_volt
+        self.pflow_mat = None        # used for func_calc_volt & func_calc_lineflow
+        self.qflow_mat = None        # used for func_calc_volt & func_calc_lineflow
         if network=="network37":
             self.load_network73()
 
@@ -50,6 +56,7 @@ class Network:
         node_b = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
                   18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
                   35, 36]
+        num_lines = len(node_a)
         line_z_pu = np.array(
             [zt_new_pu * length[0], z1 * length[1] / zbase, z2 * length[2] / zbase, z2 * length[3] / zbase,
              z3 * length[4] / zbase, z3 * length[5] / zbase, z3 * length[6] / zbase, z3 * length[7] / zbase,
@@ -64,6 +71,7 @@ class Network:
              z3 * length[29] / zbase, z4 * length[30] / zbase, z4 * length[31] / zbase,
              z4 * length[32] / zbase, z4 * length[33] / zbase, z4 * length[34] / zbase,
              z4 * length[35] / zbase])
+        line_z_pu = np.expand_dims(line_z_pu, axis=1)
         P_load = np.array(
             [0, 0, 140, 0, 0, 0, 0, 0, 85, 0, 140, 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 42, 42, 0, 0, 8, 0, 0, 0, 0, 0,
              0, 0, 0,
@@ -86,11 +94,29 @@ class Network:
         current_graph = current_graph[1:, :]  # remove slack node as we assume it can provide requried current // todo: reform this so nodes other than 0 can be slack
         voltage_graph = current_graph.T
         # downstream_branch = downstream_branch[1:, :]  # remove slack node as we assume it can provide requried current // todo: reform this so nodes other than 0 can be slack
+
+        # pre calculated matrices for func_calc_lineflow
+        # matrix is for multiplication with p and q vector
+        p_load_mat = np.diag(np.ones(len(node_b)))
+        load_mat = np.zeros((2*len(node_a), 2*len(node_a)))
+        load_mat[0:len(node_a),0:len(node_a)] = p_load_mat
+        load_mat[len(node_a):2*len(node_a),len(node_a):2*len(node_a)] = p_load_mat
+        # define matrix for multiplication with p_01/ p_ij, q_01/ q_ij terms
+        line_flow_mat = np.zeros((2*len(node_a), 2*len(node_a)))
+        line_flow_mat[0:len(node_a),0:len(node_a)] = downstream_branch[1:, :]
+        line_flow_mat[len(node_a):2*len(node_a),len(node_a):2*len(node_a)] = downstream_branch[1:, :]
+
+        # pre calculated matrices for func_calc_volt
+        # const matrix of res./ reac with line flow
+        pflow_mat = np.diag(line_z_pu.real.reshape(len(line_z_pu),))
+        qflow_mat = np.diag(line_z_pu.imag.reshape(len(line_z_pu),))
+        line_flow_mat_V = np.concatenate((pflow_mat, qflow_mat), axis =1)
         self.busNo = 37
         self.vbase = vbase
         self.sbase = sbase
         self.node_a = node_a
         self.node_b = node_b
+        self.num_lines = num_lines
         self.line_z_pu = line_z_pu
         self.load_powers = load_powers
         self.downstream_branch = downstream_branch
@@ -101,3 +127,8 @@ class Network:
             self.current_graph = current_graph
             self.voltage_graph = voltage_graph
         self.V_slack = 1. + 0.j
+        self.load_mat = load_mat
+        self.line_flow_mat = line_flow_mat
+        self.line_flow_mat_V = line_flow_mat_V
+        self.pflow_mat = pflow_mat
+        self.qflow_mat = qflow_mat

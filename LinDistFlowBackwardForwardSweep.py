@@ -30,7 +30,7 @@ def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None,
         V[i] = 1 # square magnitude
     # should skip the line below for ausnet because 0 isn't the slack node        
     V[slack_node] = 1 if V0 is None else V0 # replace 0 with slack node
-
+    # print(V[0])
     #Initialization of iteration count
     k = 0 # iteration count
     e_max = 1

@@ -30,16 +30,16 @@ def func(arr, v0, p0, q0, A, B):
     F2 = np.zeros(N)
     F3 = np.zeros(N)
 
-    F1[0] = p[0] - p0 + h*(-1. - (p0**2 + q0**2) / v0**2) # active power line flows
-    F2[0] = q[0] - q0 + h*(A - B*(p0**2 + q0**2) / v0**2) # reactive power line flows
-    F3[0] = v[0]**2 - v0**2 - 2*h*(p0 + B*q0) # voltages
+    F1[0] = p[0] - p0 + h*(-1. - (p0**2 + q0**2) / v0**2) # not sure what is this
+    F2[0] = q[0] - q0 + h*(A - B*(p0**2 + q0**2) / v0**2) # not sure about this either
+    F3[0] = v[0]**2 - v0**2 - 2*h*(p0 + B*q0) # slack voltage
     # F3[0] = v0
     # print(F1[0], F2[0], F3[0])
     for i in range(1, N):
         # print(i)
-        F1[i] = p[i] - p[i-1] + h*(-1. - (p[i-1]**2 + q[i-1]**2) / v[i-1]**2)  
-        F2[i] = q[i] - q[i-1] + h*(A - B*(p[i-1]**2 + q[i-1]**2) / v[i-1]**2) 
-        F3[i] = v[i]**2 - v[i-1]**2 - 2*h*(p[i-1] + B*q[i-1]) 
+        F1[i] = p[i] - p[i-1] + h*(-1. - (p[i-1]**2 + q[i-1]**2) / v[i-1]**2) # active power line flows
+        F2[i] = q[i] - q[i-1] + h*(A - B*(p[i-1]**2 + q[i-1]**2) / v[i-1]**2) # reactive power line flows
+        F3[i] = v[i]**2 - v[i-1]**2 - 2*h*(p[i-1] + B*q[i-1])  # voltages
 
 # backward sweep
 #     F1[N-1] = 0 - p[N-1] + h*r[N-1] * (p[N-1]**2 + q[N-1]**2) / v[N-2]**2 + h*P[N-1]  
@@ -67,20 +67,23 @@ def jacob(arr, v0, p0, q0, A, B):
     J[2*N, 2*N] = 2*v[0]
 
     for i in range (1,N):
+        # jacobian for pflow
         J[i, i-1] = -1. - 2*h*p[i-1] / v[i-1]**2
         J[i, i] = 1.
         J[i, i+N-1] = -2*h*q[i-1] / v[i-1]**2
         J[i, i+2*N-1] = 2*h*(p[i-1]**2 + q[i-1]**2) / v[i-1]**3
 
+        # jacobian for qflow    
         J[i+N, i-1] = -2*h*B*p[i-1] / v[i-1]**2
         J[i+N, i+N] = 1.
         J[i+N, i+N-1] = -1. - 2*h*B*q[i-1] / v[i-1]**2
         J[i+N, i+2*N-1] = 2*h*B*(p[i-1]**2 + q[i-1]**2) / v[i-1]**3
 
-        J[i+2*N, i-1] = -2*h
-        J[i+2*N, i+N-1] = -2*h*B
-        J[i+2*N, i+2*N-1] = -2*v[i-1]
-        J[i+2*N, i+2*N] = 2*v[i]
+        # jacobian for voltage
+        J[i+2*N, i-1] = -2*h # with pline
+        J[i+2*N, i+N-1] = -2*h*B # with qline
+        J[i+2*N, i+2*N-1] = -2*v[i-1] # with preceeding
+        J[i+2*N, i+2*N] = 2*v[i] # with self
 
     J = csc_matrix(J)
     return J
@@ -88,7 +91,7 @@ def jacob(arr, v0, p0, q0, A, B):
 import scipy as sp
 import scipy.optimize
 
-N = 5000
+N = 5
 v0 = 1.
 p0 = 0.
 q0 = 0.

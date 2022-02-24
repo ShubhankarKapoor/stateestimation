@@ -37,7 +37,7 @@ def backwardforwardsweep(network, max_iter=100, tolerance=1e-10):
 
         ## forward sweep
         # line voltage drops
-        line_voltages = np.expand_dims(line_z_pu, 1) * line_currents
+        line_voltages = line_z_pu * line_currents
         btmp = -1. * line_voltages
         btmp[0] = btmp[0] + V_slack
         if sparse:
@@ -119,8 +119,8 @@ def lindistflowsweep(network, max_iter=100, tolerance=1e-10, loss=None,  pflow =
             # calc loss term and add it to p_lines
             current_sq = (new_P_line**2 + new_Q_line**2) * (1/V_all[node_a])
             # current_sq = (P_line[bus_arcs[i]["To"][0]]**2 + Q_line[bus_arcs[i]["To"][0]]**2)* (1/V[i])
-            loss_term_p = current_sq * np.expand_dims(line_z_pu, 1).real
-            loss_term_q = current_sq * np.expand_dims(line_z_pu, 1).imag
+            loss_term_p = current_sq * line_z_pu.real
+            loss_term_q = current_sq * line_z_pu.imag
             
             new_P_line += loss_term_p
             new_Q_line += loss_term_q
@@ -132,10 +132,10 @@ def lindistflowsweep(network, max_iter=100, tolerance=1e-10, loss=None,  pflow =
 
         ## forward sweep
         # line voltage drops
-        # line_voltages = np.expand_dims(line_z_pu, 1) * line_currents
+        # line_voltages = line_z_pu * line_currents
         # line_voltages = 2*(R_line[(i,j)]*P_line[(i,j)] + X_line[(i,j)]*Q_line[(i,j)])
-        line_voltages = 2 * (np.expand_dims(line_z_pu, 1).real * new_P_line  \
-                        + np.expand_dims(line_z_pu, 1).imag * new_Q_line)
+        line_voltages = 2 * (line_z_pu.real * new_P_line  \
+                        + line_z_pu.imag * new_Q_line)
         btmp = -1. * line_voltages
         btmp[0] = btmp[0] + V_slack.real
         if sparse:

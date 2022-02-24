@@ -15,6 +15,7 @@ import seaborn, time
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
                        error_calc_refactor, countour_plot, get_index_for_keys_init_stat_var
+from power_flow_modelling.networks import Network
 import torch
 import matplotlib.pyplot as plt
 which = 37 # IEEE 37-node or IEEE 906-node or ausnet
@@ -212,6 +213,9 @@ W_rr[not_considered_indices] = w22 # weights on unknown p_buses
 W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_buses
 W_rr[-1] = w3
 
+# load the network object for sped up distflow
+network37 = Network('network37', sparse=False)
+
 # GN-WLS
 lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
                   'num_buses':len(P_Load), 'which':which, 'volt_buses': meas_V.keys(),
@@ -225,7 +229,7 @@ loss, pflow = 0, 0
 # LinDist
 x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
     x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+    meas_V, R_line, X_line, network37, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
@@ -238,7 +242,7 @@ _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est
 # loss, pflow = 1, 0
 # x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn, _ = se_wls(
 #     x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-#     meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+#     meas_V, R_line, X_line, network37, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # # costsn = cost(x_estn, jacobian_matrix, z, W)
 # _,_,_,p3error2 = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
 #                         which, V, V_mag, loss = 1, pflow = 1) # for WLS
@@ -250,7 +254,7 @@ _,_,_,p3error1 = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est
 # loss, pflow = 0, 1
 # x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn, _ = se_wls(
 #     x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-#     meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+#     meas_V, R_line, X_line, network37, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # # costsn = cost(x_estn, jacobian_matrix, z, W)
 # _,_,_,p3error3 = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
 #                         which, V, V_mag, loss = 1, pflow = 1) # for WLS
@@ -262,7 +266,7 @@ print('GN-WLS based on linear jacobian with both feedback')
 loss, pflow = 1, 1
 x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn, _ = se_wls(
     x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-    meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+    meas_V, R_line, X_line, network37, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
 # costsn = cost(x_estn, jacobian_matrix, z, W)
 perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                         which, V, V_mag, loss = 1, pflow = 1) # for WLS
