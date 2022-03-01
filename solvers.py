@@ -4,7 +4,7 @@ import torch
 from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from some_funcs import refactor_estimates
 from jacobian_calc import create_jacobian, create_loss_jacobian
-from power_flow_modelling.newton import newton_no_jacob
+from power_flow_modelling.newton import newton_no_jacob, newton_with_jacob
 from power_flow_modelling.networks import Network
 # import some_funcs
 
@@ -132,9 +132,13 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
                 P_Load_est = np.expand_dims(P_Load_est, axis=1)
                 Q_Load_est = np.asarray(list(Q_Load_est.values()))
                 Q_Load_est = np.expand_dims(Q_Load_est, axis=1)
-                # x_line, V_est, _, _ = newton_no_jacob(network37, P_Load_est, 
+
+                # without jacobian, just using arrays
+                # x_line, V_est = newton_no_jacob(network, P_Load_est, 
                 # Q_Load_est, V0=full_x_est[-1], loss=loss, pflow = pflow)
-                x_line, V_est = newton_no_jacob(network, P_Load_est, 
+                
+                # with jacobian using GN
+                x_line, V_est = newton_with_jacob(network, P_Load_est, 
                 Q_Load_est, V0=full_x_est[-1], loss=loss, pflow = pflow)
                 # update the estimates -- after feedback calculation
                 # update the pline/qline measurement estimates

@@ -27,6 +27,7 @@ class Network:
         self.line_flow_mat_V = None  # pre calc matrix for func_calc_volt
         self.pflow_mat = None        # used for func_calc_volt & func_calc_lineflow
         self.qflow_mat = None        # used for func_calc_volt & func_calc_lineflow
+        self.line_flow_mat_all = None # used for func_jacob_calc, pretty much current graph but did it separately for p_ij and q_ij 
         if network=="network37":
             self.load_network73()
 
@@ -111,6 +112,12 @@ class Network:
         pflow_mat = np.diag(line_z_pu.real.reshape(len(line_z_pu),))
         qflow_mat = np.diag(line_z_pu.imag.reshape(len(line_z_pu),))
         line_flow_mat_V = np.concatenate((pflow_mat, qflow_mat), axis =1)
+        
+        # pre calculated matrices for func_jacob_calc
+        line_flow_mat_all = np.zeros((2*num_lines, 2*num_lines)) # rename and pre define
+        line_flow_mat_all[0:num_lines,0:num_lines] = current_graph
+        line_flow_mat_all[num_lines:2*num_lines,num_lines:2*num_lines] = current_graph
+
         self.busNo = 37
         self.vbase = vbase
         self.sbase = sbase
@@ -132,3 +139,4 @@ class Network:
         self.line_flow_mat_V = line_flow_mat_V
         self.pflow_mat = pflow_mat
         self.qflow_mat = qflow_mat
+        self.line_flow_mat_all = line_flow_mat_all

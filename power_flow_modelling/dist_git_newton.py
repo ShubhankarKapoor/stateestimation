@@ -37,9 +37,9 @@ def func(arr, v0, p0, q0, A, B):
     # print(F1[0], F2[0], F3[0])
     for i in range(1, N):
         # print(i)
-        F1[i] = p[i] - p[i-1] + h*(-1. - (p[i-1]**2 + q[i-1]**2) / v[i-1]**2) # active power line flows
-        F2[i] = q[i] - q[i-1] + h*(A - B*(p[i-1]**2 + q[i-1]**2) / v[i-1]**2) # reactive power line flows
-        F3[i] = v[i]**2 - v[i-1]**2 - 2*h*(p[i-1] + B*q[i-1])  # voltages
+        F1[i] = p[i] - p[i-1] + h*(-1. - (p[i-1]**2 + q[i-1]**2) / v[i-1]**2) # active power line flows dependent on state vars
+        F2[i] = q[i] - q[i-1] + h*(A - B*(p[i-1]**2 + q[i-1]**2) / v[i-1]**2) # reactive power line flows dependent on state vars
+        F3[i] = v[i]**2 - v[i-1]**2 - 2*h*(p[i-1] + B*q[i-1]) # voltages dependent on state vars
 
 # backward sweep
 #     F1[N-1] = 0 - p[N-1] + h*r[N-1] * (p[N-1]**2 + q[N-1]**2) / v[N-2]**2 + h*P[N-1]  
@@ -124,13 +124,13 @@ def newton(x, tolF, toldx, maxiters):
         x = x + dx
         if normF < tolF and normdx < toldx:         
             print ('Converged to x= {} in {} iterations'.format(x, i) )
-            return x
+            return x, J
 
         if iter == maxiters:    
             print ('Non-Convergence after {} iterations!!!'.format(i))
-            return x
+            return x, J
 
-sol = newton(arr0,1e-3, 1e-3, 50)
+sol, J = newton(arr0,1e-3, 1e-3, 50)
 #sol = sp.optimize.broyden1(func_newton, arr0, f_tol = 10e-3)
 
 s = np.linspace(0.0001,0.5,N)
