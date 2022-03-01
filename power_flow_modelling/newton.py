@@ -49,9 +49,9 @@ def func_calc_lineflow(x, P_load, Q_load, node_a, node_b, num_lines, line_z_pu,
 
         # martix * x^2
         f3 = np.matmul(line_flow_loss_mat, (x**2))
-        jacob = 2*(line_flow_loss_mat*x) + line_flow_mat
-        jacob = jacob + np.diag(np.ones(2*num_lines))
-        # jacob = 1
+        # jacob = 2*(line_flow_loss_mat*x) + line_flow_mat
+        # jacob = jacob + np.diag(np.ones(2*num_lines))
+        jacob = 1
     else:
         f3 = 0
         jacob = 1
