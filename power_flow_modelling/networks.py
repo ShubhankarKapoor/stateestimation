@@ -28,7 +28,7 @@ class Network:
         self.pflow_mat = None        # used for func_calc_volt & func_calc_lineflow
         self.qflow_mat = None        # used for func_calc_volt & func_calc_lineflow
         self.line_flow_mat_all = None # used for func_jacob_calc, pretty much current graph but did it separately for p_ij and q_ij 
-        
+
         if network=="network37":
             self.load_network73()
 

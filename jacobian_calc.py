@@ -881,11 +881,13 @@ def pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nod
                             R_line, X_line, elems_comb, non_zib_index_array):
 # maybe create a df for pline with vnode and see if it works
 # elems_comb[1] elems_comb[2] indices_for_elems_comb R_hat X_hat calc_PQ(could use indices) Final_result()
+    
     # the 2 terms below can be directly used for any pline/qline calculation
     # these are the 2 big matrices multiplied with combination of loads in pline/qline calculation
     # should hold true for grads of any line with vnode: needs verification
     mat_r = np.zeros((len(meas_P_line), len(elems_comb))) # matrix used for multiplication with combs
     mat_x = np.zeros((len(meas_P_line), len(elems_comb))) # matrix used for multiplication with combs
+
     data = []
     meas_P_nodes_index = np.arange((len(P_Load_state)))
     for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
