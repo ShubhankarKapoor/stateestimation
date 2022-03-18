@@ -16,6 +16,9 @@ def meas_from_approx_distflow(x_est, meas_P_line, P_Load_state, comb_idx1, comb_
     q_term = x_est[comb_idx1 + len(P_Load_state)]*x_est[comb_idx2 + len(P_Load_state)]
     pq_term = p_term + q_term
 
+    # i think you could modify just here to get values for the rest of the plines
+    # and maybe have a backward-forward sweep
+    # should work
     # hacky way for line 01, wont work for other cases
     if meas_P_line:    
         p_01 = sum(x_est[0:len(P_Load_state)]) + (1/V0)*(sum(pq_term * sum_r))
@@ -23,6 +26,8 @@ def meas_from_approx_distflow(x_est, meas_P_line, P_Load_state, comb_idx1, comb_
         hx[0] = p_01
         hx[1] = q_01
 
+    # for all p lines 
+    
     # v_i
     # calculate v_i again
     # looks incorrect

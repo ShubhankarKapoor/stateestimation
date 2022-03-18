@@ -118,7 +118,7 @@ def jacob_calc(x):
 
 def newton_no_jacob(network, P_load, Q_load, V0=None, loss=None, pflow = None, 
            tol_x = None, max_iter= None):
-
+    ''' numpy based distflow '''
     loss = 0 if loss is None else loss # for voltage loss term
     pflow = 0 if pflow is None else pflow # for pflow/qflow loss term
 
@@ -272,7 +272,7 @@ def func_jacob_calc(x, P_load, Q_load, node_a, node_b, num_lines, line_z_pu,
 
 def newton_with_jacob(network, P_load, Q_load, V0=None, loss=None, pflow = None, 
            tol_x = None, max_iter= None):
-
+    ''' newton based distflow '''
     loss = 0 if loss is None else loss # for voltage loss term
     pflow = 0 if pflow is None else pflow # for pflow/qflow loss term
 
@@ -348,7 +348,7 @@ def newton_with_jacob(network, P_load, Q_load, V0=None, loss=None, pflow = None,
             # print(x)
             print ('Non-Convergence after {} iterations!!!'.format(i))
 
-            return x, V
+            return x, V # x is a vec of p_ijs and q_ijs. V is sq of voltage mag
 
 # x3, V3 = newton_with_jacob(network37, P_load, Q_load, loss=1, pflow = 1)
 # x3, V3, results, results_V = newton_with_jacob(network37, P_load, Q_load, loss=1, pflow = 1)

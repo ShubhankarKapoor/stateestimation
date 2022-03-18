@@ -579,6 +579,9 @@ def pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path_to_all_nod
                         common_path = common_path-path_to_all_nodes[line[0]]
                         sum_R = sum(R_line[item] for item in common_path)
                         sum_X = sum(X_line[item] for item in common_path)
+                    # else: # error above when considering all nodes, so trying to fix. Not sure if entirely correcct
+                    #     sum_R = 0
+                    #     sum_X = 0
                     r_hat[j][k] = sum_R
                     x_hat[j][k] = sum_X
     return r_hat, x_hat
@@ -878,11 +881,16 @@ def pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nod
                             R_line, X_line, elems_comb, non_zib_index_array):
 # maybe create a df for pline with vnode and see if it works
 # elems_comb[1] elems_comb[2] indices_for_elems_comb R_hat X_hat calc_PQ(could use indices) Final_result()
-
+    # the 2 terms below can be directly used for any pline/qline calculation
+    # these are the 2 big matrices multiplied with combination of loads in pline/qline calculation
+    # should hold true for grads of any line with vnode: needs verification
+    mat_r = np.zeros((len(meas_P_line), len(elems_comb))) # matrix used for multiplication with combs
+    mat_x = np.zeros((len(meas_P_line), len(elems_comb))) # matrix used for multiplication with combs
     data = []
     meas_P_nodes_index = np.arange((len(P_Load_state)))
     for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
         # print(i,k,v)
+        r_list, x_list = [], []
         sq_pline_term, sq_qline_term, double_pline_term, double_qline_term = 0, 0, 0, 0
         for (node_j, node_k) in elems_comb:
             # print(node_j, node_k)
@@ -892,16 +900,30 @@ def pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nod
                     common_lines = common_lines - path_to_all_nodes[k[0]]
                     sum_R = sum(R_line[item] for item in common_lines)
                     sum_X = sum(X_line[item] for item in common_lines)
-                    idx1 = np.where(node_j == non_zib_index_array)[0][0]
+                    idx1 = np.where(node_j == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
                     data.append([node_j, node_k, idx1, idx1, sum_R, sum_X])
+                    r_list.append(sum_R) # for big mat_r
+                    x_list.append(sum_X) # for big mat_x
                 else:
                     common_lines = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
                     common_lines = common_lines - path_to_all_nodes[k[0]]
                     sum_R = sum(R_line[item] for item in common_lines) * 2 # 2 comes from 2P1P2 terms
                     sum_X = sum(X_line[item] for item in common_lines) * 2 
-                    idx1 = np.where(node_j == non_zib_index_array)[0][0]
-                    idx2 = np.where(node_k == non_zib_index_array)[0][0]
+                    idx1 = np.where(node_j == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
+                    idx2 = np.where(node_k == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
                     data.append([node_j, node_k, idx1, idx2, sum_R, sum_X])
+                    r_list.append(sum_R) # for big mat_r
+                    x_list.append(sum_X) # for big mat_x
+            else: # these terms will be 0
+                sum_R, sum_X = 0, 0
+                idx1 = np.where(node_j == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
+                idx2 = np.where(node_k == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
+                data.append([node_j, node_k, idx1, idx2, sum_R, sum_X])
+                r_list.append(sum_R) # for big mat_r
+                x_list.append(sum_X) # for big mat_x
+        # make a matrix of sum_r and sum_x for each matrix
+        mat_r[i:] = r_list # vector of size elems comb
+        mat_x[i:] = x_list # vector of size elems comb
     df = pd.DataFrame(data, columns=['elem1', 'elem2', 'idx1', 'idx2', 'sum_r', 'sum_x'])   
     return df
 
