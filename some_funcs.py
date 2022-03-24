@@ -1,3 +1,6 @@
+import sys
+sys.path.append("/home/jess/Documents/phD/stateestimation") # to deal with when running code from impedanceestimation
+
 import numpy as np
 import pandas as pd
 import random
@@ -133,6 +136,14 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
     #            errperc_vectorp, mean_error_st_q, max_error_st_q, errabs_vectorq, mean_error_st_abs_q, max_error_st_abs_q, \
 
     return errperc_vector_vmag, errperc_vectorp, errabs_vectorv, errabs_vectorp # all vectors
+
+def get_nodes_downstream_of_each_branch(meas_P_line, P_Load_state, path_to_all_nodes):
+    downstream_matrix = np.zeros((len(meas_P_line), len(P_Load_state)))
+    for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
+        for j, node_a in enumerate(P_Load_state.keys()): # iterate over states node
+            if k in path_to_all_nodes[node_a]: # if node is downstream
+                downstream_matrix[i][j] = 1
+    return downstream_matrix
 
 def inc_avg(prev_avg, total_counts, new_array):
     """Calculate the average incrementally.
