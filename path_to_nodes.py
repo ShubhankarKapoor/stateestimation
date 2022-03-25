@@ -9,7 +9,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 
-def path_to_nodes(which):
+def path_to_nodes(which, node_a = None, node_b = None):
     if which == 37: # IEEE 37-node or IEEE 906-node
         from Network37 import arcs
     if which == 906 or which == 907: # IEEE 37-node or IEEE 906-node
@@ -21,7 +21,11 @@ def path_to_nodes(which):
     # add nodes
     G.add_nodes_from(np.arange(0, which))
     # add edges
-    G.add_edges_from((arcs))
+    if which == 37 or which == 906 or which == 907:
+        G.add_edges_from((arcs))
+    else: # use node_a and node_b for edge addition
+        e = zip(node_a, node_b)
+        G.add_edges_from(e)
     # uncomment below to plot graph
     # plt.figure()
     # nx.draw(G, with_labels=True, font_weight='bold')

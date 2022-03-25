@@ -926,8 +926,9 @@ def pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nod
         # make a matrix of sum_r and sum_x for each matrix
         mat_r[i:] = r_list # vector of size elems comb
         mat_x[i:] = x_list # vector of size elems comb
-    df = pd.DataFrame(data, columns=['elem1', 'elem2', 'idx1', 'idx2', 'sum_r', 'sum_x'])   
-    return df
+    df = pd.DataFrame(data, columns=['elem1', 'elem2', 'idx1', 'idx2', 'sum_r', 'sum_x'])
+    # return mat_r, mat_x for generic calcualtion of pline/ qline in distlow assumption pf
+    return df, mat_r, mat_x
 
 def grad_pline_with_vnode_loss_ass_updated_fast(meas_P_line, comb_idx1, comb_idx2, sum_r, sum_x, P_Load_state, x_est, V0):
     # had to separate from df as the pd wrapper around np is expensive
@@ -1305,7 +1306,7 @@ def combination_of_loads(P_Load_state):
             if j>=i:
                 elems_comb.append((elema,elemb))
     return elems_comb
-    
+
 def combination_of_lines_to_nodes(elems_comb, path_to_all_nodes):
     ''' returns common path of nodes and the combinations of common path '''
     # common path to coupled and squared node terms

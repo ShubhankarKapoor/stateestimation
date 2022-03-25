@@ -21,7 +21,8 @@ from itertools import combinations
 import seaborn as sns
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
-                       error_calc_refactor, countour_plot, inc_avg, get_index_for_keys_init_stat_var
+                       error_calc_refactor, countour_plot, inc_avg, get_index_for_keys_init_stat_var, \
+                       get_nodes_downstream_of_each_branch
 from power_flow_modelling.networks import Network
 import time
 import torch
@@ -116,14 +117,18 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 network37 = Network('network37', sparse=False)
 ###############################################################################
 ###############################################################################
+# get paths from slack bus to all nodes
+path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
+
 # get subset of lineflow measurement set
-num_plow_meas = 1
+num_plow_meas = 0
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
-
-# get paths from slack bus to all nodes
-path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
+if meas_P_line:
+    downstream_matrix = get_nodes_downstream_of_each_branch(meas_P_line, P_Load_state, path_to_all_nodes)
+else:
+    downstream_matrix = 0
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
@@ -257,7 +262,7 @@ r_hat, x_hat = pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path
                             R_line, X_line)
 
 # used for pline with vnode
-df_pline_with_v0 =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+df_pline_with_v0, mat_r, mat_x =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
                             R_line, X_line, elems_comb, non_zib_index_array)
 ###############################################################################
 
@@ -483,6 +488,9 @@ for row, i in enumerate(num_known):
         pre_calculated_info['additional_mat_x'] = addn_xx
         pre_calculated_info['r_hat'] = r_hat
         pre_calculated_info['x_hat'] = x_hat
+        pre_calculated_info['mat_r'] = mat_r
+        pre_calculated_info['mat_x'] = mat_x
+        pre_calculated_info['downstream_matrix'] = downstream_matrix
         if num_plow_meas!=0:
             pre_calculated_info['comb_idx1'] = np.array(df_pline_with_v0.idx1)
             pre_calculated_info['comb_idx2'] = np.array(df_pline_with_v0.idx2)

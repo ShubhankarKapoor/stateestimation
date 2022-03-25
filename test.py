@@ -14,7 +14,8 @@ from itertools import combinations
 import seaborn, time
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
-                       error_calc_refactor, countour_plot, get_index_for_keys_init_stat_var
+                       error_calc_refactor, countour_plot, get_index_for_keys_init_stat_var, \
+                       get_nodes_downstream_of_each_branch
 from power_flow_modelling.networks import Network
 import torch
 import matplotlib.pyplot as plt
@@ -110,12 +111,18 @@ x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ##############################################################################
 ##############################################################################
+# get paths from slack bus to all nodes
+path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 
 # get subset of lineflow measurement set
 num_plow_meas = 1 # 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
+if meas_P_line:
+    downstream_matrix = get_nodes_downstream_of_each_branch(meas_P_line, P_Load_state, path_to_all_nodes)
+else:
+    downstream_matrix = 0
 
 # different combinations of known nodes
 i = 5 # number of known measurements
@@ -193,8 +200,6 @@ W = np.linalg.inv(W)
 ##############################################################################
 ##############################################################################
 # state estimation
-# get paths from slack bus to all nodes
-path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 
 # get jacobain matrix
 # we arent using the values of P_line, P_Load_state or P_Load in jacobian_calc
@@ -317,7 +322,7 @@ r_hat, x_hat = pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path
                             R_line, X_line)
 
 # used for pline with vnode
-df_pline_with_v0 =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+df_pline_with_v0, mat_r, mat_x =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
                             R_line, X_line, elems_comb, non_zib_index_array)
 # start = time.time()
 # Z_mm2 = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
@@ -352,6 +357,10 @@ pre_calculated_info['additional_mat_r'] = addn_rr
 pre_calculated_info['additional_mat_x'] = addn_xx
 pre_calculated_info['r_hat'] = r_hat
 pre_calculated_info['x_hat'] = x_hat
+pre_calculated_info['mat_r'] = mat_r
+pre_calculated_info['mat_x'] = mat_x
+pre_calculated_info['downstream_matrix'] = downstream_matrix
+
 if num_plow_meas!=0:
     pre_calculated_info['comb_idx1'] = np.array(df_pline_with_v0.idx1)
     pre_calculated_info['comb_idx2'] = np.array(df_pline_with_v0.idx2)
