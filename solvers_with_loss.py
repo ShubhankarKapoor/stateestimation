@@ -3,10 +3,12 @@ from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
 from some_funcs import refactor_estimates, measurements_estimated_from_states
 from jacobian_calc import create_loss_jacobian, create_loss_jacobian_ass
 from BackwardForwardSweep import BackwardForwardSweep
+from measurement_set import meas_from_approx_distflow
 
 def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
            path_to_all_nodes, non_zib_index, meas_V, R_line, X_line, LineData_Z_pu, 
-           num_states, num_meas, tot_state_vars, which, tol = None, iters= None):
+           pre_calculated_info, num_states, num_meas, tot_state_vars, which, 
+           tol = None, iters= None):
     ''' Weighted Least Square Estimate with assumptions on losses
         num_states: state vars being estimated
         tot_state_vars: state vars being estimated + zib buses
@@ -24,9 +26,9 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
 
         if count == 0:
             jacobian_matrix = np.zeros((num_meas, num_states)) # initialize jacobian with zeros
-            R_mat, X_mat, Z_mat = np.zeros((len(meas_V), len(P_Load_state))), np.zeros((len(meas_V), len(P_Load_state))), \
-                np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state))) # initialize with zeros
-            additional_mat_r, additional_mat_x = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state))), np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
+            # R_mat, X_mat, Z_mat = np.zeros((len(meas_V), len(P_Load_state))), np.zeros((len(meas_V), len(P_Load_state))), \
+            #     np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state))) # initialize with zeros
+            # additional_mat_r, additional_mat_x = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state))), np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
         # i think you are getting the below vals from PF: might be incorrect
         # should be just getting the vals from jacobian * xest
         # you are right
@@ -39,14 +41,21 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
 
         # recalculate jacobian: changes every iter here
         # R_mat, X_mat, Z_mat remains consistent: only calculated once
-        jacobian_matrix, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = create_loss_jacobian_ass(
+        jacobian_matrix = create_loss_jacobian_ass(
             meas_P_line, P_Load_state, meas_P_load, P_Load_est, Q_Load_est, path_to_all_nodes,
             meas_V, R_line, X_line, LineData_Z_pu, num_states, num_meas, count,
-            jacobian_matrix, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x, x_est)
+            jacobian_matrix, pre_calculated_info, x_est)
 
         # calculate h(x)
         hx = np.matmul(jacobian_matrix, x_est)
-
+        # print('b', hx[-len(meas_V):])
+        # try to get estimate from full approx distflow model
+        hx = meas_from_approx_distflow(x_est, meas_P_line, P_Load_state, pre_calculated_info['comb_idx1'], 
+                pre_calculated_info['comb_idx2'], pre_calculated_info['sum_r'], 
+                pre_calculated_info['sum_x'], pre_calculated_info['R_mat'], 
+                pre_calculated_info['X_mat'], pre_calculated_info['v_RX_Z_comb_req'], 
+                x_est[-1], hx)
+        # print('a', hx[-len(meas_V):])
         # calculate measurement residuals
         residuals = z - hx
         # residuals_mat[:,count] = residuals
@@ -62,7 +71,7 @@ def se_wls_nonlin_ass(x_est, z, W, meas_P_line, P_Load_state, meas_P_load,
 
         # update values of state vars
         x_est = x_est + deltax
-        results = np.vstack((results, x_est))
+        # results = np.vstack((results, x_est))
 
         # get tolerance
         emax = np.max(np.abs(deltax))

@@ -6,7 +6,7 @@ Created on Fri Nov 27 13:44:59 2020
 @author: shub
 """
 import numpy as np
-
+import pandas as pd
 def create_loss_jacobian(P_Load_state, P_line_meas, Q_line_meas, P_Load_meas, 
                          Vsq_mes, path_to_all_nodes_list, path_to_all_nodes, R_line, X_line, LineData_Z_pu, V_est, 
                          Pline_est, Qline_est, num_states, num_meas):
@@ -385,8 +385,7 @@ def grad_vnode_with_v0(v_meas):
 
 def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est, Q_Load_est, path_to_all_nodes,
                     Vsq_mes, R_line, X_line, LineData_Z_pu, num_states, num_meas, iter_num,
-                    jacobian_matrix_la, R_mat, X_mat, Z_mat, 
-                    additional_mat_r, additional_mat_x, x_est):
+                    jacobian_matrix_la, pre_calculated_info, x_est):
     ''' creates jacobian while considering losses and some assumptions'''
 
     # jacobian_matrix_la = np.zeros((num_meas, num_states)) # jacobian with loss assumption
@@ -395,8 +394,10 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     # this changes every iteration
     # grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass(
     #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)
-    grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass_updated(
-        meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)
+    # grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass_updated(
+    #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est, x_est)
+    grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q = grad_pline_with_p_loss_ass_updated_fast(
+        meas_P_line, pre_calculated_info['r_hat'], pre_calculated_info['x_hat'], x_est, P_Load_state, x_est[-1])
     # grad_array_pline_p2, grad_array_pline_q2, grad_array_qline_p2, grad_array_qline_q2 = grad_pline_with_p_loss_ass_updated_new(
     #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, x_est[-1], P_Load_est, Q_Load_est)
     meas_rows = grad_array_pline_p.shape[0]
@@ -425,9 +426,6 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
         jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, state_cols:2*state_cols] = grad_array
         last_row_inserted += meas_rows
 
-        # get R_mat, X_mat, Z_mat: only needs to be calculated once
-        R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x = get_r_x_z_mat(Vsq_mes, 
-                                P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu)
     else:
         last_row_inserted+= len(P_Load_meas)*2
     # gradient for vnode^2 with p and q
@@ -437,8 +435,9 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     # grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass_new(Vsq_mes, P_Load_state, path_to_all_nodes, 
     #                                 R_mat, X_mat, Z_mat, x_est, P_Load_est, Q_Load_est, Vsq_mes[0])
     grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass_updated(Vsq_mes, P_Load_state, path_to_all_nodes, 
-                        R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x, 
-                            x_est, P_Load_est, Q_Load_est, Vsq_mes[0])
+                        pre_calculated_info['R_mat'], pre_calculated_info['X_mat'], 
+                        pre_calculated_info['Z_mat'], pre_calculated_info['additional_mat_r'], 
+                        pre_calculated_info['additional_mat_x'], x_est, P_Load_est, Q_Load_est, Vsq_mes[0])
     # grad_array_v_p, grad_array_v_q = grad_vnode_with_p_loss_ass_updated_new(Vsq_mes, P_Load_state, path_to_all_nodes, 
     #                    R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     meas_rows = grad_array_v_p.shape[0]
@@ -452,8 +451,11 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     # this changes every iteration
     # grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass(
     #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
-    grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass_updated(
-        meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
+    # grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass_updated(
+    #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
+    grad_array_pline_vnode, grad_array_qline_vnode = grad_pline_with_vnode_loss_ass_updated_fast(
+        meas_P_line, pre_calculated_info['comb_idx1'], pre_calculated_info['comb_idx2'], 
+        pre_calculated_info['sum_r'], pre_calculated_info['sum_x'], P_Load_state, x_est, x_est[-1])
     # grad_array_pline_vnode2, grad_array_qline_vnode2 = grad_pline_with_vnode_loss_ass_updated_new(
     #     meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, P_Load_est, Q_Load_est, x_est[-1])
     meas_rows = grad_array_pline_vnode.shape[0]
@@ -477,12 +479,16 @@ def create_loss_jacobian_ass(meas_P_line, P_Load_state, P_Load_meas, P_Load_est,
     #                                                   path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
     # grad_array_vnode_v = grad_vnode_with_v0_loss_ass_updated(Vsq_mes, P_Load_state, path_to_all_nodes, 
     #                         R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
-    grad_array_vnode_v = grad_vnode_with_v0_loss_ass_updated_new(Vsq_mes, P_Load_state, path_to_all_nodes, 
-                            R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, Vsq_mes[0])
+    # grad_array_vnode_v = grad_vnode_with_v0_loss_ass_updated_new(Vsq_mes, P_Load_state, path_to_all_nodes, 
+    #                         R_line, X_line, LineData_Z_pu, pre_calculated_info, 
+    #                         P_Load_est, Q_Load_est, Vsq_mes[0])
+    grad_array_vnode_v = grad_vnode_with_v0_loss_ass_updated_fast(pre_calculated_info['comb_idx1'], 
+                pre_calculated_info['comb_idx2'], pre_calculated_info['v_RX_Z_comb_req'], 
+                    P_Load_state, x_est, Vsq_mes[0])
     meas_rows = grad_array_vnode_v.shape[0]
     jacobian_matrix_la[last_row_inserted:last_row_inserted + meas_rows, 2*state_cols] = grad_array_vnode_v
 
-    return jacobian_matrix_la, R_mat, X_mat, Z_mat, additional_mat_r, additional_mat_x
+    return jacobian_matrix_la
 
 def grad_pline_with_p_loss_ass(meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, V0, P_Load_est, Q_Load_est):
 
@@ -514,7 +520,8 @@ def grad_pline_with_p_loss_ass(meas_P_line, P_Load_state, path_to_all_nodes, R_l
 
     return grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q
 
-def grad_pline_with_p_loss_ass_updated(meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, V0, P_Load_est, Q_Load_est):
+def grad_pline_with_p_loss_ass_updated(meas_P_line, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, V0, P_Load_est, Q_Load_est, x_est):
 
     grad_array_pline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
     grad_array_pline_q = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
@@ -531,12 +538,13 @@ def grad_pline_with_p_loss_ass_updated(meas_P_line, P_Load_state, path_to_all_no
             if k in path_to_all_nodes[node_a]: # if node is downstream
                 # print(node_a,'Downstream')
                 for _, node_k in enumerate(P_Load_state.keys()): # iterate over states node
-                    if k in path_to_all_nodes[node_k]: # if node is downstream    
+                    if k in path_to_all_nodes[node_k]: # if node is downstream
                         common_path = path_to_all_nodes[node_a].intersection(path_to_all_nodes[node_k])
                         common_path = common_path-path_to_all_nodes[k[0]]
                         sum_R = sum(R_line[item] for item in common_path)
                         sum_X = sum(X_line[item] for item in common_path)
                         # print(node_a, node_k, common_path)
+                        # pre calculate sum_R and sum_X
                         temp_sum_pline_p = P_Load_est[node_k] * sum_R
                         temp_sum_pline_q = Q_Load_est[node_k] * sum_R
                         temp_sum_qline_p = P_Load_est[node_k] * sum_X
@@ -550,9 +558,49 @@ def grad_pline_with_p_loss_ass_updated(meas_P_line, P_Load_state, path_to_all_no
                 grad_array_pline_q[i, j] = 2 * sum_pline_with_q/V0
                 grad_array_qline_p[i, j] = 2 * sum_qline_with_p/V0
                 grad_array_qline_q[i, j] = 1 + 2 * sum_qline_with_q/V0
-
+                
     return grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q
 
+def pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line):
+    r_hat = np.zeros((len(P_Load_state), len(P_Load_state)))
+    x_hat = np.zeros((len(P_Load_state), len(P_Load_state)))
+    for i , (line,v) in enumerate(meas_P_line.items()): # iterate over measurements line
+        # print(i,line)
+
+        for j, node_a in enumerate(P_Load_state.keys()): # iterate over states node
+            sum_pline_with_p, sum_pline_with_q, sum_qline_with_p, sum_qline_with_q = 0, 0, 0, 0 # sum of p and q downstream to that line
+            # print(j, node_a)
+            if line in path_to_all_nodes[node_a]: # if node is downstream
+                # print(node_a,'Downstream')
+                for k, node_k in enumerate(P_Load_state.keys()): # iterate over states node
+                    if line in path_to_all_nodes[node_k]: # if node is downstream
+                        common_path = path_to_all_nodes[node_a].intersection(path_to_all_nodes[node_k])
+                        common_path = common_path-path_to_all_nodes[line[0]]
+                        sum_R = sum(R_line[item] for item in common_path)
+                        sum_X = sum(X_line[item] for item in common_path)
+                    # else: # error above when considering all nodes, so trying to fix. Not sure if entirely correcct
+                    #     sum_R = 0
+                    #     sum_X = 0
+                    r_hat[j][k] = sum_R
+                    x_hat[j][k] = sum_X
+    return r_hat, x_hat
+                    
+def grad_pline_with_p_loss_ass_updated_fast(meas_P_line, r_hat, x_hat, x_est, P_Load_state, V0):
+    # would only wprk for (0,1) flow
+    # could be modified to include more line flows
+    if meas_P_line:
+        grad_array_pline_p = (1 + 2 * np.matmul(r_hat,x_est[0:len(P_Load_state)])/ V0).reshape(1,-1)
+        grad_array_pline_q = (    2 * np.matmul(r_hat,x_est[len(P_Load_state):2*len(P_Load_state)])/V0).reshape(1,-1)
+        grad_array_qline_p = (    2 * np.matmul(x_hat,x_est[0:len(P_Load_state)])/V0).reshape(1,-1)
+        grad_array_qline_q = (1 + 2 * np.matmul(x_hat,x_est[len(P_Load_state):2*len(P_Load_state)])/V0 ).reshape(1,-1)
+    else:
+        grad_array_pline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+        grad_array_pline_q = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+        grad_array_qline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+        grad_array_qline_q = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
+    return grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q
+                       
 def grad_pline_with_p_loss_ass_updated_new(meas_P_line, P_Load_state, path_to_all_nodes, R_line, X_line, V0, P_Load_est, Q_Load_est):
 
     grad_array_pline_p = np.zeros((len(meas_P_line), len(P_Load_state))) # meas*states
@@ -585,12 +633,15 @@ def grad_pline_with_p_loss_ass_updated_new(meas_P_line, P_Load_state, path_to_al
             
     return grad_array_pline_p, grad_array_pline_q, grad_array_qline_p, grad_array_qline_q
 
-def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu):
+def get_r_x_z_mat(meas_V_nodes, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu):
     ''' Returns the constant matrices used for grad_vnode_with_p_loss_ass'''
-    R_mat, X_mat, Z_mat = np.zeros((len(meas_V), len(P_Load_state))), np.zeros((len(meas_V), len(P_Load_state))), \
-        np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
+    # somehow define it in the beginning
+    # and extract a part of it depending on the problem
+    # sensitivity matrices
+    R_mat, X_mat, Z_mat = np.zeros((len(meas_V_nodes), len(P_Load_state))), np.zeros((len(meas_V_nodes), len(P_Load_state))), \
+        np.zeros((len(meas_V_nodes)*len(P_Load_state), len(P_Load_state)))
     a = 0
-    for i, node_i in enumerate(meas_V.keys()): # meas node
+    for i, node_i in enumerate(meas_V_nodes): # meas node
         path_to_node_i = path_to_all_nodes[node_i]
         for j, node_j in enumerate(P_Load_state.keys()): # state node
             # print(node_i, node_j)
@@ -608,9 +659,9 @@ def get_r_x_z_mat(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineD
             a+=1
 
     a = 0
-    additional_mat_r = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
-    additional_mat_x = np.zeros((len(meas_V)*len(P_Load_state), len(P_Load_state)))
-    for i, node_i in enumerate(meas_V.keys()): # meas node
+    additional_mat_r = np.zeros((len(meas_V_nodes)*len(P_Load_state), len(P_Load_state)))
+    additional_mat_x = np.zeros((len(meas_V_nodes)*len(P_Load_state), len(P_Load_state)))
+    for i, node_i in enumerate(meas_V_nodes): # meas node
         path_to_node_i = path_to_all_nodes[node_i]
         # break
         for path in path_to_node_i: # each line param to node_i, r_ij
@@ -826,6 +877,72 @@ def grad_pline_with_vnode_loss_ass_updated(meas_P_line, P_Load_state, path_to_al
         
     return grad_array_pline_vnode, grad_array_qline_vnode
 
+def pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, elems_comb, non_zib_index_array):
+# maybe create a df for pline with vnode and see if it works
+# elems_comb[1] elems_comb[2] indices_for_elems_comb R_hat X_hat calc_PQ(could use indices) Final_result()
+    
+    # the 2 terms below can be directly used for any pline/qline calculation
+    # these are the 2 big matrices multiplied with combination of loads in pline/qline calculation
+    # should hold true for grads of any line with vnode: needs verification
+    mat_r = np.zeros((len(meas_P_line), len(elems_comb))) # matrix used for multiplication with combs
+    mat_x = np.zeros((len(meas_P_line), len(elems_comb))) # matrix used for multiplication with combs
+
+    data = []
+    meas_P_nodes_index = np.arange((len(P_Load_state)))
+    for i , (k,v) in enumerate(meas_P_line.items()): # iterate over measurements line
+        # print(i,k,v)
+        r_list, x_list = [], []
+        sq_pline_term, sq_qline_term, double_pline_term, double_qline_term = 0, 0, 0, 0
+        for (node_j, node_k) in elems_comb:
+            # print(node_j, node_k)
+            if k in path_to_all_nodes[node_j] and k in path_to_all_nodes[node_k]:
+                if node_j == node_k:
+                    common_lines = path_to_all_nodes[node_j]
+                    common_lines = common_lines - path_to_all_nodes[k[0]]
+                    sum_R = sum(R_line[item] for item in common_lines)
+                    sum_X = sum(X_line[item] for item in common_lines)
+                    idx1 = np.where(node_j == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
+                    data.append([node_j, node_k, idx1, idx1, sum_R, sum_X])
+                    r_list.append(sum_R) # for big mat_r
+                    x_list.append(sum_X) # for big mat_x
+                else:
+                    common_lines = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
+                    common_lines = common_lines - path_to_all_nodes[k[0]]
+                    sum_R = sum(R_line[item] for item in common_lines) * 2 # 2 comes from 2P1P2 terms
+                    sum_X = sum(X_line[item] for item in common_lines) * 2 
+                    idx1 = np.where(node_j == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
+                    idx2 = np.where(node_k == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
+                    data.append([node_j, node_k, idx1, idx2, sum_R, sum_X])
+                    r_list.append(sum_R) # for big mat_r
+                    x_list.append(sum_X) # for big mat_x
+            else: # these terms will be 0
+                sum_R, sum_X = 0, 0
+                idx1 = np.where(node_j == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
+                idx2 = np.where(node_k == non_zib_index_array)[0][0] # index of node_j in non_zib_index_array
+                data.append([node_j, node_k, idx1, idx2, sum_R, sum_X])
+                r_list.append(sum_R) # for big mat_r
+                x_list.append(sum_X) # for big mat_x
+        # make a matrix of sum_r and sum_x for each matrix
+        mat_r[i:] = r_list # vector of size elems comb
+        mat_x[i:] = x_list # vector of size elems comb
+    df = pd.DataFrame(data, columns=['elem1', 'elem2', 'idx1', 'idx2', 'sum_r', 'sum_x'])   
+    return df
+
+def grad_pline_with_vnode_loss_ass_updated_fast(meas_P_line, comb_idx1, comb_idx2, sum_r, sum_x, P_Load_state, x_est, V0):
+    # had to separate from df as the pd wrapper around np is expensive
+    # would only work for 0,1 lineflow
+    if meas_P_line:
+        p_term = x_est[comb_idx1]*x_est[comb_idx2]
+        q_term = x_est[comb_idx1 + len(P_Load_state)]*x_est[comb_idx2 + len(P_Load_state)]
+        pq_term = p_term + q_term
+        grad_array_pline_vnode = np.array([(-1/V0**2)*(sum(pq_term * sum_r))])
+        grad_array_qline_vnode = np.array([(-1/V0**2)*(sum(pq_term * sum_x))])
+    else:
+        grad_array_pline_vnode = np.zeros((len(meas_P_line))) # meas*states
+        grad_array_qline_vnode = np.zeros((len(meas_P_line))) # meas*states
+    return grad_array_pline_vnode, grad_array_qline_vnode
+
 def grad_pline_with_vnode_loss_ass_updated_new(meas_P_line, P_Load_state, path_to_all_nodes, 
                                    R_line, X_line, P_Load_est, Q_Load_est, V0):
 
@@ -834,7 +951,7 @@ def grad_pline_with_vnode_loss_ass_updated_new(meas_P_line, P_Load_state, path_t
 
     # get combs of elements
     elems_comb = combination_of_loads(P_Load_state)
-                
+    pqs = []                
     for i, (line,v) in enumerate(meas_P_line.items()):
         # print(i, line, v)
         grad_line_p, grad_line_q = 0, 0 
@@ -848,6 +965,7 @@ def grad_pline_with_vnode_loss_ass_updated_new(meas_P_line, P_Load_state, path_t
                     common_path = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
                     pq_sum = 2*(P_Load_est[node_j] * P_Load_est[node_k] + Q_Load_est[node_j] * Q_Load_est[node_k])
 
+                pqs.append(pq_sum)
                 common_path = common_path - path_to_all_nodes[line[0]] # only consider lines downstream of line[0] as per the formulation
                 R_hat = sum(R_line[item] for item in common_path)
                 X_hat = sum(X_line[item] for item in common_path)
@@ -856,7 +974,7 @@ def grad_pline_with_vnode_loss_ass_updated_new(meas_P_line, P_Load_state, path_t
                 # print(node_j, node_k, R_hat, X_hat, grad_line_p, grad_line_q)
         grad_array_pline_vnode[i] = (-1/V0**2)*grad_line_p
         grad_array_qline_vnode[i] = (-1/V0**2)*grad_line_q
-        
+        pqs = np.array(pqs)
     return grad_array_pline_vnode, grad_array_qline_vnode
 
 def grad_vnode_with_v0_loss_ass(meas_V, P_Load_state, path_to_all_nodes, R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, V0):
@@ -1004,48 +1122,18 @@ def grad_vnode_with_v0_loss_ass_updated(meas_V, P_Load_state, path_to_all_nodes,
     #     grad_array_vnode_v[i] += (2/(V0**2)) * (sq_term + double_term)
 
     return grad_array_vnode_v
-
+    
 def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_nodes, 
-                            R_line, X_line, LineData_Z_pu, P_Load_est, Q_Load_est, V0):
+                            R_line, X_line, LineData_Z_pu, pre_calculated_info, 
+                            P_Load_est, Q_Load_est, V0):
     grad_array_vnode_v = np.zeros((len(meas_V))) # vnode_with_v
     
     # get combs of elements
     elems_comb = combination_of_loads(P_Load_state)
-
-    # can put it in a func from herre ----->>>>>>>>>>>>>
-    # common path to coupled and squared node terms
-    common_path_of_combs = {}
-    for (node_j, node_k) in elems_comb:
-        # print(node_j, node_k)
-        # could use this straight away rather than calculating at every iteration for grad calc
-        common_path_of_combs[(node_j, node_k)] = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k])
-
-    # get lines combs for each node for the additional loss term
-    # only needs to be done once
-    lines_comb = {}
-    for key,val in common_path_of_combs.items():
-        # print(key,val)
-        # if key == (1,2):
-        #     break
-        lines_comb_entries = []
-        for i,elema  in enumerate(val):
-            for j, elemb in enumerate(val):
-                if j>i:
-                    lines_comb_entries.append((elema,elemb))
-        lines_comb[key] = lines_comb_entries
-        
-    # sum up R and X for above combs
-    # can be directly used for additional loss
-    # sum_R_comb, sum_X_comb, sum_RX_comb = {}, {}, {}
-    # for key, val in lines_comb.items():
-    #     # print(key, val[0])
-    #     R_hat = sum(R_line[item[0]]*R_line[item[1]] for item in val)
-    #     X_hat = sum(X_line[item[0]]*X_line[item[1]] for item in val)
-    #     sum_RX_hat = R_hat + X_hat
-    #     sum_RX_comb[key] = sum_RX_hat
-    # ---------<<<<<<<<<<<< till here
+    # common_path_of_combs, lines_comb = combination_of_lines_to_nodes(elems_comb, path_to_all_nodes)
 
     for idxv, (node_v, val) in enumerate(meas_V.items()):
+
         # print (idxv, node_v, val)
         original_loss, additional_loss = 0, 0
         # break
@@ -1055,8 +1143,8 @@ def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_no
         for (node_j, node_k) in elems_comb:
             # print(node_j, node_k)
             # print(node_j, node_k, sum_RX_comb[(node_j, node_k)])
-            if node_j == node_k and node_j: # square terms
-                common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j]) # for original loss
+            if node_j == node_k: # square terms
+                # common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j]) # for original loss
                 power_term = P_Load_est[node_j]**2 + Q_Load_est[node_j]**2
                 # no additional term for first node on the line from slack bus
                 # in this node 1, wont affect becasue it is ZIB
@@ -1064,17 +1152,21 @@ def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_no
                 # the line comb terms should always have a line that is in path of vnode
                 # else shouldn't be considered
             else: # other coupled terms
-                common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j]).intersection(path_to_all_nodes[node_k])
+                # common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j]).intersection(path_to_all_nodes[node_k])
                 power_term = 2*(P_Load_est[node_j]*P_Load_est[node_k] + Q_Load_est[node_j]*Q_Load_est[node_k])
                 # no additional term for first node on the power line from slack bus
                 # in this node 1, wont affect becasue it is 0
             # print(common_path)    
-            Z_hat = sum((abs(LineData_Z_pu[item]))**2 for item in common_path)
-            original_loss+= Z_hat * power_term
+            # Z_hat = sum((abs(LineData_Z_pu[item]))**2 for item in common_path)
+            # original_loss+= Z_hat * power_term
+            original_loss+= pre_calculated_info['z_common_path'][node_v, (node_j,node_k)] * power_term
+            # if z_common_path[(node_j, node_k)]!= Z_hat:
+            #     print(node_j, node_k, z_common_path[(node_j, node_k)], Z_hat)
+            #     break
             # for additional loss
-            common_lines_power_nodes = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k]) # for additional loss
-            _, _, sum_RX_comb = sum_comb_of_lines(lines_comb[(node_j, node_k)], path_to_all_nodes, node_v, R_line, X_line)
-            _, _, sum_RX_comb2 = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
+            # common_lines_power_nodes = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k]) # for additional loss
+            # _, _, sum_RX_comb = sum_comb_of_lines(lines_comb[(node_j, node_k)], path_to_all_nodes, node_v, R_line, X_line)
+            # _, _, sum_RX_comb = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
             # ff = 0
             # print(sum_RX_comb, sum_RX_comb2)
             # if sum_RX_comb!= sum_RX_comb2:
@@ -1083,11 +1175,100 @@ def grad_vnode_with_v0_loss_ass_updated_new(meas_V, P_Load_state, path_to_all_no
             #     ff = 1
         # if ff == 1:
         #     break
-            additional_loss+= sum_RX_comb * power_term
+            # additional_loss+= sum_RX_comb * power_term
+            additional_loss+= pre_calculated_info['v_node_RX_comb'][node_v, (node_j,node_k)] * power_term
             # get lines combs for node
         
         grad_array_vnode_v[idxv] = 1 + 1/V0*original_loss + 2/(V0**2)*additional_loss
     return grad_array_vnode_v
+
+def vnode_with_v0_pre_calculated_terms(meas_V_nodes, P_Load_state, path_to_all_nodes, 
+                            R_line, X_line, LineData_Z_pu):
+    '''
+    meas_V_nodes : all nodes where meas can be found, should be same as P_Load_state
+    P_Load_state : all nodes that can have loads
+    Returns pre calculated values required for v_node with v0 grad
+    '''
+    # get combs of elements
+    elems_comb = combination_of_loads(P_Load_state)
+
+    common_path_of_combs, lines_comb = combination_of_lines_to_nodes(elems_comb, path_to_all_nodes)
+
+    v_node_RX_comb = {}
+    z_common_path = {}
+
+    for node_v in meas_V_nodes:
+        # print (node_v)
+        # all downstream nodes
+        # common impedance bw subscripts of power terms and voltage node
+        for (node_j, node_k) in elems_comb:
+            # print(node_j, node_k)
+            # print(node_j, node_k, sum_RX_comb[(node_j, node_k)])
+            if node_j == node_k: # square terms
+                common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j]) # for original loss
+            else: # other coupled terms
+                common_path = path_to_all_nodes[node_v].intersection(path_to_all_nodes[node_j]).intersection(path_to_all_nodes[node_k])
+            # sum of square impedance of common lines
+            Z_hat = sum((abs(LineData_Z_pu[item]))**2 for item in common_path)
+            z_common_path[node_v, (node_j,node_k)] = Z_hat
+            # for additional loss
+            common_lines_power_nodes = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k]) # for additional loss
+            # _, _, sum_RX_comb = sum_comb_of_lines(lines_comb[(node_j, node_k)], path_to_all_nodes, node_v, R_line, X_line)
+            _, _, sum_RX_comb = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
+            v_node_RX_comb[node_v, (node_j,node_k)] = sum_RX_comb
+            
+    return v_node_RX_comb, z_common_path
+
+def vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_nodes, 
+                                      R_line, X_line, LineData_Z_pu, non_zib_index_array):
+    data = []
+    v_node_RX_comb = np.zeros((len(meas_V_nodes), len(elems_comb)))
+    z_common_path = np.zeros((len(meas_V_nodes), len(elems_comb)))
+
+    for idxv, node_v in enumerate(meas_V_nodes):
+        # all downstream nodes
+        # common impedance bw subscripts of power terms and voltage node
+        for idx_elem, (node_j, node_k) in enumerate(elems_comb):
+            # print(idx_elem, node_j, node_k)
+            if node_j == node_k: # square terms
+                common_lines_power_nodes = path_to_all_nodes[node_j] # for additional loss
+                common_path = path_to_all_nodes[node_v].intersection(common_lines_power_nodes) # for original loss
+                _, _, sum_RX_comb = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
+                Z_hat = sum((abs(LineData_Z_pu[item]))**2 for item in common_path)                
+                v_node_RX_comb[idxv][idx_elem] = sum_RX_comb
+                z_common_path[idxv][idx_elem] = Z_hat
+                if idxv == 0: # needs to be done only once
+                    idx1 = np.where(node_j == non_zib_index_array)[0][0]
+                    data.append([node_j, node_k, idx1, idx1])
+            else: # other coupled terms
+                common_lines_power_nodes = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k]) # for additional loss
+                common_path = path_to_all_nodes[node_v].intersection(common_lines_power_nodes)
+                _, _, sum_RX_comb = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
+                Z_hat = sum((abs(LineData_Z_pu[item]))**2 for item in common_path)
+                v_node_RX_comb[idxv][idx_elem] = sum_RX_comb * 2 # 2 is for coupled terms
+                z_common_path[idxv][idx_elem] = Z_hat * 2
+                if idxv == 0: # needs to be done only once
+                    idx1 = np.where(node_j == non_zib_index_array)[0][0]
+                    idx2 = np.where(node_k == non_zib_index_array)[0][0]
+                    data.append([node_j, node_k, idx1, idx2])
+
+    v_RX_Z_comb = z_common_path + 2 * v_node_RX_comb # 2 is here because it is in the formulation
+    df = pd.DataFrame(data, columns=['elem1', 'elem2', 'idx1', 'idx2'])
+    return df, v_RX_Z_comb
+
+def grad_vnode_with_v0_loss_ass_updated_fast(comb_idx1, comb_idx2, v_RX_Z_comb_req, 
+                                             P_Load_state, x_est, V0):
+    # had to separate from df as the pd wrapper around np is expensive
+    # would only work for 0,1 lineflow
+    # comb_idx1 = np.array(df.idx1)
+    # comb_idx2 = np.array(df.idx2)
+    p_term = x_est[comb_idx1]*x_est[comb_idx2]
+    q_term = x_est[comb_idx1 + len(P_Load_state)]*x_est[comb_idx2 + len(P_Load_state)]
+    pq_term = p_term + q_term
+
+    grad_array_vnode_v = 1 + 1/V0*(np.matmul(v_RX_Z_comb_req, pq_term))
+    return grad_array_vnode_v
+
 
 def sum_comb_of_lines(lines_comb_for_nodes, path_to_all_nodes, node_v, R_line, X_line):
     ''' returns sum of combs of lines for the node wrt voltage meas'''
@@ -1097,7 +1278,7 @@ def sum_comb_of_lines(lines_comb_for_nodes, path_to_all_nodes, node_v, R_line, X
     R_hat = sum(R_line[item[0]]*R_line[item[1]] for item in lines_comb_for_nodes if path_to_node_v.intersection(item))
     X_hat = sum(X_line[item[0]]*X_line[item[1]] for item in lines_comb_for_nodes if path_to_node_v.intersection(item))
     sum_RX_hat = R_hat + X_hat
-     
+    # you can get a dictionary for vnode key and line key
     return R_hat, X_hat, sum_RX_hat
 
 def sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes):
@@ -1127,7 +1308,6 @@ def combination_of_loads(P_Load_state):
     
 def combination_of_lines_to_nodes(elems_comb, path_to_all_nodes):
     ''' returns common path of nodes and the combinations of common path '''
-    # can put it in a func from herre ----->>>>>>>>>>>>>
     # common path to coupled and squared node terms
     common_path_of_combs = {}
     for (node_j, node_k) in elems_comb:
