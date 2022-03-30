@@ -109,8 +109,8 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
                 ###############################################################
                 # V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
                 #         P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], 
+                #         # loss, pflow, max_iter=1)
                 #         loss, pflow)
-                #         # loss, pflow)
 
                 # # update the estimates -- after feedback calculation
                 # Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
@@ -157,12 +157,12 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
 
         # calculate measurement residuals
         residuals = z - hx
-        residuals_mat[:,count] = residuals
+        # residuals_mat[:,count] = residuals
 
         # calculate deltax
         deltax = np.matmul(np.matmul(np.matmul(Ginv, jacobian_matrix.T), W), residuals)
         # deltax = np.matmul(np.matmul(Ginv, jacobian_matrix.T), residuals) # OLS
-        delta_mat[:,count] = deltax
+        # delta_mat[:,count] = deltax
 
         # update values of state vars
         x_est = x_est + deltax
