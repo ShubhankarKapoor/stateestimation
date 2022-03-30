@@ -9,3 +9,11 @@ print(avg_abs_p_nofeed, avg_abs_p_vfeed, avg_abs_p_pfeed, avg_abs_p_bothfeed, av
 print(avg_perc_p_nofeed, avg_perc_p_vfeed, avg_perc_p_pfeed, avg_perc_p_bothfeed, avg_perc_p_la)
 print(avg_abs_v_nofeed, avg_abs_v_vfeed, avg_abs_v_pfeed, avg_abs_v_bothfeed, avg_abs_v_la)
 print(avg_perc_v_nofeed, avg_perc_v_vfeed, avg_perc_v_pfeed, avg_perc_v_bothfeed, avg_perc_v_la)
+
+###################################################################################################
+
+print(len((np.where(np.asarray(ll_la_perc_v)>1)[0])),
+len((np.where(np.asarray(ll_la_perc_v)>2)[0])),
+len((np.where(np.asarray(ll_la_perc_v)>3)[0])),
+len((np.where(np.asarray(ll_la_perc_v)>4)[0])),
+len((np.where(np.asarray(ll_la_perc_v)>5)[0])))

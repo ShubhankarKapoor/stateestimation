@@ -121,7 +121,7 @@ network37 = Network('network37', sparse=False)
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
+num_plow_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -132,6 +132,7 @@ else:
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
+# num_known = np.array(5,).reshape(1,)
 # num_known = np.arange(len(non_zib_index))[:0:-1]
 # num_known = np.array((9,8,5,4,3,2,1))
 # num_known = [20, 19, 1] # known number of measurements
@@ -368,8 +369,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_nofeed = inc_avg(avg_perc_p_nofeed, total_counts_p, perc_p_nofeed[non_zib_index])
         avg_abs_p_nofeed = inc_avg(avg_abs_p_nofeed, total_counts_p, abs_p_nofeed[non_zib_index])
         # uncomment below to store all errors
-        # l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
-        # l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
+        l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
+        l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
         ################### HEATMAP ##########################################
         volt_max_perc_nofeed = max_val(volt_max_perc_nofeed, perc_v_nofeed, all_index_array)
         # _, flag = max_val_for_index(p_max_perc_nofeed, perc_p_nofeed, non_zib_index, 7)
@@ -400,8 +401,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_vfeed = inc_avg(avg_perc_p_vfeed, total_counts_p, perc_p_vfeed[non_zib_index])
         avg_abs_p_vfeed = inc_avg(avg_abs_p_vfeed, total_counts_p, abs_p_vfeed[non_zib_index])        
         # uncomment below to store all errors        
-        # l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
-        # l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
+        l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
+        l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
         ################### HEATMAP ##########################################
         volt_max_perc_vfeed = max_val(volt_max_perc_vfeed, perc_v_vfeed, all_index_array)
         p_max_perc_vfeed = max_val(p_max_perc_vfeed, perc_p_vfeed, non_zib_index)       
@@ -428,8 +429,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_pfeed = inc_avg(avg_perc_p_pfeed, total_counts_p, perc_p_pfeed[non_zib_index])
         avg_abs_p_pfeed = inc_avg(avg_abs_p_pfeed, total_counts_p, abs_p_pfeed[non_zib_index])           
         # uncomment below to store all errors        
-        # l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
-        # l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
+        l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
+        l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
         ################### HEATMAP ###########################################
         volt_max_perc_pfeed = max_val(volt_max_perc_pfeed, perc_v_pfeed, all_index_array)
         p_max_perc_pfeed = max_val(p_max_perc_pfeed, perc_p_pfeed, non_zib_index)       
@@ -456,8 +457,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_bothfeed = inc_avg(avg_perc_p_bothfeed, total_counts_p, perc_p_n[non_zib_index])
         avg_abs_p_bothfeed = inc_avg(avg_abs_p_bothfeed, total_counts_p, abs_p_n[non_zib_index])   
         # uncomment below to store all errors        
-        # l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
-        # l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
+        l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
+        l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
         ################### HEATMAP ##########################################
         volt_max_perc_bothfeed = max_val(volt_max_perc_bothfeed, perc_v_n, all_index_array)
         p_max_perc_bothfeed = max_val(p_max_perc_bothfeed, perc_p_n, non_zib_index)       
@@ -524,8 +525,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_la = inc_avg(avg_perc_p_la, total_counts_p, perc_p_la[non_zib_index])
         avg_abs_p_la = inc_avg(avg_abs_p_la, total_counts_p, abs_p_la[non_zib_index]) 
         # uncomment below to store all errors
-        # l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
-        # l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
+        l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
+        l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
         ################### HEATMAP ##########################################
         volt_max_perc_la = max_val(volt_max_perc_la, perc_v_la, all_index_array)
         p_max_perc_la = max_val(p_max_perc_la, perc_p_la, non_zib_index)       
@@ -567,7 +568,7 @@ for row, i in enumerate(num_known):
     ###########################################################################
     
     # values for all errors
-    # uncomment below to store all errors
+    # uncomment below to store all errors for each case
     # ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
     # ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
     # ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
@@ -578,6 +579,18 @@ for row, i in enumerate(num_known):
     # ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
     # ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
     # ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+
+    # uncomment below to store all errors together
+    ll_no_feed_perc_v.extend(l_no_feed_perc_v), ll_no_feed_perc_p.extend(l_no_feed_perc_p), 
+    ll_no_feed_abs_v.extend(l_no_feed_abs_v), ll_no_feed_abs_p.extend(l_no_feed_abs_p)
+    ll_v_feed_perc_v.extend(l_v_feed_perc_v), ll_v_feed_perc_p.extend(l_v_feed_perc_p), 
+    ll_v_feed_abs_v.extend(l_v_feed_abs_v), ll_v_feed_abs_p.extend(l_v_feed_abs_p)
+    ll_p_feed_perc_v.extend(l_p_feed_perc_v), ll_p_feed_perc_p.extend(l_p_feed_perc_p), 
+    ll_p_feed_abs_v.extend(l_p_feed_abs_v), ll_p_feed_abs_p.extend(l_p_feed_abs_p)
+    ll_both_feed_perc_v.extend(l_both_feed_perc_v), ll_both_feed_perc_p.extend(l_both_feed_perc_p), 
+    ll_both_feed_abs_v.extend(l_both_feed_abs_v), ll_both_feed_abs_p.extend(l_both_feed_abs_p)
+    ll_la_perc_v.extend(l_la_perc_v), ll_la_perc_p.extend(l_la_perc_p), 
+    ll_la_abs_v.extend(l_la_abs_v), ll_la_abs_p.extend(l_la_abs_p)    
 
 ###############################################################################
 # Adjusting the subplots
