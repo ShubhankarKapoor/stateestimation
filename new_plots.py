@@ -79,13 +79,39 @@ fig,ax = plt.subplots()
 ax.bar(range(len(hist)),hist,width=1,align='center',tick_label=
         ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
 
+fig = plt.figure()
+ax1 = plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
+hist, bin_edges = np.histogram(ll_no_feed_perc_v,bins) # make the histogram
+ax1.bar(range(len(hist)),hist,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+
+ax2 = plt.subplot2grid((2,6), (0,2), colspan=2)
+hist, bin_edges = np.histogram(ll_v_feed_perc_v,bins) # make the histogram
+ax2.bar(range(len(hist)),hist,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+
+ax3 = plt.subplot2grid((2,6), (0,4), colspan=2)
+hist, bin_edges = np.histogram(ll_p_feed_perc_v,bins) # make the histogram
+ax3.bar(range(len(hist)),hist,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+
+ax4 = plt.subplot2grid((2,6), (1,1), colspan=2)
+hist, bin_edges = np.histogram(ll_both_feed_perc_v,bins) # make the histogram
+ax4.bar(range(len(hist)),hist,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+
+ax5 = plt.subplot2grid((2,6), (1,3), colspan=2)
+hist, bin_edges = np.histogram(ll_la_perc_v,bins) # make the histogram
+ax5.bar(range(len(hist)),hist,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+fig.subplots_adjust(wspace=0.8)
 # plot p abs hist for all methods
 
 # plotting heatmap on nodes
 # just do it using proposed methodology for diff cases of meas available
 # do it for voltage percentage and abs power
-val = abs_p_la
-# val = perc_v_la
+# val = abs_p_la
+val = perc_v_la
 plt.figure()
 with open('saved_pos.pkl', 'rb') as f:
     pos = pickle.load(f) # load the position of nodes for plotting
@@ -95,8 +121,8 @@ if np.all(val) == None:
     plt.title('Test Feeder {}'.format(which))
 else:
     # define vmin,vmax
-    # plt.title('Voltage Percentage Error at each node in Test Feeder {}'.format(which))
-    plt.title('Active Power Absolute Error (kW) at Each node in Test Feeder {}'.format(which))
+    plt.title('Voltage Percentage Error at each node in Test Feeder {}'.format(which))
+    # plt.title('Active Power Absolute Error (kW) at Each node in Test Feeder {}'.format(which))
     cmap = plt.cm.Blues
     # nx.draw(G, pos=pos, with_labels=True, font_weight='bold', node_color=val)
     nx.draw(G, pos=pos, vmin = vmin, vmax = vmax, with_labels=True, 
