@@ -523,7 +523,7 @@ for row, i in enumerate(num_known):
         avg_perc_v_la = inc_avg(avg_perc_v_la, total_counts_v, perc_v_la)
         avg_abs_v_la = inc_avg(avg_abs_v_la, total_counts_v, abs_v_la)
         avg_perc_p_la = inc_avg(avg_perc_p_la, total_counts_p, perc_p_la[non_zib_index])
-        avg_abs_p_la = inc_avg(avg_abs_p_la, total_counts_p, abs_p_la) 
+        avg_abs_p_la = inc_avg(avg_abs_p_la, total_counts_p, abs_p_la[non_zib_index]) 
         # uncomment below to store all errors
         l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
         l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la[non_zib_index])
