@@ -113,7 +113,7 @@ fig.subplots_adjust(wspace=0.8)
 fig.suptitle('Distribution of Voltage % Error in Test Feeder {}'.format(which))
 
 # plot p abs hist for all methods
-bins=[0, 0.1, 1, 4]
+bins=np.asarray([0, 0.1, 1, 4])*Sbase
 # data = np.asarray(ll_la_perc_v)[np.where(np.asarray(ll_la_perc_v)<3)[0]]
 
 # hist, bin_edges = np.histogram(ll_both_feed_ab,bins) # make the histogram
@@ -123,31 +123,31 @@ bins=[0, 0.1, 1, 4]
 
 fig = plt.figure()
 ax1 = plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
-hist, bin_edges = np.histogram(ll_no_feed_abs_p,bins) # make the histogram
+hist, bin_edges = np.histogram(np.asarray(ll_no_feed_abs_p)*Sbase,bins) # make the histogram
 ax1.bar(range(len(hist)),hist,width=1,align='center',tick_label=
         ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
 ax1.title.set_text('LN')
 
 ax2 = plt.subplot2grid((2,6), (0,2), colspan=2)
-hist, bin_edges = np.histogram(ll_v_feed_abs_p,bins) # make the histogram
+hist, bin_edges = np.histogram(np.asarray(ll_v_feed_abs_p)*Sbase,bins) # make the histogram
 ax2.bar(range(len(hist)),hist,width=1,align='center',tick_label=
         ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
 ax2.title.set_text('LV')
 
 ax3 = plt.subplot2grid((2,6), (0,4), colspan=2)
-hist, bin_edges = np.histogram(ll_p_feed_abs_p,bins) # make the histogram
+hist, bin_edges = np.histogram(np.asarray(ll_p_feed_abs_p)*Sbase,bins) # make the histogram
 ax3.bar(range(len(hist)),hist,width=1,align='center',tick_label=
         ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
 ax3.title.set_text('LP')
 
 ax4 = plt.subplot2grid((2,6), (1,1), colspan=2)
-hist, bin_edges = np.histogram(ll_both_feed_abs_p,bins) # make the histogram
+hist, bin_edges = np.histogram(np.asarray(ll_both_feed_abs_p)*Sbase,bins) # make the histogram
 ax4.bar(range(len(hist)),hist,width=1,align='center',tick_label=
         ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
 ax4.title.set_text('LB')
 
 ax5 = plt.subplot2grid((2,6), (1,3), colspan=2)
-hist, bin_edges = np.histogram(ll_la_abs_p,bins) # make the histogram
+hist, bin_edges = np.histogram(np.asarray(ll_la_abs_p)*Sbase,bins) # make the histogram
 ax5.bar(range(len(hist)),hist,width=1,align='center',tick_label=
         ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
 ax5.title.set_text('LA')
