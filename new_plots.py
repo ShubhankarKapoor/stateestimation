@@ -149,7 +149,7 @@ ax4.title.set_text('LB')
 ax5 = plt.subplot2grid((2,6), (1,3), colspan=2)
 hist, bin_edges = np.histogram(np.asarray(ll_la_abs_p)*Sbase,bins) # make the histogram
 ax5.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)], rotation='vertical')
 ax5.title.set_text('LA')
 fig.subplots_adjust(wspace=0.8)
 fig.suptitle('Distribution of Active Power Absolute Error in Test Feeder {}'.format(which))
@@ -157,8 +157,8 @@ fig.suptitle('Distribution of Active Power Absolute Error in Test Feeder {}'.for
 # plotting heatmap on nodes
 # just do it using proposed methodology for diff cases of meas available
 # do it for voltage percentage and abs power
-# val = abs_p_la
-val = perc_v_la
+val = abs_p_la*Sbase
+# val = perc_v_la
 plt.figure()
 with open('saved_pos.pkl', 'rb') as f:
     pos = pickle.load(f) # load the position of nodes for plotting
@@ -168,8 +168,8 @@ if np.all(val) == None:
     plt.title('Test Feeder {}'.format(which))
 else:
     # define vmin,vmax
-    plt.title('Voltage Percentage Error at each node in Test Feeder {}'.format(which))
-    # plt.title('Active Power Absolute Error (kW) at Each node in Test Feeder {}'.format(which))
+    # plt.title('Voltage Percentage Error at each node in Test Feeder {}'.format(which))
+    plt.title('Active Power Absolute Error (kW) at Each node in Test Feeder {}'.format(which))
     cmap = plt.cm.Blues
     # nx.draw(G, pos=pos, with_labels=True, font_weight='bold', node_color=val)
     nx.draw(G, pos=pos, vmin = vmin, vmax = vmax, with_labels=True, 
