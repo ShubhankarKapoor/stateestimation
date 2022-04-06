@@ -74,47 +74,48 @@ else: # use node_a and node_b for edge addition
 bins=[0, 1, 2.5,6.5]
 # data = np.asarray(ll_la_perc_v)[np.where(np.asarray(ll_la_perc_v)<3)[0]]
 
-hist, bin_edges = np.histogram(ll_both_feed_perc_v,bins) # make the histogram
-fig,ax = plt.subplots()
-ax.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+# hist, bin_edges = np.histogram(ll_both_feed_perc_v,bins) # make the histogram
+# fig,ax = plt.subplots()
+# ax.bar(range(len(hist)),hist,width=1,align='center',tick_label=
+#         ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
 
 fig = plt.figure()
 ax1 = plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
-hist, bin_edges = np.histogram(ll_no_feed_perc_v,bins) # make the histogram
-ax1.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+hist1, bin_edges = np.histogram(ll_no_feed_perc_v,bins) # make the histogram
+ax1.bar(range(len(hist1)),hist1,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist1)])
 ax1.title.set_text('LN')
 
 ax2 = plt.subplot2grid((2,6), (0,2), colspan=2)
-hist, bin_edges = np.histogram(ll_v_feed_perc_v,bins) # make the histogram
-ax2.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+hist2, bin_edges = np.histogram(ll_v_feed_perc_v,bins) # make the histogram
+ax2.bar(range(len(hist2)),hist2,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist2)])
 ax2.title.set_text('LV')
 
 ax3 = plt.subplot2grid((2,6), (0,4), colspan=2)
-hist, bin_edges = np.histogram(ll_p_feed_perc_v,bins) # make the histogram
-ax3.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+hist3, bin_edges = np.histogram(ll_p_feed_perc_v,bins) # make the histogram
+ax3.bar(range(len(hist3)),hist3,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist3)])
 ax3.title.set_text('LP')
 
 ax4 = plt.subplot2grid((2,6), (1,1), colspan=2)
-hist, bin_edges = np.histogram(ll_both_feed_perc_v,bins) # make the histogram
-ax4.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+hist4, bin_edges = np.histogram(ll_both_feed_perc_v,bins) # make the histogram
+ax4.bar(range(len(hist4)),hist4,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist4)])
 ax4.title.set_text('LB')
 
 ax5 = plt.subplot2grid((2,6), (1,3), colspan=2)
-hist, bin_edges = np.histogram(ll_la_perc_v,bins) # make the histogram
-ax5.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
-ax5.title.set_text('LV')
-fig.subplots_adjust(wspace=0.8)
+hist5, bin_edges = np.histogram(ll_la_perc_v,bins) # make the histogram
+ax5.bar(range(len(hist5)),hist5,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist5)])
+ax5.title.set_text('LA')
+# fig.subplots_adjust(wspace=0.8)
 fig.suptitle('Distribution of Voltage % Error in Test Feeder {}'.format(which))
+fig.set_tight_layout(True)
 
 # plot p abs hist for all methods
 bins=np.asarray([0, 0.1, 1, 4])*Sbase
-# data = np.asarray(ll_la_perc_v)[np.where(np.asarray(ll_la_perc_v)<3)[0]]
+# data = np.asarray(ll_la_perc_v)[np.where(np.sasarray(ll_la_perc_v)<3)[0]]
 
 # hist, bin_edges = np.histogram(ll_both_feed_ab,bins) # make the histogram
 # fig,ax = plt.subplots()
@@ -123,36 +124,42 @@ bins=np.asarray([0, 0.1, 1, 4])*Sbase
 
 fig = plt.figure()
 ax1 = plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
-hist, bin_edges = np.histogram(np.asarray(ll_no_feed_abs_p)*Sbase,bins) # make the histogram
-ax1.bar(range(len(hist)),hist,width=1,align='center',tick_label=
+hist1, bin_edges = np.histogram(np.asarray(ll_no_feed_abs_p)*Sbase,bins) # make the histogram
+ax1.bar(range(len(hist1)),hist1,width=1,align='center',tick_label=
         ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+plt.xticks( rotation=45)
 ax1.title.set_text('LN')
 
 ax2 = plt.subplot2grid((2,6), (0,2), colspan=2)
-hist, bin_edges = np.histogram(np.asarray(ll_v_feed_abs_p)*Sbase,bins) # make the histogram
-ax2.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+hist2, bin_edges = np.histogram(np.asarray(ll_v_feed_abs_p)*Sbase,bins) # make the histogram
+ax2.bar(range(len(hist2)),hist2,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist2)])
+plt.xticks( rotation=45)
 ax2.title.set_text('LV')
 
 ax3 = plt.subplot2grid((2,6), (0,4), colspan=2)
-hist, bin_edges = np.histogram(np.asarray(ll_p_feed_abs_p)*Sbase,bins) # make the histogram
-ax3.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+hist3, bin_edges = np.histogram(np.asarray(ll_p_feed_abs_p)*Sbase,bins) # make the histogram
+ax3.bar(range(len(hist3)),hist3,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist3)])
+plt.xticks( rotation=45)
 ax3.title.set_text('LP')
 
 ax4 = plt.subplot2grid((2,6), (1,1), colspan=2)
-hist, bin_edges = np.histogram(np.asarray(ll_both_feed_abs_p)*Sbase,bins) # make the histogram
-ax4.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+hist4, bin_edges = np.histogram(np.asarray(ll_both_feed_abs_p)*Sbase,bins) # make the histogram
+ax4.bar(range(len(hist4)),hist4,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist4)])
+plt.xticks( rotation=45)
 ax4.title.set_text('LB')
 
 ax5 = plt.subplot2grid((2,6), (1,3), colspan=2)
-hist, bin_edges = np.histogram(np.asarray(ll_la_abs_p)*Sbase,bins) # make the histogram
-ax5.bar(range(len(hist)),hist,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)], rotation='vertical')
+hist5, bin_edges = np.histogram(np.asarray(ll_la_abs_p)*Sbase,bins) # make the histogram
+ax5.bar(range(len(hist5)),hist5,width=1,align='center',tick_label=
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist5)])
+plt.xticks( rotation=45)
 ax5.title.set_text('LA')
-fig.subplots_adjust(wspace=0.8)
+# fig.subplots_adjust(wspace=0.8)
 fig.suptitle('Distribution of Active Power Absolute Error in Test Feeder {}'.format(which))
+fig.set_tight_layout(True)
 
 # plotting heatmap on nodes
 # just do it using proposed methodology for diff cases of meas available
