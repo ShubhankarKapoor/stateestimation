@@ -37,7 +37,7 @@ def path_to_nodes(which, node_a = None, node_b = None, val = None, vmin = None, 
     with open('saved_pos.pkl', 'rb') as f:
         pos = pickle.load(f) # load the position of nodes for plotting
     if np.all(val) == None:
-        # nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
+        # nx.draw(G, with_labels=True, font_weight='bold')
         nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
     else:
         # define vmin,vmax
