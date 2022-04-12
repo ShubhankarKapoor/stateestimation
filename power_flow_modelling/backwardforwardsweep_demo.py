@@ -11,7 +11,7 @@ from solvers import backwardforwardsweep, lindistflowsweep
 """
 
 
-network37 = Network('network37', sparse=False)  # the sparse option might give speed improvements on very large networks
+network37 = Network('network906', sparse=False)  # the sparse option might give speed improvements on very large networks
 
 ts = time.time()
 V_all, line_currents, V_mag, V_ang, S_line, max_diff, diff_save = backwardforwardsweep(network37)

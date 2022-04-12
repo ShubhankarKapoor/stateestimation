@@ -19,7 +19,7 @@ from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
 from power_flow_modelling.networks import Network
 import torch
 import matplotlib.pyplot as plt
-which = 37 # IEEE 37-node or IEEE 906-node or ausnet
+which = 906 # IEEE 37-node or IEEE 906-node or ausnet
 
 if which == 37:
     from Network37 import *

@@ -5,7 +5,7 @@ from scipy.sparse.linalg import spsolve_triangular
 # implementation of backwardforwardsweepsolver
 # assumes LV network, slack bus is first node, and PQ loads only
 
-def backwardforwardsweep(network, max_iter=100, tolerance=1e-10):
+def backwardforwardsweep(network, max_iter=100, tolerance=1e-12):
     busNo = network.busNo
     V_slack = network.V_slack
     node_a = network.node_a
