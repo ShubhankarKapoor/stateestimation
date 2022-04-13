@@ -64,6 +64,7 @@ for i in range(0,busNo-1):
 ##################################################
 # 1- Calculation of Zabc
 LineData = {}
+LineData[(0,1)] = [[element for element in row] for row in Z_t_new_pu]
 
 for i in range(0,len(ReadLineData)):
     Z012 = np.zeros((3,3),dtype=complex)
@@ -83,7 +84,6 @@ for i in range(0,len(ReadLineData)):
     Zabc = np.dot(invA,np.dot(Z012,A))
     LineData[(ReadLineData.iat[i,1],ReadLineData.iat[i,2])] = [ [Zabc[0,0],Zabc[0,1],Zabc[0,2]] , [Zabc[1,0],Zabc[1,1],Zabc[1,2]] , [Zabc[2,0],Zabc[2,1],Zabc[2,2]]]
 
-LineData[(0,1)] = [[element for element in row] for row in Z_t_new_pu]
 
 ###########################################################
 #P.U impedance matrix
@@ -118,13 +118,13 @@ for i in BusNum:
         P_Load[i] = 0*LoadData.iloc[:,0] # 1440*1 zero vector
     Q_Load[i] = 0*LoadData.iloc[:,0] # 1440*1 zero vector
 
-scaling_factor = 1 # 12, 16, 50
+scaling_factor = 16 # 12, 16, 50
 # Let's just consider a specific time like t = 720 (data for 12pm)
 for i in BusNum:
     P_Load[i] = P_Load[i][720] * scaling_factor
     Q_Load[i] = Q_Load[i][720] * scaling_factor
     # if P_Load[i] != 0:
-    #     print(P_Load[i])
+    #     print(i, P_Load[i])
 
 # added nw info on top of Masoume's code
 R_line = {key:val.real for key, val in LineData_Z_pu.items()} # resistance of every line

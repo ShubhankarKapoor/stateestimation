@@ -185,6 +185,7 @@ class Network:
         # line_z_pu = np.expand_dims(line_z_pu, axis=1)
         
         LineData = {}
+        LineData[(0,1)] = [[element for element in row] for row in zt_new_pu]
 
         for i in range(0,len(ReadLineData)):
             Z012 = np.zeros((3,3),dtype=complex)
@@ -204,8 +205,6 @@ class Network:
             Zabc = np.dot(invA,np.dot(Z012,A))
             LineData[(ReadLineData.iat[i,1],ReadLineData.iat[i,2])] = [ [Zabc[0,0],Zabc[0,1],Zabc[0,2]] , [Zabc[1,0],Zabc[1,1],Zabc[1,2]] , [Zabc[2,0],Zabc[2,1],Zabc[2,2]]]
         
-        LineData[(0,1)] = [[element for element in row] for row in zt_new_pu]
-        
         ###########################################################
         #P.U impedance matrix
         ########################################################### 
@@ -217,6 +216,7 @@ class Network:
         line_z_pu = np.asarray(list(LineData_Z_pu.values()))
         line_z_pu = np.expand_dims(line_z_pu, axis=1)
 
+        scaling_factor = 16
         P_load = np.zeros((busNo), dtype=np.double)
         Q_load = np.zeros((busNo), dtype=np.double)
         LoadBuses = [] #Identify load buses from data sheet
@@ -229,6 +229,8 @@ class Network:
         load = LoadData.iloc[:, SS]
         load = load.iloc[720]
         P_load[LoadBuses] = load
+        P_load*=scaling_factor
+        Q_load*=scaling_factor
 
         load_powers = np.expand_dims(P_load / sbase + 1j * Q_load / sbase, 1) # craete one normalised load array
         current_graph = np.zeros((busNo, len(node_a)))
