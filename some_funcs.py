@@ -1,10 +1,12 @@
 import sys
-sys.path.append("/home/jess/Documents/phD/stateestimation") # to deal with when running code from impedanceestimation
+sys.path.append("/home/shub/Documents/phd/stateestimation/") # to deal with when running code from impedanceestimation
 
+print(sys.path)
 import numpy as np
 import pandas as pd
 import random
-from LinDistFlowBackwardForwardSweep import LinDistFlowBackwardForwardSweep
+# from LinDistFlowBackwardForwardSweep 
+import LinDistFlowBackwardForwardSweep
 from BackwardForwardSweep import BackwardForwardSweep
 # from solvers import cost
 import solvers
