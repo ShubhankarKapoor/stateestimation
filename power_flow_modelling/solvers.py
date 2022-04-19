@@ -5,7 +5,7 @@ from scipy.sparse.linalg import spsolve_triangular
 # implementation of backwardforwardsweepsolver
 # assumes LV network, slack bus is first node, and PQ loads only
 
-def backwardforwardsweep(network, max_iter=100, tolerance=1e-10):
+def backwardforwardsweep(network, max_iter=100, tolerance=1e-12):
     busNo = network.busNo
     V_slack = network.V_slack
     node_a = network.node_a
@@ -56,7 +56,7 @@ def backwardforwardsweep(network, max_iter=100, tolerance=1e-10):
     V_mag = np.absolute(V_all)
     V_ang = np.angle(V_all) * (180 / np.pi)
     S_line = V_all[:-1] * np.conj(line_currents)
-
+    print(iter)
     return V_all, line_currents, V_mag, V_ang, S_line, max_diff, diff_save
 
 # implementation of Lindistflow

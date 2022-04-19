@@ -71,7 +71,8 @@ else: # use node_a and node_b for edge addition
 
 # use the following for distribution of errors
 # plot v perc hist for all methods
-bins=[0, 1, 2.5,6.5]
+bins=[0, 1, 2.5,6.5] # 37
+bins=[0, 0.5, 1,3] # 906
 # data = np.asarray(ll_la_perc_v)[np.where(np.asarray(ll_la_perc_v)<3)[0]]
 
 # hist, bin_edges = np.histogram(ll_both_feed_perc_v,bins) # make the histogram
@@ -114,7 +115,8 @@ fig.suptitle('Distribution of Voltage % Error in Test Feeder {}'.format(which))
 fig.set_tight_layout(True)
 
 # plot p abs hist for all methods
-bins=np.asarray([0, 0.1, 1, 4])*Sbase
+bins=np.asarray([0, 0.1, 1, 4])*Sbase # 37
+bins=np.asarray([0, 2.5, 5, 10]) # 906
 # data = np.asarray(ll_la_perc_v)[np.where(np.sasarray(ll_la_perc_v)<3)[0]]
 
 # hist, bin_edges = np.histogram(ll_both_feed_ab,bins) # make the histogram
@@ -126,7 +128,7 @@ fig = plt.figure()
 ax1 = plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
 hist1, bin_edges = np.histogram(np.asarray(ll_no_feed_abs_p)*Sbase,bins) # make the histogram
 ax1.bar(range(len(hist1)),hist1,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist1)])
 plt.xticks( rotation=45)
 ax1.title.set_text('LN')
 

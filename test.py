@@ -44,9 +44,11 @@ comparison = 0
 
 # masurement set
 if data_lin == 1:
-    [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
-    # [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which,loss=1, pflow = 1)
-
+    ts = time.time()
+    # [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
+    [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which,loss=1, pflow = 1)
+    tf = time.time()
+    print('Time to solve = ', tf-ts, 's')
 if data_full_ac == 1:
     [V_mag, V_ang, _, S_line, I_line, I_load, e_max, k] = BackwardForwardSweep(
                                                                 P_Load, Q_Load, which)
@@ -219,7 +221,10 @@ W_rr[not_considered_indices + len(non_zib_index)] = w22 # weights on unknown q_b
 W_rr[-1] = w3
 
 # load the network object for sped up distflow
-network37 = Network('network37', sparse=False)
+if which==37:
+    network37 = Network('network37', sparse=False)
+if which==906 or which ==907:
+    network37 = Network('network906', sparse=False)
 
 # GN-WLS
 lossy_volt_est = {'tot_states':len(x), 'non_zib_index':non_zib_index, 
