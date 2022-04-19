@@ -569,17 +569,30 @@ for row, i in enumerate(num_known):
     ###########################################################################
     
     # values for all errors
-    # uncomment below to store all errors
-    ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
-    ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
-    ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
-    ll_v_feed_abs_v.append(l_v_feed_abs_v), ll_v_feed_abs_p.append(l_v_feed_abs_p)
-    ll_p_feed_perc_v.append(l_p_feed_perc_v), ll_p_feed_perc_p.append(l_p_feed_perc_p), 
-    ll_p_feed_abs_v.append(l_p_feed_abs_v), ll_p_feed_abs_p.append(l_p_feed_abs_p)
-    ll_both_feed_perc_v.append(l_both_feed_perc_v), ll_both_feed_perc_p.append(l_both_feed_perc_p), 
-    ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
-    ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
-    ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+    # uncomment below to store all errors for each case
+    # ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
+    # ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
+    # ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
+    # ll_v_feed_abs_v.append(l_v_feed_abs_v), ll_v_feed_abs_p.append(l_v_feed_abs_p)
+    # ll_p_feed_perc_v.append(l_p_feed_perc_v), ll_p_feed_perc_p.append(l_p_feed_perc_p), 
+    # ll_p_feed_abs_v.append(l_p_feed_abs_v), ll_p_feed_abs_p.append(l_p_feed_abs_p)
+    # ll_both_feed_perc_v.append(l_both_feed_perc_v), ll_both_feed_perc_p.append(l_both_feed_perc_p), 
+    # ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
+    # ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
+    # ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+
+    # uncomment below to store all errors together
+    ll_no_feed_perc_v.extend(l_no_feed_perc_v), ll_no_feed_perc_p.extend(l_no_feed_perc_p), 
+    ll_no_feed_abs_v.extend(l_no_feed_abs_v), ll_no_feed_abs_p.extend(l_no_feed_abs_p)
+    ll_v_feed_perc_v.extend(l_v_feed_perc_v), ll_v_feed_perc_p.extend(l_v_feed_perc_p), 
+    ll_v_feed_abs_v.extend(l_v_feed_abs_v), ll_v_feed_abs_p.extend(l_v_feed_abs_p)
+    ll_p_feed_perc_v.extend(l_p_feed_perc_v), ll_p_feed_perc_p.extend(l_p_feed_perc_p), 
+    ll_p_feed_abs_v.extend(l_p_feed_abs_v), ll_p_feed_abs_p.extend(l_p_feed_abs_p)
+    ll_both_feed_perc_v.extend(l_both_feed_perc_v), ll_both_feed_perc_p.extend(l_both_feed_perc_p), 
+    ll_both_feed_abs_v.extend(l_both_feed_abs_v), ll_both_feed_abs_p.extend(l_both_feed_abs_p)
+    ll_la_perc_v.extend(l_la_perc_v), ll_la_perc_p.extend(l_la_perc_p), 
+    ll_la_abs_v.extend(l_la_abs_v), ll_la_abs_p.extend(l_la_abs_p)    
+
 
 ###############################################################################
 # Adjusting the subplots
