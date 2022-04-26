@@ -20,7 +20,8 @@ from itertools import combinations
 import seaborn as sns
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
-                       error_calc_refactor, countour_plot, inc_avg
+                       error_calc_refactor, countour_plot, inc_avg, get_nodes_downstream_of_each_branch
+from power_flow_modelling.networks import Network
 import time
 import torch
 import matplotlib.pyplot as plt
@@ -116,16 +117,23 @@ x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 ###############################################################################
-
-# get subset of lineflow measurement set
-num_plow_meas = 0
-num_voltage_meas = 1
-# chose lineflows
-meas_P_line, meas_Q_line = subset_of_measurements(
-    num_plow_meas, arcs, P_line, Q_line, V)
+# load the network object for sped up distflow
+network906 = Network('network906', sparse=False)
+###############################################################################
+###############################################################################
 
 # get paths from slack bus to all nodes
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
+
+# get subset of lineflow measurement set
+num_plow_meas = 1
+# chose lineflows
+meas_P_line, meas_Q_line = subset_of_measurements(
+    num_plow_meas, arcs, P_line, Q_line, V)
+if meas_P_line:
+    downstream_matrix = get_nodes_downstream_of_each_branch(meas_P_line, P_Load_state, path_to_all_nodes)
+else:
+    downstream_matrix = 0
 # num_known = [8, 5, 3] # known number of measurements
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
@@ -251,7 +259,7 @@ r_hat, x_hat = pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path
                             R_line, X_line)
 
 # used for pline with vnode
-df_pline_with_v0 =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
+df_pline_with_v0, mat_r, mat_x =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
                             R_line, X_line, elems_comb, non_zib_index_array)
 ###############################################################################
 
@@ -349,7 +357,7 @@ for row, i in enumerate(num_known):
         start = time.time()
         x_estn0, emax, countsn0, residuals_mat, delta_mat, results, costsn, jacobian_matrix = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            meas_V, R_line, X_line, network906, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_n0+= tot_time
@@ -363,8 +371,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_nofeed = inc_avg(avg_perc_p_nofeed, total_counts_p, perc_p_nofeed[non_zib_index])
         avg_abs_p_nofeed = inc_avg(avg_abs_p_nofeed, total_counts_p, abs_p_nofeed[non_zib_index])
         # uncomment below to store all errors
-        # l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
-        # l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed)
+        l_no_feed_perc_v.extend(perc_v_nofeed), l_no_feed_perc_p.extend(perc_p_nofeed), 
+        l_no_feed_abs_v.extend(abs_v_nofeed), l_no_feed_abs_p.extend(abs_p_nofeed[non_zib_index])
         ################### HEATMAP ##########################################
         volt_max_perc_nofeed = max_val(volt_max_perc_nofeed, perc_v_nofeed, non_zib_index)
         # _, flag = max_val_for_index(p_max_perc_nofeed, perc_p_nofeed, non_zib_index, 7)
@@ -381,7 +389,7 @@ for row, i in enumerate(num_known):
         start = time.time()
         x_estn1, emax, countsn1, residuals_mat, delta_mat, results, costsn, _ = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            meas_V, R_line, X_line, network906, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_n1+= tot_time
@@ -395,8 +403,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_vfeed = inc_avg(avg_perc_p_vfeed, total_counts_p, perc_p_vfeed[non_zib_index])
         avg_abs_p_vfeed = inc_avg(avg_abs_p_vfeed, total_counts_p, abs_p_vfeed[non_zib_index])        
         # uncomment below to store all errors        
-        # l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
-        # l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed)
+        l_v_feed_perc_v.extend(perc_v_vfeed), l_v_feed_perc_p.extend(perc_p_vfeed), 
+        l_v_feed_abs_v.extend(abs_v_vfeed), l_v_feed_abs_p.extend(abs_p_vfeed[non_zib_index])
         ################### HEATMAP ##########################################
         volt_max_perc_vfeed = max_val(volt_max_perc_vfeed, perc_v_vfeed, non_zib_index)
         p_max_perc_vfeed = max_val(p_max_perc_vfeed, perc_p_vfeed, non_zib_index)       
@@ -409,7 +417,7 @@ for row, i in enumerate(num_known):
         start = time.time()
         x_estn2, emax, countsn2, residuals_mat, delta_mat, results, costsn, _ = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            meas_V, R_line, X_line, network906, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_n2+= tot_time        
@@ -423,8 +431,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_pfeed = inc_avg(avg_perc_p_pfeed, total_counts_p, perc_p_pfeed[non_zib_index])
         avg_abs_p_pfeed = inc_avg(avg_abs_p_pfeed, total_counts_p, abs_p_pfeed[non_zib_index])           
         # uncomment below to store all errors        
-        # l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
-        # l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed)
+        l_p_feed_perc_v.extend(perc_v_pfeed), l_p_feed_perc_p.extend(perc_p_pfeed), 
+        l_p_feed_abs_v.extend(abs_v_pfeed), l_p_feed_abs_p.extend(abs_p_pfeed[non_zib_index])
         ################### HEATMAP ##########################################
         volt_max_perc_pfeed = max_val(volt_max_perc_pfeed, perc_v_pfeed, non_zib_index)
         p_max_perc_pfeed = max_val(p_max_perc_pfeed, perc_p_pfeed, non_zib_index)       
@@ -437,7 +445,7 @@ for row, i in enumerate(num_known):
         start = time.time()
         x_estn, emax, countsn, residuals_mat, delta_mat, results, costsn, _ = se_wls(
             x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_nodes,
-            meas_V, R_line, X_line, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
+            meas_V, R_line, X_line, network906, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
         time_nn+= tot_time                
@@ -451,8 +459,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_bothfeed = inc_avg(avg_perc_p_bothfeed, total_counts_p, perc_p_n[non_zib_index])
         avg_abs_p_bothfeed = inc_avg(avg_abs_p_bothfeed, total_counts_p, abs_p_n[non_zib_index])   
         # uncomment below to store all errors        
-        # l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
-        # l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n)
+        l_both_feed_perc_v.extend(perc_v_n), l_both_feed_perc_p.extend(perc_p_n), 
+        l_both_feed_abs_v.extend(abs_v_n), l_both_feed_abs_p.extend(abs_p_n[non_zib_index])
         ################### HEATMAP ##########################################
         volt_max_perc_bothfeed = max_val(volt_max_perc_bothfeed, perc_v_n, non_zib_index)
         p_max_perc_bothfeed = max_val(p_max_perc_bothfeed, perc_p_n, non_zib_index)       
@@ -468,11 +476,11 @@ for row, i in enumerate(num_known):
         R_mat_req = R_mat[meas_V_idx, :]
         X_mat_req = X_mat[meas_V_idx, :]
         v_RX_Z_comb_req = v_RX_Z_comb[meas_V_idx, :]
-        
+
         Z_mm = np.concatenate([Z_mat[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
         addn_rr = np.concatenate([additional_mat_r[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
         addn_xx = np.concatenate([additional_mat_x[i*len(P_Load_state):i*len(P_Load_state) + len(P_Load_state)] for i in meas_V_idx])
-        
+
         pre_calculated_info['v_node_RX_comb'] = v_node_RX_comb
         pre_calculated_info['z_common_path'] = z_common_path
         pre_calculated_info['elems_comb'] = elems_comb
@@ -483,6 +491,9 @@ for row, i in enumerate(num_known):
         pre_calculated_info['additional_mat_x'] = addn_xx
         pre_calculated_info['r_hat'] = r_hat
         pre_calculated_info['x_hat'] = x_hat
+        pre_calculated_info['mat_r'] = mat_r
+        pre_calculated_info['mat_x'] = mat_x
+        pre_calculated_info['downstream_matrix'] = downstream_matrix        
         if num_plow_meas!=0:
             pre_calculated_info['comb_idx1'] = np.array(df_pline_with_v0.idx1)
             pre_calculated_info['comb_idx2'] = np.array(df_pline_with_v0.idx2)
@@ -516,8 +527,8 @@ for row, i in enumerate(num_known):
         avg_perc_p_la = inc_avg(avg_perc_p_la, total_counts_p, perc_p_la[non_zib_index])
         avg_abs_p_la = inc_avg(avg_abs_p_la, total_counts_p, abs_p_la[non_zib_index]) 
         # uncomment below to store all errors
-        # l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
-        # l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la)
+        l_la_perc_v.extend(perc_v_la), l_la_perc_p.extend(perc_p_la), 
+        l_la_abs_v.extend(abs_v_la), l_la_abs_p.extend(abs_p_la[non_zib_index])
         ################### HEATMAP ##########################################
         volt_max_perc_la = max_val(volt_max_perc_la, perc_v_la, non_zib_index)
         p_max_perc_la = max_val(p_max_perc_la, perc_p_la, non_zib_index)       
@@ -558,17 +569,30 @@ for row, i in enumerate(num_known):
     ###########################################################################
     
     # values for all errors
-    # uncomment below to store all errors
-    ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
-    ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
-    ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
-    ll_v_feed_abs_v.append(l_v_feed_abs_v), ll_v_feed_abs_p.append(l_v_feed_abs_p)
-    ll_p_feed_perc_v.append(l_p_feed_perc_v), ll_p_feed_perc_p.append(l_p_feed_perc_p), 
-    ll_p_feed_abs_v.append(l_p_feed_abs_v), ll_p_feed_abs_p.append(l_p_feed_abs_p)
-    ll_both_feed_perc_v.append(l_both_feed_perc_v), ll_both_feed_perc_p.append(l_both_feed_perc_p), 
-    ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
-    ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
-    ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+    # uncomment below to store all errors for each case
+    # ll_no_feed_perc_v.append(l_no_feed_perc_v), ll_no_feed_perc_p.append(l_no_feed_perc_p), 
+    # ll_no_feed_abs_v.append(l_no_feed_abs_v), ll_no_feed_abs_p.append(l_no_feed_abs_p)
+    # ll_v_feed_perc_v.append(l_v_feed_perc_v), ll_v_feed_perc_p.append(l_v_feed_perc_p), 
+    # ll_v_feed_abs_v.append(l_v_feed_abs_v), ll_v_feed_abs_p.append(l_v_feed_abs_p)
+    # ll_p_feed_perc_v.append(l_p_feed_perc_v), ll_p_feed_perc_p.append(l_p_feed_perc_p), 
+    # ll_p_feed_abs_v.append(l_p_feed_abs_v), ll_p_feed_abs_p.append(l_p_feed_abs_p)
+    # ll_both_feed_perc_v.append(l_both_feed_perc_v), ll_both_feed_perc_p.append(l_both_feed_perc_p), 
+    # ll_both_feed_abs_v.append(l_both_feed_abs_v), ll_both_feed_abs_p.append(l_both_feed_abs_p)
+    # ll_la_perc_v.append(l_la_perc_v), ll_la_perc_p.append(l_la_perc_p), 
+    # ll_la_abs_v.append(l_la_abs_v), ll_la_abs_p.append(l_la_abs_p)
+
+    # uncomment below to store all errors together
+    ll_no_feed_perc_v.extend(l_no_feed_perc_v), ll_no_feed_perc_p.extend(l_no_feed_perc_p), 
+    ll_no_feed_abs_v.extend(l_no_feed_abs_v), ll_no_feed_abs_p.extend(l_no_feed_abs_p)
+    ll_v_feed_perc_v.extend(l_v_feed_perc_v), ll_v_feed_perc_p.extend(l_v_feed_perc_p), 
+    ll_v_feed_abs_v.extend(l_v_feed_abs_v), ll_v_feed_abs_p.extend(l_v_feed_abs_p)
+    ll_p_feed_perc_v.extend(l_p_feed_perc_v), ll_p_feed_perc_p.extend(l_p_feed_perc_p), 
+    ll_p_feed_abs_v.extend(l_p_feed_abs_v), ll_p_feed_abs_p.extend(l_p_feed_abs_p)
+    ll_both_feed_perc_v.extend(l_both_feed_perc_v), ll_both_feed_perc_p.extend(l_both_feed_perc_p), 
+    ll_both_feed_abs_v.extend(l_both_feed_abs_v), ll_both_feed_abs_p.extend(l_both_feed_abs_p)
+    ll_la_perc_v.extend(l_la_perc_v), ll_la_perc_p.extend(l_la_perc_p), 
+    ll_la_abs_v.extend(l_la_abs_v), ll_la_abs_p.extend(l_la_abs_p)    
+
 
 ###############################################################################
 # Adjusting the subplots

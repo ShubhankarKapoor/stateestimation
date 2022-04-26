@@ -1,8 +1,8 @@
 import numpy as np
+import pandas as pd
 import scipy
-
+import random
 # network Class description
-
 
 class Network:
     def __init__(self, network=None, sparse=False):
@@ -30,9 +30,14 @@ class Network:
         self.line_flow_mat_all = None # used for func_jacob_calc, pretty much current graph but did it separately for p_ij and q_ij 
 
         if network=="network37":
-            self.load_network73()
+            print('37')
+            self.load_network37()
+        if network=="network906":
+            print('906')
+            self.load_network906()
+        
 
-    def load_network73(self):
+    def load_network37(self):
         busNo = 37
         vbase = 4.8 / np.sqrt(3)  # kV Base voltage for normalization
         sbase = 100  # kVA Base apparent power for normalization
@@ -120,6 +125,151 @@ class Network:
         line_flow_mat_all[num_lines:2*num_lines,num_lines:2*num_lines] = current_graph
 
         self.busNo = 37
+        self.vbase = vbase
+        self.sbase = sbase
+        self.node_a = node_a
+        self.node_b = node_b
+        self.num_lines = num_lines
+        self.line_z_pu = line_z_pu
+        self.load_powers = load_powers
+        self.downstream_branch = downstream_branch
+        if self.sparse:
+            self.current_graph = scipy.sparse.csr_matrix(current_graph)
+            self.voltage_graph = scipy.sparse.csr_matrix(voltage_graph)
+        else:
+            self.current_graph = current_graph
+            self.voltage_graph = voltage_graph
+        self.V_slack = 1. + 0.j
+        self.load_mat = load_mat
+        self.line_flow_mat = line_flow_mat
+        self.line_flow_mat_V = line_flow_mat_V
+        self.pflow_mat = pflow_mat
+        self.qflow_mat = qflow_mat
+        self.line_flow_mat_all = line_flow_mat_all
+        self.P_load = P_load
+        self.Q_load = Q_load
+
+    def load_network906(self):
+        busNo = 906 + 1
+        ReadLineData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/Lines.xlsx')
+        ReadLineCodeData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/LineCode.xlsx')
+        ReadLoadBuses = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/Loads.xlsx')
+        LoadData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/LoadShapes.xlsx')
+        vbase = .48/np.sqrt(3) # kV Base voltage for normalization
+        sbase = 1 #kVA three-phase
+        zbase = 1000 * vbase ** 2 / sbase  # ohm
+        slack_bus_num = [0]  # slack bus, Note that ideal secondary of the transformer is considered as the slack bus, i.e., V = 1<0 pu
+        # sbase_old_t = 2500 / 3  # kVA Transformer rated apparent power. Note that transforer impedance is given in pu and it is based on transformer rated values (S and V) as the base values. We should update this value based on new base values, i.e., Sbase and Vbase
+        zbase_t_old = 1000*vbase**2/(500/3) # 500 kVA is the three phase rated apparent power of the transformer
+        zbase_t_new = 1000 * vbase ** 2 / sbase
+        zt_old_pu = [
+                    [(0.0011+0.002j) ,0+0j            ,0+0j           ],
+                    [0+0j            ,(0.0011+0.002j) ,0+0j           ],
+                    [0+0j            ,0+0j            ,(0.0011+0.002j)]
+                    ]
+        zt_new_pu = [[element*zbase_t_old/zbase_t_new for element in row] for row in zt_old_pu]  # transformer impedance in the new per unit system
+
+        node_a = ReadLineData['Bus1'].values
+        node_a = np.insert(node_a, 0, 0)
+        node_b = ReadLineData['Bus2'].values
+        node_b = np.insert(node_b, 0, 1)
+        # add 0 and   1 in node a, node b
+        num_lines = len(node_a)
+
+        # A = [[1/3,1/3,1/3],[1/3,a/3,a*a/3],[1/3,a*a/3,a/3]]
+        # A = 1
+
+        # line_data = ReadLineData.merge(ReadLineCodeData, left_on='LineCode', right_on='Name', how='left')
+        # line_z_pu = (line_data['R0'] + line_data['X0'] * 1j) * ReadLineData['Length'] * 1/3
+        # line_z_pu = line_z_pu*0.001/zbase
+        # line_z_pu = np.expand_dims(line_z_pu, axis=1)
+        
+        LineData = {}
+        LineData[(0,1)] = [[element for element in row] for row in zt_new_pu]
+
+        for i in range(0,len(ReadLineData)):
+            Z012 = np.zeros((3,3),dtype=complex)
+            a = -0.500000000000000 + 0.866025403784439j
+            A = [[1/3,1/3,1/3],[1/3,a/3,a*a/3],[1/3,a*a/3,a/3]]
+            invA = [[1,1,1],[1,a*a,a],[1,a,a*a]]
+        
+            code = ReadLineData.iat[i,6]
+            for ii in range(0,len(ReadLineCodeData)):      
+                if ReadLineCodeData.iat[ii,0] == code:
+                    Z0 = complex(ReadLineCodeData.iat[ii,4],ReadLineCodeData.iat[ii,5])
+                    Z1 = complex(ReadLineCodeData.iat[ii,2],ReadLineCodeData.iat[ii,3])
+                    Z2 = Z1
+                    Z012[0,0] = Z0*ReadLineData.iat[i,4]
+                    Z012[1,1] = Z1*ReadLineData.iat[i,4]
+                    Z012[2,2] = Z2*ReadLineData.iat[i,4]
+            Zabc = np.dot(invA,np.dot(Z012,A))
+            LineData[(ReadLineData.iat[i,1],ReadLineData.iat[i,2])] = [ [Zabc[0,0],Zabc[0,1],Zabc[0,2]] , [Zabc[1,0],Zabc[1,1],Zabc[1,2]] , [Zabc[2,0],Zabc[2,1],Zabc[2,2]]]
+        
+        ###########################################################
+        #P.U impedance matrix
+        ########################################################### 
+        LineData_Z_pu_threePhase = {} # three phase impedance
+        LineData_Z_pu = {} # single phase impedance
+        for (i,j) in LineData.keys():
+            LineData_Z_pu_threePhase[(i,j)] = [[element*0.001/zbase for element in row] for row in LineData[(i,j)]] # 0.001 is to convert the length of the lines to km
+            LineData_Z_pu[(i,j)] = LineData_Z_pu_threePhase[(i,j)][0][0] # Only Phase "A" is considered. 
+        line_z_pu = np.asarray(list(LineData_Z_pu.values()))
+        line_z_pu = np.expand_dims(line_z_pu, axis=1)
+
+        scaling_factor = 16
+        P_load = np.zeros((busNo), dtype=np.double)
+        Q_load = np.zeros((busNo), dtype=np.double)
+        LoadBuses = [] #Identify load buses from data sheet
+        phase = 'A' # get loads for a specific phase
+        LoadBuses = np.asarray(ReadLoadBuses[ReadLoadBuses['phaseNumber'] == phase]['BusNumber'])
+        random.seed(10)
+        SS = []
+        for i in range(0,len(LoadBuses)):
+            SS.append(random.randrange(0,54,1))
+        load = LoadData.iloc[:, SS]
+        load = load.iloc[720]
+        P_load[LoadBuses] = load
+        P_load*=scaling_factor
+        Q_load*=scaling_factor
+
+        load_powers = np.expand_dims(P_load / sbase + 1j * Q_load / sbase, 1) # craete one normalised load array
+        current_graph = np.zeros((busNo, len(node_a)))
+        upstream_branch = np.zeros((busNo, len(node_a)))
+        downstream_branch = np.zeros((busNo, len(node_a))) # downstream 
+        for i in range(len(node_a)):
+            a = node_a[i]
+            b = node_b[i]
+            current_graph[a, i] = -1.
+            current_graph[b, i] = 1.
+            upstream_branch[b, i] = 1.
+            downstream_branch[a, i] = 1.
+        current_graph = current_graph[1:, :]  # remove slack node as we assume it can provide requried current // todo: reform this so nodes other than 0 can be slack
+        voltage_graph = current_graph.T
+        # downstream_branch = downstream_branch[1:, :]  # remove slack node as we assume it can provide requried current // todo: reform this so nodes other than 0 can be slack
+
+        # pre calculated matrices for func_calc_lineflow
+        # matrix is for multiplication with p and q vector
+        p_load_mat = np.diag(np.ones(len(node_b)))
+        load_mat = np.zeros((2*len(node_a), 2*len(node_a)))
+        load_mat[0:len(node_a),0:len(node_a)] = p_load_mat
+        load_mat[len(node_a):2*len(node_a),len(node_a):2*len(node_a)] = p_load_mat
+        # define matrix for multiplication with p_01/ p_ij, q_01/ q_ij terms
+        line_flow_mat = np.zeros((2*len(node_a), 2*len(node_a)))
+        line_flow_mat[0:len(node_a),0:len(node_a)] = downstream_branch[1:, :]
+        line_flow_mat[len(node_a):2*len(node_a),len(node_a):2*len(node_a)] = downstream_branch[1:, :]
+
+        # pre calculated matrices for func_calc_volt
+        # const matrix of res./ reac with line flow
+        pflow_mat = np.diag(line_z_pu.real.reshape(len(line_z_pu),))
+        qflow_mat = np.diag(line_z_pu.imag.reshape(len(line_z_pu),))
+        line_flow_mat_V = np.concatenate((pflow_mat, qflow_mat), axis =1)
+        
+        # pre calculated matrices for func_jacob_calc
+        line_flow_mat_all = np.zeros((2*num_lines, 2*num_lines)) # rename and pre define
+        line_flow_mat_all[0:num_lines,0:num_lines] = current_graph
+        line_flow_mat_all[num_lines:2*num_lines,num_lines:2*num_lines] = current_graph
+
+        self.busNo = busNo
         self.vbase = vbase
         self.sbase = sbase
         self.node_a = node_a

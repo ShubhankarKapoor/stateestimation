@@ -177,7 +177,7 @@ def newton_no_jacob(network, P_load, Q_load, V0=None, loss=None, pflow = None,
             print ('Non-Convergence after {} iterations!!!'.format(i))
             # return x, V, results, results_V
             return x, V
-# network37 = Network('network37', sparse=False)
+# network37 = Network('network906', sparse=False)
 # load_powers = network37.load_powers
 # P_load = load_powers.real
 # Q_load = load_powers.imag
@@ -350,5 +350,8 @@ def newton_with_jacob(network, P_load, Q_load, V0=None, loss=None, pflow = None,
 
             return x, V # x is a vec of p_ijs and q_ijs. V is sq of voltage mag
 
+# ts = time.time()
 # x3, V3 = newton_with_jacob(network37, P_load, Q_load, loss=1, pflow = 1)
+# tf = time.time()
+# print('Time to solve = ', tf-ts, 's')
 # x3, V3, results, results_V = newton_with_jacob(network37, P_load, Q_load, loss=1, pflow = 1)

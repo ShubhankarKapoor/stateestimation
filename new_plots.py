@@ -96,7 +96,8 @@ else:
 
 # use the following for distribution of errors
 # plot v perc hist for all methods
-bins=[0, 1, 2.5,6.5]
+bins=[0, 1, 2.5,6.5] # 37
+bins=[0, 0.5, 1,3] # 906
 # data = np.asarray(ll_la_perc_v)[np.where(np.asarray(ll_la_perc_v)<3)[0]]
 
 # hist, bin_edges = np.histogram(ll_both_feed_perc_v,bins) # make the histogram
@@ -139,7 +140,8 @@ ax5.title.set_text('LA')
 fig.set_tight_layout(True)
 
 # plot p abs hist for all methods
-bins=np.asarray([0, 0.1, 1, 4])*Sbase
+bins=np.asarray([0, 0.1, 1, 4])*Sbase # 37
+bins=np.asarray([0, 2.5, 5, 10]) # 906
 # data = np.asarray(ll_la_perc_v)[np.where(np.sasarray(ll_la_perc_v)<3)[0]]
 
 # hist, bin_edges = np.histogram(ll_both_feed_ab,bins) # make the histogram
