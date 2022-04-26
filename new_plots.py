@@ -54,10 +54,13 @@ if which == 906 or which == 907: # IEEE 37-node or IEEE 906-node
     from Network906 import arcs
     which = 906 + 1 # becasue there are 907 buses, see nw 906 script
 
-if vmin == None and np.all(val)!= None:
-    vmin = np.min(val)
-if vmin == None and np.all(val)!= None:
-    vmax = np.max(val)
+val = abs_p_la*Sbase
+# val = perc_v_la
+
+# if vmin == None and np.all(val)!= None:
+vmin = np.min(val)
+# if vmin == None and np.all(val)!= None:
+vmax = np.max(val)
 # instantiate the graph
 G = nx.Graph()
 # add nodes
@@ -68,6 +71,28 @@ if which == 37 or which == 906 or which == 907:
 else: # use node_a and node_b for edge addition
     e = zip(node_a, node_b)
     G.add_edges_from(e)
+
+# plotting heatmap on nodes
+# just do it using proposed methodology for diff cases of meas available
+# do it for voltage percentage and abs power
+plt.figure()
+with open('saved_pos.pkl', 'rb') as f:
+    pos = pickle.load(f) # load the position of nodes for plotting
+if np.all(val) == None:
+    # nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
+    nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
+    plt.title('Test Feeder {}'.format(which))
+else:
+    # define vmin,vmax
+    # plt.title('Voltage Percentage Error at each node in Test Feeder {}'.format(which))
+    plt.title('')
+    cmap = plt.cm.Blues
+    # nx.draw(G, pos=pos, with_labels=True, font_weight='bold', node_color=val)
+    nx.draw(G, pos=pos, vmin = vmin, vmax = vmax, with_labels=True, 
+            font_weight='bold', node_color=val, cmap=cmap)
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin = vmin, vmax=vmax))
+    sm._A = []
+    plt.colorbar(sm)
 
 # use the following for distribution of errors
 # plot v perc hist for all methods
@@ -110,7 +135,7 @@ ax5.bar(range(len(hist5)),hist5,width=1,align='center',tick_label=
         ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist5)])
 ax5.title.set_text('LA')
 # fig.subplots_adjust(wspace=0.8)
-fig.suptitle('Distribution of Voltage % Error in Test Feeder {}'.format(which))
+# fig.suptitle('Distribution of Voltage % Error in Test Feeder {}'.format(which))
 fig.set_tight_layout(True)
 
 # plot p abs hist for all methods
@@ -126,7 +151,7 @@ fig = plt.figure()
 ax1 = plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
 hist1, bin_edges = np.histogram(np.asarray(ll_no_feed_abs_p)*Sbase,bins) # make the histogram
 ax1.bar(range(len(hist1)),hist1,width=1,align='center',tick_label=
-        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist)])
+        ['{} - {}'.format(bins[i],bins[i+1]) for i,j in enumerate(hist1)])
 plt.xticks( rotation=45)
 ax1.title.set_text('LN')
 
@@ -158,29 +183,5 @@ ax5.bar(range(len(hist5)),hist5,width=1,align='center',tick_label=
 plt.xticks( rotation=45)
 ax5.title.set_text('LA')
 # fig.subplots_adjust(wspace=0.8)
-fig.suptitle('Distribution of Active Power Absolute Error in Test Feeder {}'.format(which))
+# fig.suptitle('Distribution of Active Power Absolute Error in Test Feeder {}'.format(which))
 fig.set_tight_layout(True)
-
-# plotting heatmap on nodes
-# just do it using proposed methodology for diff cases of meas available
-# do it for voltage percentage and abs power
-val = abs_p_la*Sbase
-# val = perc_v_la
-plt.figure()
-with open('saved_pos.pkl', 'rb') as f:
-    pos = pickle.load(f) # load the position of nodes for plotting
-if np.all(val) == None:
-    # nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
-    nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
-    plt.title('Test Feeder {}'.format(which))
-else:
-    # define vmin,vmax
-    # plt.title('Voltage Percentage Error at each node in Test Feeder {}'.format(which))
-    plt.title('Active Power Absolute Error (kW) at Each node in Test Feeder {}'.format(which))
-    cmap = plt.cm.Blues
-    # nx.draw(G, pos=pos, with_labels=True, font_weight='bold', node_color=val)
-    nx.draw(G, pos=pos, vmin = vmin, vmax = vmax, with_labels=True, 
-            font_weight='bold', node_color=val, cmap=cmap)
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin = vmin, vmax=vmax))
-    sm._A = []
-    plt.colorbar(sm)
