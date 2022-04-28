@@ -55,7 +55,7 @@ if which == 906 or which == 907: # IEEE 37-node or IEEE 906-node
     which = 906 + 1 # becasue there are 907 buses, see nw 906 script
 
 val = abs_p_la*Sbase
-# val = perc_v_la
+val = perc_v_la
 
 # if vmin == None and np.all(val)!= None:
 vmin = np.min(val)
@@ -78,18 +78,27 @@ else: # use node_a and node_b for edge addition
 plt.figure()
 with open('saved_pos.pkl', 'rb') as f:
     pos = pickle.load(f) # load the position of nodes for plotting
+    pos_higher = {} # used to put label outside the nodes
+    y_off = 0.05  # offset on the y axis
+    
+    for k, v in pos.items():
+        pos_higher[k] = (v[0], v[1]+y_off)
+
 if np.all(val) == None:
     # nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
-    nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
+    nx.draw(G, pos=pos, with_labels=False, font_weight='bold')
+    nx.draw_networkx_labels(G, pos_higher)
     plt.title('Test Feeder {}'.format(which))
 else:
     # define vmin,vmax
     # plt.title('Voltage Percentage Error at each node in Test Feeder {}'.format(which))
     plt.title('')
     cmap = plt.cm.Blues
+    cmap = plt.cm.viridis
     # nx.draw(G, pos=pos, with_labels=True, font_weight='bold', node_color=val)
-    nx.draw(G, pos=pos, vmin = vmin, vmax = vmax, with_labels=True, 
+    nx.draw(G, pos=pos, vmin = vmin, vmax = vmax, with_labels=False, 
             font_weight='bold', node_color=val, cmap=cmap)
+    nx.draw_networkx_labels(G, pos_higher)
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin = vmin, vmax=vmax))
     sm._A = []
     plt.colorbar(sm)
