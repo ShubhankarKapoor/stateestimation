@@ -121,7 +121,7 @@ network37 = Network('network37', sparse=False)
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 
 # get subset of lineflow measurement set
-num_plow_meas = 1
+num_plow_meas = 0
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -180,12 +180,13 @@ def max_val_for_index(A, current_calc_error, non_zib_index, node):
         flag = 1
     return A, flag
 
-def subplot_heatmap(array_2d, indices, vmin, vmax, cbar = None, cbar_ax = None, ax = None):
+def subplot_heatmap(array_2d, indices, vmin, vmax, cbar = None, cbar_ax = None, cmap = None, ax = None):
     cbar = 0 if cbar is None else cbar
     cbar_ax = 0 if cbar_ax is None else cbar_ax
     ax = 0 if ax is None else ax
+    cmap = None if cmap is None else cmap
     # plt.figure()
-    ax = sns.heatmap(array_2d, vmin, vmax, cbar = cbar, cbar_ax = cbar_ax)
+    ax = sns.heatmap(array_2d, vmin, vmax, cbar = cbar, cbar_ax = cbar_ax, cmap=cmap)
     # plt.xlabel('Node Number')
     # plt.ylabel('Number of Missing Measurements')
     plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
@@ -608,9 +609,10 @@ vmax = max(heatmap_volt_perc_no_feed.max(), heatmap_volt_perc_v_feed.max(), heat
 fig1, axn1 = plt.subplots(5, 1, sharex=True, sharey=True)
 fig1.suptitle("V Max Percentage Error for Each Node using Different Models")
 cbar_ax = fig1.add_axes([.91, .3, .03, .4])
+cmap = plt.cm.viridis
 # cbar_ax = fig1.add_axes([.068, .2, .42, .03])
 plt.subplot(5, 1,1)
-sns.heatmap(heatmap_volt_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+sns.heatmap(heatmap_volt_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax)
                  # cbar_kws={ "orientation": "horizontal" }) # for horizontal cbar
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(all_index_array))+0.5, all_index_array) # node number
@@ -639,26 +641,27 @@ vmin = min(heatmap_p_perc_no_feed.min(), heatmap_p_perc_v_feed.min(), heatmap_p_
 vmax = max(heatmap_p_perc_no_feed.max(), heatmap_p_perc_v_feed.max(), heatmap_p_perc_p_feed.max(), heatmap_p_perc_both_feed.max(), heatmap_p_perc_la.max())
 
 fig2, axn2 = plt.subplots(5, 1, sharex=True, sharey=True)
-fig2.suptitle("P Max Percentage Error for Each Node using Different Models")
+# fig2.suptitle("P Max Percentage Error for Each Node using Different Models")
 cbar_ax = fig2.add_axes([.91, .3, .03, .4])
+cmap = plt.cm.viridis
 # cbar_ax = fig2.add_axes([.55, .2, .4, .03])
 plt.subplot(5, 1, 1)
-sns.heatmap(heatmap_p_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+sns.heatmap(heatmap_p_perc_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax, cmap=cmap)
                  # cbar_kws={ "orientation": "horizontal" })
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
 plt.xlabel('LN')
 plt.subplot(5, 1, 2)
-subplot_heatmap(heatmap_p_perc_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_p_perc_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap=cmap)
 plt.xlabel('LV')
 plt.subplot(5, 1, 3)
-subplot_heatmap(heatmap_p_perc_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_p_perc_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap=cmap)
 plt.xlabel('LP')
 plt.subplot(5, 1, 4)
-subplot_heatmap(heatmap_p_perc_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_p_perc_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap=cmap)
 plt.xlabel('LB')
 plt.subplot(5, 1, 5)
-subplot_heatmap(heatmap_p_perc_la, non_zib_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_p_perc_la, non_zib_index_array, vmin=vmin, vmax=vmax, cmap=cmap)
 plt.xlabel('LA')
 fig2.text(0.51, 0.02, 'Node Number', ha='center', fontsize=BIGGER_SIZE)
 fig2.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical', fontsize=BIGGER_SIZE)
@@ -722,26 +725,27 @@ vmin = min(heatmap_p_abs_no_feed.min(), heatmap_p_abs_v_feed.min(), heatmap_p_ab
 vmax = max(heatmap_p_abs_no_feed.max(), heatmap_p_abs_v_feed.max(), heatmap_p_abs_p_feed.max(), heatmap_p_abs_both_feed.max(), heatmap_p_abs_la.max())
 
 fig4, axn4 = plt.subplots(5, 1, sharex=True, sharey=True)
-fig4.suptitle("P Max Absolute Error (kW) for Each Node using Different Models")
+# fig4.suptitle("P Max Absolute Error (kW) for Each Node using Different Models")
 cbar_ax = fig4.add_axes([.91, .3, .03, .4])
+cmap = plt.cm.viridis
 # cbar_ax = fig4.add_axes([.55, .2, .4, .03])
 plt.subplot(5, 1,1)
-sns.heatmap(heatmap_p_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax,)
+sns.heatmap(heatmap_p_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax, cmap = cmap)
                  # cbar_kws={ "orientation": "horizontal" })
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
 plt.xlabel('LN')
 plt.subplot(5, 1,2)
-subplot_heatmap(heatmap_p_abs_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_p_abs_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
 plt.xlabel('LV')
 plt.subplot(5, 1,3)
-subplot_heatmap(heatmap_p_abs_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_p_abs_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
 plt.xlabel('LP')
 plt.subplot(5, 1,4)
-subplot_heatmap(heatmap_p_abs_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_p_abs_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
 plt.xlabel('LB')
 plt.subplot(5, 1,5)
-subplot_heatmap(heatmap_p_abs_la, non_zib_index_array, vmin=vmin, vmax=vmax)
+subplot_heatmap(heatmap_p_abs_la, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
 plt.xlabel('LA')
 fig4.text(0.51, 0.02, 'Node Number', ha='center', fontsize=BIGGER_SIZE)
 fig4.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical', fontsize=BIGGER_SIZE)

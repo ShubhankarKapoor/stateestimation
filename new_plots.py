@@ -55,7 +55,7 @@ if which == 906 or which == 907: # IEEE 37-node or IEEE 906-node
     which = 906 + 1 # becasue there are 907 buses, see nw 906 script
 
 val = abs_p_la*Sbase
-val = perc_v_la
+# val = perc_v_la
 
 # if vmin == None and np.all(val)!= None:
 vmin = np.min(val)
@@ -93,7 +93,7 @@ else:
     # define vmin,vmax
     # plt.title('Voltage Percentage Error at each node in Test Feeder {}'.format(which))
     plt.title('')
-    cmap = plt.cm.Blues
+    # cmap = plt.cm.Blues
     cmap = plt.cm.viridis
     # nx.draw(G, pos=pos, with_labels=True, font_weight='bold', node_color=val)
     nx.draw(G, pos=pos, vmin = vmin, vmax = vmax, with_labels=False, 
