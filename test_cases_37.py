@@ -121,7 +121,7 @@ network37 = Network('network37', sparse=False)
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
+num_plow_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -190,6 +190,21 @@ def subplot_heatmap(array_2d, indices, vmin, vmax, cbar = None, cbar_ax = None, 
     # plt.xlabel('Node Number')
     # plt.ylabel('Number of Missing Measurements')
     plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
+    plt.xticks(np.arange(len(indices))+0.5, indices) # node number
+
+def subplot_heatmap_mod(array_2d, indices, lim_num_known, vmin, vmax, cbar = None, cbar_ax = None, cmap = None, ax = None):
+    ''' limited num of yticks '''
+    cbar = 0 if cbar is None else cbar
+    cbar_ax = 0 if cbar_ax is None else cbar_ax
+    ax = 0 if ax is None else ax
+    cmap = None if cmap is None else cmap
+    plt.rc('ytick', labelsize=20)
+    plt.rc('xtick', labelsize=18)
+    # plt.figure()
+    ax = sns.heatmap(array_2d, vmin, vmax, cbar = cbar, cbar_ax = cbar_ax, cmap=cmap)
+    # plt.xlabel('Node Number')
+    # plt.ylabel('Number of Missi
+    plt.yticks(np.array(lim_num_known)+0.5, lim_num_known[::-1]) # num known meas
     plt.xticks(np.arange(len(indices))+0.5, indices) # node number
 
 def plot_heatmap(array_2d):
@@ -723,7 +738,8 @@ plot_heatmap(heatmap_volt_abs_la)
 ########################## plot p abs error ###########################
 vmin = min(heatmap_p_abs_no_feed.min(), heatmap_p_abs_v_feed.min(), heatmap_p_abs_p_feed.min(), heatmap_p_abs_both_feed.min(), heatmap_p_abs_la.min())
 vmax = max(heatmap_p_abs_no_feed.max(), heatmap_p_abs_v_feed.max(), heatmap_p_abs_p_feed.max(), heatmap_p_abs_both_feed.max(), heatmap_p_abs_la.max())
-
+plt.rc('ytick', labelsize=20)
+plt.rc('xtick', labelsize=18)
 fig4, axn4 = plt.subplots(5, 1, sharex=True, sharey=True)
 # fig4.suptitle("P Max Absolute Error (kW) for Each Node using Different Models")
 cbar_ax = fig4.add_axes([.91, .3, .03, .4])
@@ -733,19 +749,26 @@ plt.subplot(5, 1,1)
 sns.heatmap(heatmap_p_abs_no_feed, vmin=vmin, vmax=vmax, cbar = True, cbar_ax = cbar_ax, cmap = cmap)
                  # cbar_kws={ "orientation": "horizontal" })
 plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
+lim_num_known = [0, 3, 6, 9]
+plt.yticks(np.array(lim_num_known)+0.5, lim_num_known[::-1]) # num known meas
+# plt.yticks(np.arange(len(num_known))+0.5, num_known) # num known meas
 plt.xticks(np.arange(len(non_zib_index_array))+0.5, non_zib_index_array) # node number
 plt.xlabel('LN')
 plt.subplot(5, 1,2)
-subplot_heatmap(heatmap_p_abs_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
+subplot_heatmap_mod(heatmap_p_abs_v_feed, non_zib_index_array, lim_num_known, vmin=vmin, vmax=vmax, cmap = cmap)
+# subplot_heatmap(heatmap_p_abs_v_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
 plt.xlabel('LV')
 plt.subplot(5, 1,3)
-subplot_heatmap(heatmap_p_abs_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
+subplot_heatmap_mod(heatmap_p_abs_p_feed, non_zib_index_array, lim_num_known, vmin=vmin, vmax=vmax, cmap = cmap)
+# subplot_heatmap(heatmap_p_abs_p_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
 plt.xlabel('LP')
 plt.subplot(5, 1,4)
-subplot_heatmap(heatmap_p_abs_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
+subplot_heatmap_mod(heatmap_p_abs_both_feed, non_zib_index_array, lim_num_known, vmin=vmin, vmax=vmax, cmap = cmap)
+# subplot_heatmap(heatmap_p_abs_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
 plt.xlabel('LB')
 plt.subplot(5, 1,5)
-subplot_heatmap(heatmap_p_abs_la, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
+subplot_heatmap_mod(heatmap_p_abs_both_feed, non_zib_index_array, lim_num_known, vmin=vmin, vmax=vmax, cmap = cmap)
+# subplot_heatmap(heatmap_p_abs_both_feed, non_zib_index_array, vmin=vmin, vmax=vmax, cmap = cmap)
 plt.xlabel('LA')
 fig4.text(0.51, 0.02, 'Node Number', ha='center', fontsize=BIGGER_SIZE)
 fig4.text(0.08, 0.5, 'Number of Known Measurements', va='center', rotation='vertical', fontsize=BIGGER_SIZE)

@@ -19,6 +19,7 @@ def meas_from_approx_distflow(x_est, meas_P_line, P_Load_state, comb_idx1, comb_
     pq_term = p_term + q_term
 
     # hacky way for line 01, wont work for other cases
+    # it think it should work now, depends on mat_r/mat_x size - haven't tested it
     if meas_P_line:    
         # p_01 = sum(x_est[0:len(P_Load_state)]) + (1/V0)*(sum(pq_term * sum_r))
         # q_01 = sum(x_est[len(P_Load_state):2*len(P_Load_state)]) + (1/V0)*(sum(pq_term * sum_x))

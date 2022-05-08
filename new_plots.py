@@ -98,7 +98,7 @@ else:
     # nx.draw(G, pos=pos, with_labels=True, font_weight='bold', node_color=val)
     nx.draw(G, pos=pos, vmin = vmin, vmax = vmax, with_labels=False, 
             font_weight='bold', node_color=val, cmap=cmap)
-    nx.draw_networkx_labels(G, pos_higher)
+    nx.draw_networkx_labels(G, pos_higher, font_size = MEDIUM_SIZE)
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin = vmin, vmax=vmax))
     sm._A = []
     plt.colorbar(sm)
