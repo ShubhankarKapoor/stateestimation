@@ -1224,6 +1224,7 @@ def vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_node
                                       R_line, X_line, LineData_Z_pu, non_zib_index_array):
     data = []
     v_node_RX_comb = np.zeros((len(meas_V_nodes), len(elems_comb)))
+    R_comb, X_comb = np.zeros((len(meas_V_nodes), len(elems_comb))), np.zeros((len(meas_V_nodes), len(elems_comb)))
     z_common_path = np.zeros((len(meas_V_nodes), len(elems_comb)))
 
     for idxv, node_v in enumerate(meas_V_nodes):
@@ -1234,18 +1235,24 @@ def vnode_with_v0_pre_calc_terms_fast(meas_V_nodes, elems_comb, path_to_all_node
             if node_j == node_k: # square terms
                 common_lines_power_nodes = path_to_all_nodes[node_j] # for additional loss
                 common_path = path_to_all_nodes[node_v].intersection(common_lines_power_nodes) # for original loss
-                _, _, sum_RX_comb = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
+                R_hat, X_hat, sum_RX_comb = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
                 Z_hat = sum((abs(LineData_Z_pu[item]))**2 for item in common_path)                
+                R_comb[idxv][idx_elem] = R_hat # for extra testing in modified dist
+                X_comb[idxv][idx_elem] = X_hat                
                 v_node_RX_comb[idxv][idx_elem] = sum_RX_comb
                 z_common_path[idxv][idx_elem] = Z_hat
+                R_comb[idxv][idx_elem] = R_hat
+                X_comb[idxv][idx_elem] = X_hat
                 if idxv == 0: # needs to be done only once
                     idx1 = np.where(node_j == non_zib_index_array)[0][0]
                     data.append([node_j, node_k, idx1, idx1])
             else: # other coupled terms
                 common_lines_power_nodes = path_to_all_nodes[node_j].intersection(path_to_all_nodes[node_k]) # for additional loss
                 common_path = path_to_all_nodes[node_v].intersection(common_lines_power_nodes)
-                _, _, sum_RX_comb = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
+                R_hat, X_hat, sum_RX_comb = sum_comb_of_lines2(node_v, R_line, X_line, common_lines_power_nodes, path_to_all_nodes)
                 Z_hat = sum((abs(LineData_Z_pu[item]))**2 for item in common_path)
+                R_comb[idxv][idx_elem] = R_hat * 2# for extra testing in modified dist
+                X_comb[idxv][idx_elem] = X_hat * 2                              
                 v_node_RX_comb[idxv][idx_elem] = sum_RX_comb * 2 # 2 is for coupled terms
                 z_common_path[idxv][idx_elem] = Z_hat * 2
                 if idxv == 0: # needs to be done only once
