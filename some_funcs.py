@@ -147,6 +147,19 @@ def get_nodes_downstream_of_each_branch(meas_P_line, P_Load_state, path_to_all_n
                 downstream_matrix[i][j] = 1
     return downstream_matrix
 
+def get_nodes_downstream_of_branch_with_req_nodes(lines_key, nodes, path_to_all_nodes):
+    '''
+    same as get_nodes_downstream_of_each_branch with only line keys and node num required 
+    lines_key: lines you want to consider
+    nodes: nodes you want to consider
+    '''
+    downstream_matrix = np.zeros((len(lines_key), len(nodes)))
+    for i , k in enumerate(lines_key): # iterate over measurements line
+        for j, node_a in enumerate(nodes): # iterate over states node
+            if k in path_to_all_nodes[node_a]: # if node is downstream
+                downstream_matrix[i][j] = 1
+    return downstream_matrix
+
 def inc_avg(prev_avg, total_counts, new_array):
     """Calculate the average incrementally.
     prev_avg: last calculated average.

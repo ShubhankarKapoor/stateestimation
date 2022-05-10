@@ -117,7 +117,7 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
 
 # get subset of lineflow measurement set
-num_plow_meas = 0 # 1
+num_plow_meas = 1 # 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -141,7 +141,7 @@ indices = np.asarray(combs[5])
 # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 # [0,   1,  2,  3,  4,  5,  6,  7,  8,  9]
 
-indices = np.asarray((   0,    3,    5,  6,  7,   9 )) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
+indices = np.asarray((3,  5,  6,  7, 9)) # [ 2,  8, 10, 11, 21, 22, 23, 26, 35, 36]
 
 # 906
 # [ 34, 70, 73, 74, 225, 289, 349, 387, 388, 502, 562, 563, 611, 629, 817, 860, 861, 896, 898, 900, 906]

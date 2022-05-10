@@ -18,9 +18,11 @@ class Network:
         self.line_z_pu = None        # impedance of each line
         self.slack_bus_num = 0       # //todo: this is currently not used and is assumed zero
         self.load_powers = None      # power load connected to each node (including slack)
+        self.non_zib_index_array = None # array of index with loads
         self.V_slack = None          # voltage of slack node (normalised if loads are normalised)
         self.node_voltages = None
         self.line_currents = None
+        self.lines_key = None        # list of connected lines
         self.sparse = sparse         # whether to store graphs in sparse format or not
         self.load_mat = None         # pre calc matrix for func_calc_lineflow
         self.line_flow_mat = None    # pre calc matrix for func_calc_lineflow
@@ -64,6 +66,7 @@ class Network:
                   18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
                   35, 36]
         num_lines = len(node_a)
+        lines_key = list(zip(node_a, node_b))
         line_z_pu = np.array(
             [zt_new_pu * length[0], z1 * length[1] / zbase, z2 * length[2] / zbase, z2 * length[3] / zbase,
              z3 * length[4] / zbase, z3 * length[5] / zbase, z3 * length[6] / zbase, z3 * length[7] / zbase,
@@ -88,6 +91,7 @@ class Network:
              0, 0, 8,
              40], np.double())
         load_powers = np.expand_dims(P_load / sbase + 1j * Q_load / sbase, 1) # craete one normalised load array
+        non_zib_index_array = np.where(P_load!=0)[0]
         current_graph = np.zeros((busNo, len(node_a)))
         upstream_branch = np.zeros((busNo, len(node_a)))
         downstream_branch = np.zeros((busNo, len(node_a))) # downstream 
@@ -132,6 +136,7 @@ class Network:
         self.num_lines = num_lines
         self.line_z_pu = line_z_pu
         self.load_powers = load_powers
+        self.non_zib_index_array = non_zib_index_array
         self.downstream_branch = downstream_branch
         if self.sparse:
             self.current_graph = scipy.sparse.csr_matrix(current_graph)
@@ -140,6 +145,7 @@ class Network:
             self.current_graph = current_graph
             self.voltage_graph = voltage_graph
         self.V_slack = 1. + 0.j
+        self.lines_key = lines_key
         self.load_mat = load_mat
         self.line_flow_mat = line_flow_mat
         self.line_flow_mat_V = line_flow_mat_V
