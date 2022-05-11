@@ -1314,6 +1314,24 @@ def combination_of_loads(P_Load_state):
                 elems_comb.append((elema,elemb))
     return elems_comb
 
+def combination_of_loads_with_indices(non_zib_index_array):
+    ''' 
+    return combination of load elements and their indices 
+    motivated from combination_of_loads
+    non_zib_index_array: nodes with loads
+    '''
+    # get combs of elements
+    elems = list(non_zib_index_array)
+    elems_comb = [] # all elements in square of p and q
+    comb_idx1, comb_idx2 =[], []
+    for i,elema  in enumerate(elems):
+        for j, elemb in enumerate(elems):
+            if j>=i:
+                elems_comb.append((elema,elemb))
+                comb_idx1.append(i)
+                comb_idx2.append(j)
+    return elems_comb, np.array(comb_idx1), np.array(comb_idx2)
+
 def combination_of_lines_to_nodes(elems_comb, path_to_all_nodes):
     ''' returns common path of nodes and the combinations of common path '''
     # common path to coupled and squared node terms
