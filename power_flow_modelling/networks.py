@@ -15,6 +15,8 @@ class Network:
         self.current_graph = None    # connection matrix for KCL
         self.voltage_graph = None    # connection matrix for KVL
         self.downstream_branch = None
+        self.length = None           # length of each line
+        self.line_z_pu_per_length = None # impedance per unit length        
         self.line_z_pu = None        # impedance of each line
         self.slack_bus_num = 0       # //todo: this is currently not used and is assumed zero
         self.load_powers = None      # power load connected to each node (including slack)
@@ -67,6 +69,20 @@ class Network:
                   35, 36]
         num_lines = len(node_a)
         lines_key = list(zip(node_a, node_b))
+        line_z_pu_per_length = np.array(
+            [zt_new_pu , z1  / zbase, z2  / zbase, z2  / zbase,
+             z3   / zbase,  z3  / zbase, z3  / zbase, z3  / zbase,
+             z3  / zbase, z3  / zbase, z3  / zbase, z3  / zbase,
+             z4  / zbase, z3  / zbase, z4  / zbase,
+             z4  / zbase, z4  / zbase, z4  / zbase,
+             z3  / zbase,
+             z4  / zbase, z3  / zbase, z4  / zbase,
+             z4  / zbase, z4  / zbase, z4  / zbase,
+             z4  / zbase, z3  / zbase, z3  / zbase,
+             z3  / zbase,
+             z3  / zbase, z4  / zbase, z4  / zbase,
+             z4  / zbase, z4  / zbase, z4  / zbase,
+             z4  / zbase])
         line_z_pu = np.array(
             [zt_new_pu * length[0], z1 * length[1] / zbase, z2 * length[2] / zbase, z2 * length[3] / zbase,
              z3 * length[4] / zbase, z3 * length[5] / zbase, z3 * length[6] / zbase, z3 * length[7] / zbase,
@@ -128,12 +144,14 @@ class Network:
         line_flow_mat_all[0:num_lines,0:num_lines] = current_graph
         line_flow_mat_all[num_lines:2*num_lines,num_lines:2*num_lines] = current_graph
 
-        self.busNo = 37
+        self.busNo = busNo
         self.vbase = vbase
         self.sbase = sbase
         self.node_a = node_a
         self.node_b = node_b
         self.num_lines = num_lines
+        self.length = length      
+        self.line_z_pu_per_length = line_z_pu_per_length
         self.line_z_pu = line_z_pu
         self.load_powers = load_powers
         self.non_zib_index_array = non_zib_index_array

@@ -28,7 +28,7 @@ def path_to_nodes(which, node_a = None, node_b = None, val = None, vmin = None, 
     # add edges
     if which == 37 or which == 906 or which == 907:
         G.add_edges_from((arcs))
-    else: # use node_a and node_b for edge addition
+    else: # use node_a and node_b for edge addition -- from new nw defintion
         e = zip(node_a, node_b)
         G.add_edges_from(e)
 
