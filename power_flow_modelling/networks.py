@@ -175,10 +175,10 @@ class Network:
 
     def load_network906(self):
         busNo = 906 + 1
-        ReadLineData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/Lines.xlsx')
-        ReadLineCodeData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/LineCode.xlsx')
-        ReadLoadBuses = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/Loads.xlsx')
-        LoadData = pd.read_excel (r'/home/shub/Documents/phd/distflow/LVNetworks/906/Network_1/Feeder_1/LoadShapes.xlsx')
+        ReadLineData = pd.read_excel (r'/home/shub/Documents/phd/stateestimation/LVNetworks/906/Network_1/Feeder_1/Lines.xlsx')
+        ReadLineCodeData = pd.read_excel (r'/home/shub/Documents/phd/stateestimation/LVNetworks/906/Network_1/Feeder_1/LineCode.xlsx')
+        ReadLoadBuses = pd.read_excel (r'/home/shub/Documents/phd/stateestimation/LVNetworks/906/Network_1/Feeder_1/Loads.xlsx')
+        LoadData = pd.read_excel (r'/home/shub/Documents/phd/stateestimation/LVNetworks/906/Network_1/Feeder_1/LoadShapes.xlsx')
         vbase = .48/np.sqrt(3) # kV Base voltage for normalization
         sbase = 1 #kVA three-phase
         zbase = 1000 * vbase ** 2 / sbase  # ohm

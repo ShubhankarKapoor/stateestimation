@@ -11,8 +11,9 @@ from solvers import backwardforwardsweep, lindistflowsweep
 """
 
 
-network37 = Network('network906', sparse=False)  # the sparse option might give speed improvements on very large networks
+network37 = Network('network37', sparse=False)  # the sparse option might give speed improvements on very large networks
 
+# meas from full AC
 ts = time.time()
 V_all, line_currents, V_mag, V_ang, S_line, max_diff, diff_save = backwardforwardsweep(network37)
 tf = time.time()
@@ -25,8 +26,9 @@ plt.ylabel('Max value change')
 plt.title("backward forward sweep solver convergence")
 plt.show()
 
-network37 = Network('network906', sparse=False)  # the sparse option might give speed improvements on very large networks
+network37 = Network('network37', sparse=False)  # the sparse option might give speed improvements on very large networks
 
+# meas from lindistflow
 ts = time.time()
 V_all, V_mag, P_line, Q_line, S_line, max_diff, diff_save, k = lindistflowsweep(network37, pflow = 1)
 tf = time.time()
