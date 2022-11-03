@@ -56,7 +56,7 @@ def backwardforwardsweep(network, max_iter=100, tolerance=1e-12):
     V_mag = np.absolute(V_all)
     V_ang = np.angle(V_all) * (180 / np.pi)
     S_line = V_all[:-1] * np.conj(line_currents)
-    print(iter)
+    # print(iter)
     return V_all, line_currents, V_mag, V_ang, S_line, max_diff, diff_save
 
 # implementation of Lindistflow
