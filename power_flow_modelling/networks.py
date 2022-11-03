@@ -5,7 +5,7 @@ import random
 # network Class description
 
 class Network:
-    def __init__(self, network=None, sparse=False):
+    def __init__(self, network=None, sparse=False, P_load = None, Q_load = None):
         self.busNo = None            # number of busses
         self.vbase = None            # kV base voltage for normalisation
         self.sbase = None            # kVA apparent power for normalisation
@@ -35,13 +35,13 @@ class Network:
 
         if network=="network37":
             print('37')
-            self.load_network37()
+            self.load_network37(P_load, Q_load)
         if network=="network906":
             print('906')
             self.load_network906()
         
 
-    def load_network37(self):
+    def load_network37(self, P_load, Q_load):
         busNo = 37
         vbase = 4.8 / np.sqrt(3)  # kV Base voltage for normalization
         sbase = 100  # kVA Base apparent power for normalization
@@ -98,11 +98,13 @@ class Network:
              z4 * length[32] / zbase, z4 * length[33] / zbase, z4 * length[34] / zbase,
              z4 * length[35] / zbase])
         line_z_pu = np.expand_dims(line_z_pu, axis=1)
-        P_load = np.array(
+        if np.any(P_load == None):
+            P_load = np.array(
             [0, 0, 140, 0, 0, 0, 0, 0, 85, 0, 140, 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 42, 42, 0, 0, 8, 0, 0, 0, 0, 0,
              0, 0, 0,
              17, 85], dtype=np.double)
-        Q_load = np.array(
+        if np.any(Q_load == None):
+            Q_load = np.array(
             [0, 0, 70, 0, 0, 0, 0, 0, 40, 0, 70, 62, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 21, 21, 0, 0, 4, 0, 0, 0, 0, 0, 0,
              0, 0, 8,
              40], np.double())
