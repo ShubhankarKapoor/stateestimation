@@ -5,7 +5,7 @@ import random
 # network Class description
 
 class Network:
-    def __init__(self, network=None, sparse=False, P_load = None, Q_load = None):
+    def __init__(self, network=None, sparse=False, P_load = None, Q_load = None, line_z_pu = None):
         self.busNo = None            # number of busses
         self.vbase = None            # kV base voltage for normalisation
         self.sbase = None            # kVA apparent power for normalisation
@@ -34,14 +34,14 @@ class Network:
         self.line_flow_mat_all = None # used for func_jacob_calc, pretty much current graph but did it separately for p_ij and q_ij 
 
         if network=="network37":
-            print('37')
-            self.load_network37(P_load, Q_load)
+            # print('37')
+            self.load_network37(P_load, Q_load, line_z_pu)
         if network=="network906":
             print('906')
             self.load_network906()
         
 
-    def load_network37(self, P_load, Q_load):
+    def load_network37(self, P_load, Q_load, line_z_pu):
         busNo = 37
         vbase = 4.8 / np.sqrt(3)  # kV Base voltage for normalization
         sbase = 100  # kVA Base apparent power for normalization
@@ -83,7 +83,8 @@ class Network:
              z3  / zbase, z4  / zbase, z4  / zbase,
              z4  / zbase, z4  / zbase, z4  / zbase,
              z4  / zbase])
-        line_z_pu = np.array(
+        if np.any(line_z_pu == None):
+            line_z_pu = np.array(
             [zt_new_pu * length[0], z1 * length[1] / zbase, z2 * length[2] / zbase, z2 * length[3] / zbase,
              z3 * length[4] / zbase, z3 * length[5] / zbase, z3 * length[6] / zbase, z3 * length[7] / zbase,
              z3 * length[8] / zbase, z3 * length[9] / zbase, z3 * length[10] / zbase, z3 * length[11] / zbase,
@@ -97,7 +98,7 @@ class Network:
              z3 * length[29] / zbase, z4 * length[30] / zbase, z4 * length[31] / zbase,
              z4 * length[32] / zbase, z4 * length[33] / zbase, z4 * length[34] / zbase,
              z4 * length[35] / zbase])
-        line_z_pu = np.expand_dims(line_z_pu, axis=1)
+            line_z_pu = np.expand_dims(line_z_pu, axis=1)
         if np.any(P_load == None):
             P_load = np.array(
             [0, 0, 140, 0, 0, 0, 0, 0, 85, 0, 140, 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 42, 42, 0, 0, 8, 0, 0, 0, 0, 0,
