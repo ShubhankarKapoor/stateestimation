@@ -50,7 +50,8 @@ def backwardforwardsweep(network, max_iter=100, tolerance=1e-12):
         diff_save.append(max_diff)
         if max_diff < tolerance:
             break
-
+        if iter == max_iter-1:
+            print('not converging....backwardfowwardsweep')
     V_all = np.vstack((np.atleast_2d(V_slack), node_voltages))
 
     V_mag = np.absolute(V_all)
