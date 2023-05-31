@@ -1,5 +1,9 @@
 import sys
-sys.path.append("/home/shub/Documents/phd/stateestimation/") # to deal with when running code from impedanceestimation
+import os
+
+parent_path = os.path.abspath("..")
+sys.path.append(parent_path+"/stateestimation")
+# sys.path.append("/home/shub/Documents/phd/stateestimation/") # to deal with when running code from impedanceestimation
 
 # print(sys.path)
 import numpy as np
