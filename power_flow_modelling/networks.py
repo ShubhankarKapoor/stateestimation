@@ -39,6 +39,9 @@ class Network:
         if network=="network906":
             print('906')
             self.load_network906()
+        if network=="network13":
+            print('Loading nw 13')
+            self.load_network13(P_load, Q_load, line_z_pu)
         
 
     def load_network37(self, P_load, Q_load, line_z_pu):
@@ -312,6 +315,133 @@ class Network:
             self.current_graph = current_graph
             self.voltage_graph = voltage_graph
         self.V_slack = 1. + 0.j
+        self.load_mat = load_mat
+        self.line_flow_mat = line_flow_mat
+        self.line_flow_mat_V = line_flow_mat_V
+        self.pflow_mat = pflow_mat
+        self.qflow_mat = qflow_mat
+        self.line_flow_mat_all = line_flow_mat_all
+        self.P_load = P_load
+        self.Q_load = Q_load
+
+    def load_network13(self, P_load, Q_load, line_z_pu):
+        busNo = 13
+        vbase = 4.16 / np.sqrt(3) #kV line_to_line
+        sbase = 300/3 #kVA 3phase
+        Sbase_old_t = 5000/3 #kVA 3phase
+        Zbase_t_old = 1000*vbase**2/Sbase_old_t
+        Zbase_t_new = 1000*vbase**2/sbase
+        Zbase = 1000*vbase**2/sbase
+
+        # slack_bus_num = [0]  # slack bus, Note that ideal secondary of the transformer is considered as the slack bus, i.e., V = 1<0 pu
+        zt_old_pu = 0.01 + 0.08j 
+        zt_new_pu = Zbase_t_old / Zbase_t_new * zt_old_pu
+
+        z1 = 0.3465+1.0179j  # Z1 to Z7 are chosen from IEEE 37-node datasheet. Note that only info of phase A is being used because here the assumption is that the system is single phase.
+        z2 = 0.7526+1.1814j
+        z3 = 1.3238+1.3569j # different from orig to avoid 0 vals chosen phase C impedance
+        z4 = 1.3238+1.3569j
+        z5 = 1.3292+1.3475j
+        z6 = 0.7982+0.4463j
+        z7 = 1.3425+0.5124j
+        length =[1 , 0.3788 , 0.3788 , 0.1894 , 0.0947 , 0.0947 , 0.0568 , 0 , 
+                 0.0947 , 0.0568 , 0.1515 , 0.0568] 
+        node_a = np.array([0, 1, 2, 3, 2, 2, 6, 3, 8, 3, 10, 10])
+        node_b = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        num_lines = len(node_a)
+        lines_key = list(zip(node_a, node_b))
+        line_z_pu_per_length = np.array(
+             [zt_new_pu, 
+             z1 / Zbase, 
+             z1 / Zbase, 
+             z1 / Zbase, 
+             z2 / Zbase, 
+             z3 / Zbase, 
+             z3 / Zbase, 
+             z1 / Zbase, 
+             z6 / Zbase, 
+             z4 / Zbase, 
+             z7 / Zbase, 
+             z5 / Zbase])
+        if np.any(line_z_pu == None):
+            line_z_pu = np.array(
+            [zt_new_pu * length[0], 
+             z1 * length[1] / Zbase, 
+             z1 * length[2] / Zbase, 
+             z1 * length[3] / Zbase, 
+             z2 * length[4] / Zbase, 
+             z3 * length[5] / Zbase, 
+             z3 * length[6] / Zbase, 
+             z1 * length[7] / Zbase, 
+             z6 * length[7] / Zbase,  # replaced 8 with 7 to avoid 0 values
+             z4 * length[9] / Zbase, 
+             z7 * length[10] / Zbase, 
+             z5 * length[11] / Zbase])
+            line_z_pu = np.expand_dims(line_z_pu, axis=1)
+        if np.any(P_load == None):
+            P_load = np.array(
+            [0, 0, 0, 140, 85, 140, 126, 42, 42, 42, 8, 17, 85], dtype=np.double)
+        if np.any(Q_load == None):
+            Q_load = np.array(
+            [0, 0, 0, 70, 40, 70, 62, 21, 21, 21, 4, 8, 40], np.double())
+        load_powers = np.expand_dims(P_load / sbase + 1j * Q_load / sbase, 1) # craete one normalised load array
+        non_zib_index_array = np.where(P_load!=0)[0]
+        current_graph = np.zeros((busNo, len(node_a)))
+        upstream_branch = np.zeros((busNo, len(node_a)))
+        downstream_branch = np.zeros((busNo, len(node_a))) # downstream 
+        for i in range(len(node_a)):
+            a = node_a[i]
+            b = node_b[i]
+            current_graph[a, i] = -1.
+            current_graph[b, i] = 1.
+            upstream_branch[b, i] = 1.
+            downstream_branch[a, i] = 1.
+        current_graph = current_graph[1:, :]  # remove slack node as we assume it can provide requried current // todo: reform this so nodes other than 0 can be slack
+        voltage_graph = current_graph.T
+        # downstream_branch = downstream_branch[1:, :]  # remove slack node as we assume it can provide requried current // todo: reform this so nodes other than 0 can be slack
+
+        # pre calculated matrices for func_calc_lineflow
+        # matrix is for multiplication with p and q vector
+        p_load_mat = np.diag(np.ones(len(node_b)))
+        load_mat = np.zeros((2*len(node_a), 2*len(node_a)))
+        load_mat[0:len(node_a),0:len(node_a)] = p_load_mat
+        load_mat[len(node_a):2*len(node_a),len(node_a):2*len(node_a)] = p_load_mat
+        # define matrix for multiplication with p_01/ p_ij, q_01/ q_ij terms
+        line_flow_mat = np.zeros((2*len(node_a), 2*len(node_a)))
+        line_flow_mat[0:len(node_a),0:len(node_a)] = downstream_branch[1:, :]
+        line_flow_mat[len(node_a):2*len(node_a),len(node_a):2*len(node_a)] = downstream_branch[1:, :]
+
+        # pre calculated matrices for func_calc_volt
+        # const matrix of res./ reac with line flow
+        pflow_mat = np.diag(line_z_pu.real.reshape(len(line_z_pu),))
+        qflow_mat = np.diag(line_z_pu.imag.reshape(len(line_z_pu),))
+        line_flow_mat_V = np.concatenate((pflow_mat, qflow_mat), axis =1)
+        
+        # pre calculated matrices for func_jacob_calc
+        line_flow_mat_all = np.zeros((2*num_lines, 2*num_lines)) # rename and pre define
+        line_flow_mat_all[0:num_lines,0:num_lines] = current_graph
+        line_flow_mat_all[num_lines:2*num_lines,num_lines:2*num_lines] = current_graph
+
+        self.busNo = busNo
+        self.vbase = vbase
+        self.sbase = sbase
+        self.node_a = node_a
+        self.node_b = node_b
+        self.num_lines = num_lines
+        self.length = length      
+        self.line_z_pu_per_length = line_z_pu_per_length
+        self.line_z_pu = line_z_pu
+        self.load_powers = load_powers
+        self.non_zib_index_array = non_zib_index_array
+        self.downstream_branch = downstream_branch
+        if self.sparse:
+            self.current_graph = scipy.sparse.csr_matrix(current_graph)
+            self.voltage_graph = scipy.sparse.csr_matrix(voltage_graph)
+        else:
+            self.current_graph = current_graph
+            self.voltage_graph = voltage_graph
+        self.V_slack = 1. + 0.j
+        self.lines_key = lines_key
         self.load_mat = load_mat
         self.line_flow_mat = line_flow_mat
         self.line_flow_mat_V = line_flow_mat_V

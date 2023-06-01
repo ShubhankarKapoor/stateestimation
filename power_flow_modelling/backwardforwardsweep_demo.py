@@ -26,7 +26,7 @@ plt.ylabel('Max value change')
 plt.title("backward forward sweep solver convergence")
 plt.show()
 
-network37 = Network('network37', sparse=False)  # the sparse option might give speed improvements on very large networks
+network37 = Network('network13', sparse=False)  # the sparse option might give speed improvements on very large networks
 
 # meas from lindistflow
 ts = time.time()
