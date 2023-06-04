@@ -372,8 +372,8 @@ class Network:
              z2 * length[4] / Zbase, 
              z3 * length[5] / Zbase, 
              z3 * length[6] / Zbase, 
-             z1 * length[7] / Zbase, 
-             z6 * length[7] / Zbase,  # replaced 8 with 7 to avoid 0 values
+             z1 * length[8] / Zbase, # replaced 7 with 8 to avoid 0 values
+             z6 * length[8] / Zbase,  
              z4 * length[9] / Zbase, 
              z7 * length[10] / Zbase, 
              z5 * length[11] / Zbase])
