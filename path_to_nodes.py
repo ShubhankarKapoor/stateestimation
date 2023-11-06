@@ -34,11 +34,20 @@ def path_to_nodes(which, node_a = None, node_b = None, val = None, vmin = None, 
 
     # uncomment below to plot graph
     # plt.figure()
-    # with open('saved_pos.pkl', 'rb') as f:
-    #     pos = pickle.load(f) # load the position of nodes for plotting
+    # if which == 37:
+    #     with open('saved_pos.pkl', 'rb') as f:
+    #         # this is position of nodes, might have been saved a while bacl for 37 node nw
+    #         pos = pickle.load(f) # load the position of nodes for plotting
+    #         file_not_found = 0
+    # else:
+    #     file_not_found = 1
+
     # if np.all(val) == None:
     #     # nx.draw(G, with_labels=True, font_weight='bold')
-    #     nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
+    #     if file_not_found == 0:
+    #         nx.draw(G, pos=pos, with_labels=True, font_weight='bold')
+    #     else:
+    #         nx.draw_networkx(G, with_labels=True, font_weight='bold')
     # else:
     #     # define vmin,vmax
     #     cmap = plt.cm.Blues
