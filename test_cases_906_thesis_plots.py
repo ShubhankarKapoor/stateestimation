@@ -30,12 +30,12 @@ SMALL_SIZE = 8
 MEDIUM_SIZE = 15
 BIGGER_SIZE = 22
 
-plt.rc('font', size=MEDIUM_SIZE)          # controls default text sizes
-plt.rc('axes', titlesize=BIGGER_SIZE)     # fontsize of the axes title
-plt.rc('axes', labelsize=BIGGER_SIZE)    # fontsize of the x and y labels
-plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
-plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
-plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
+plt.rc('font', size=BIGGER_SIZE)        # controls default text sizes
+plt.rc('axes', titlesize=BIGGER_SIZE)   # fontsize of the axes title
+plt.rc('axes', labelsize=BIGGER_SIZE)   # fontsize of the x and y labels
+plt.rc('xtick', labelsize=BIGGER_SIZE)  # fontsize of the tick labels
+plt.rc('ytick', labelsize=BIGGER_SIZE)  # fontsize of the tick labels
+plt.rc('legend', fontsize=MEDIUM_SIZE)  # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)
 
 which = 906 # IEEE 37-node or IEEE 906-node
@@ -138,7 +138,7 @@ else:
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
 
-num_known = [20, 17, 14, 11] # known number of measurements
+num_known = [17, 14, 11] # known number of measurements
 # number of known measurements
 # i = 8
 # arr = np.arange(len(non_zib_index)) # used for combinations
@@ -267,7 +267,7 @@ df_pline_with_v0, mat_r, mat_x =  pline_with_vnode_calculated_terms(meas_P_line,
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
 count = 0 # total number of iters, should be sum of all combs at the end
 iters_n0, iters_n1, iters_n2, iters_n, iters_la = 0, 0, 0, 0, 0
-time_n0, time_n1, time_n2, time_nn, time_la = 0, 0, 0, 0, 0
+time_ln, time_n1, time_n2, time_lb, time_la = 0, 0, 0, 0, 0
 tot_counts = 0
 for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
@@ -361,7 +361,7 @@ for row, i in enumerate(num_known):
             meas_V, R_line, X_line, network906, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
-        time_n0+= tot_time
+        time_ln+= tot_time
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n0+=countsn0      # average of all elements
         perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
@@ -449,7 +449,7 @@ for row, i in enumerate(num_known):
             meas_V, R_line, X_line, network906, loss = loss, pflow = pflow, lossy_volt_est = lossy_volt_est)
         end = time.time()
         tot_time = end-start
-        time_nn+= tot_time                
+        time_lb+= tot_time                
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n+=countsn
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
@@ -599,7 +599,6 @@ for row, i in enumerate(num_known):
 # voltage errors
 sns.set_theme(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
 all_lists_abs_V = ll_no_feed_abs_v + ll_both_feed_abs_v + ll_la_abs_v
-
 # Create the method labels
 method_labels = ['LN'] * len(ll_no_feed_abs_v) + ['LB'] * len(ll_both_feed_abs_v) + ['LA'] * len(ll_la_abs_v)
 
@@ -619,7 +618,7 @@ g.map(sns.kdeplot, "error_abs_V",
       fill=True, alpha=1, linewidth=1.5)
 g.map(sns.kdeplot, "error_abs_V", clip_on=False, color="w", lw=2, bw_adjust=.5)
 # passing color=None to refline() uses the hue mapping
-g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
+# g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False) # needs updated seaborn version
 def label(x, color, label):
     ax = plt.gca()
     ax.text(0, .2, label, fontweight="bold", color=color,
@@ -627,15 +626,15 @@ def label(x, color, label):
 
 g.map(label, "error_abs_V")
 # Set the subplots to overlap
-g.figure.subplots_adjust(hspace=-.5)
+# g.figure.subplots_adjust(hspace=-.5) # needs updated seaborn version
 # Remove axes details that don't play well with overlap
 g.set_titles("")
 # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
-g.set(yticks=[], ylabel="", xlabel="ABSOLUTE VOLTAGE ERROR",title="", xlim=(None, 0.02))
+g.set(yticks=[], ylabel="", xlabel="ABSOLUTE VOLTAGE ERROR",title="", xlim=(None, 0.009))
 g.despine(bottom=True, left=True)
 
 # Add a common y-axis label
-g.fig.text(0.06, 0.4, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
+g.fig.text(0.1, 0.45, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
 print("Max voltage for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_v), max(ll_both_feed_abs_v), max(ll_la_abs_v)))
 
 ######## for NO BSP ########
@@ -645,7 +644,7 @@ g.map(sns.kdeplot, "error_abs_V",
       fill=True, alpha=1, linewidth=1.5)
 g.map(sns.kdeplot, "error_abs_V", clip_on=False, color="w", lw=2, bw_adjust=.5)
 # passing color=None to refline() uses the hue mapping
-g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
+g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False) # seaborn version needs to be updated
 def label(x, color, label):
     ax = plt.gca()
     ax.text(0, .2, label, fontweight="bold", color=color,
@@ -653,7 +652,7 @@ def label(x, color, label):
 
 g.map(label, "error_abs_V")
 # Set the subplots to overlap
-g.figure.subplots_adjust(hspace=-.2)
+g.figure.subplots_adjust(hspace=-.2) # seaborn version needs to be updated
 # Remove axes details that don't play well with overlap
 g.set_titles("")
 # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
@@ -708,13 +707,5 @@ print("Mean P Error for LN: {}, LB: {}, LA: {}".format(avg_abs_p_nofeed, avg_abs
 ########################## computational time plot #######################
 # creating the dataset
 approaches = ['LN', 'LB', 'LA']
-comp_time = [time_n0/tot_counts*1e3, time_nn/tot_counts*1e3, time_la/tot_counts*1e3] # in ms
-
-fig = plt.figure(figsize = (10, 5))
-# creating the bar plot
-plt.bar(approaches, comp_time, color ='maroon',
-        width = 0.4)
-plt.xlabel("Model")
-plt.ylabel("Computational Time (ms)")
-plt.title("Total Computational Times for Different Models")
-plt.show()
+comp_time = [time_ln/tot_counts*1e3, time_lb/tot_counts*1e3, time_la/tot_counts*1e3] # in ms
+print("Average computational time for a single run for \n LN: {}, LB: {}, LA: {}".format(comp_time[0], comp_time[1], comp_time[2]))
