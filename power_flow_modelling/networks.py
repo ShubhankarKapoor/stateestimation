@@ -205,7 +205,7 @@ class Network:
         node_b = np.insert(node_b, 0, 1)
         # add 0 and   1 in node a, node b
         num_lines = len(node_a)
-
+        lines_key = list(zip(node_a, node_b))
         # A = [[1/3,1/3,1/3],[1/3,a/3,a*a/3],[1/3,a*a/3,a/3]]
         # A = 1
 
@@ -263,6 +263,7 @@ class Network:
         Q_load*=scaling_factor
 
         load_powers = np.expand_dims(P_load / sbase + 1j * Q_load / sbase, 1) # craete one normalised load array
+        non_zib_index_array = np.where(P_load!=0)[0]
         current_graph = np.zeros((busNo, len(node_a)))
         upstream_branch = np.zeros((busNo, len(node_a)))
         downstream_branch = np.zeros((busNo, len(node_a))) # downstream 
@@ -307,6 +308,7 @@ class Network:
         self.num_lines = num_lines
         self.line_z_pu = line_z_pu
         self.load_powers = load_powers
+        self.non_zib_index_array = non_zib_index_array
         self.downstream_branch = downstream_branch
         if self.sparse:
             self.current_graph = scipy.sparse.csr_matrix(current_graph)
@@ -315,6 +317,7 @@ class Network:
             self.current_graph = current_graph
             self.voltage_graph = voltage_graph
         self.V_slack = 1. + 0.j
+        self.lines_key = lines_key
         self.load_mat = load_mat
         self.line_flow_mat = line_flow_mat
         self.line_flow_mat_V = line_flow_mat_V

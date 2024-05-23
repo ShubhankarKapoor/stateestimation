@@ -1,6 +1,9 @@
 def LinDistFlowBackwardForwardSweep(P_Load,Q_Load, which, V0=None, loss=None, 
                                     pflow = None, max_iter= None):
-
+    '''
+    imp;lements lindistflow/ distflow depending on what PF options in loss and pflow
+    you are using
+    '''
     import numpy as np
     import copy
 

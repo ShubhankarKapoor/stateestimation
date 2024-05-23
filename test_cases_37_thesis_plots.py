@@ -22,7 +22,8 @@ import seaborn as sns
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
                        error_calc_refactor, countour_plot, inc_avg, get_index_for_keys_init_stat_var, \
-                       get_nodes_downstream_of_each_branch
+                       get_nodes_downstream_of_each_branch, calcErrorForModifiedDistflow, \
+                      get_pre_calc_info
 from power_flow_modelling.networks import Network
 import time
 import torch
@@ -51,8 +52,8 @@ else:
 data_lin = 0
 data_full_ac = 1
 # model used for reconstruction set
-est_lin = 1 # lindisflow or distflow depending on a few more params
-est_full_ac = 0
+est_lin = 1 # lindisflow or distflow depending on a few more params, should be 0 for no feedback
+est_full_ac = 0 # it sholdnt be used, the above one should be used by including loss term
 comparison = 0
 
 # masurement set
@@ -113,15 +114,26 @@ x_true = np.concatenate((x[non_zib_index], x[non_zib_index_array + len(gt_P_load
 x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 ###############################################################################
-# load the network object for sped up distflow
+# load the network object for sped up distflow and modified distflow
 network37 = Network('network37', sparse=False)
+lines_key           = network37.lines_key
+# non_zib_index_array = network37.non_zib_index_array
+# non_zib_index_array = np.arange(1,num_buses)
+num_buses           = network37.busNo
+num_bus_with_loads  = len(non_zib_index_array)
+num_lines           = network37.num_lines
+
 ###############################################################################
 ###############################################################################
 # get paths from slack bus to all nodes
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
+# some params fro modified ditflow
+# path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(num_buses, node_a, node_b)
+pre_calculated_info2 = get_pre_calc_info(lines_key, non_zib_index_array, num_buses, 
+                      path_to_all_nodes)
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
+num_plow_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -379,7 +391,7 @@ for row, i in enumerate(num_known):
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n0+=countsn0
         perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
         avg_perc_v_nofeed = inc_avg(avg_perc_v_nofeed, total_counts_v, perc_v_nofeed)
         avg_abs_v_nofeed = inc_avg(avg_abs_v_nofeed, total_counts_v, abs_v_nofeed)
@@ -411,7 +423,7 @@ for row, i in enumerate(num_known):
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n1+=countsn1
         perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
         avg_perc_v_vfeed = inc_avg(avg_perc_v_vfeed, total_counts_v, perc_v_vfeed)
         avg_abs_v_vfeed = inc_avg(avg_abs_v_vfeed, total_counts_v, abs_v_vfeed)
@@ -439,7 +451,7 @@ for row, i in enumerate(num_known):
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n2+=countsn2
         perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
         avg_perc_v_pfeed = inc_avg(avg_perc_v_pfeed, total_counts_v, perc_v_pfeed)
         avg_abs_v_pfeed = inc_avg(avg_abs_v_pfeed, total_counts_v, abs_v_pfeed)
@@ -467,7 +479,7 @@ for row, i in enumerate(num_known):
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n+=countsn
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
         avg_perc_v_bothfeed = inc_avg(avg_perc_v_bothfeed, total_counts_v, perc_v_n)
         avg_abs_v_bothfeed = inc_avg(avg_abs_v_bothfeed, total_counts_v, abs_v_n)
@@ -534,8 +546,10 @@ for row, i in enumerate(num_known):
         time_la+= tot_time
         iters_la+=counts_la
         #######################################################################
-        perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
+        _, perc_p_la, _, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
+                                which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption, only used for p/q errors
+        perc_v_la, abs_v_la= calcErrorForModifiedDistflow(x_est_la, x, V, 
+                 non_zib_index_array, path_to_all_nodes, network37, pre_calculated_info2) # for V error in MD
         # average of all elements
         avg_perc_v_la = inc_avg(avg_perc_v_la, total_counts_v, perc_v_la)
         avg_abs_v_la = inc_avg(avg_abs_v_la, total_counts_v, abs_v_la)
@@ -646,7 +660,7 @@ g.figure.subplots_adjust(hspace=-.5)
 # Remove axes details that don't play well with overlap
 g.set_titles("")
 # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
-g.set(yticks=[], ylabel="", xlabel="ABSOLUTE VOLTAGE ERROR",title="", xlim=(None, 0.02))
+g.set(yticks=[], ylabel="", xlabel="ABSOLUTE VOLTAGE ERROR",title="", xlim=(None, 0.002))
 g.despine(bottom=True, left=True)
 
 # Add a common y-axis label
@@ -677,6 +691,9 @@ g.despine(bottom=True, left=True)
 
 # Add a common y-axis label
 g.fig.text(0.02, 0.5, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
+# gP.fig.text(0.06, 0.4, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
+print("Max P Error for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_p), max(ll_both_feed_abs_p), max(ll_la_abs_p)))
+print("Mean P Error for LN: {}, LB: {}, LA: {}".format(avg_abs_p_nofeed, avg_abs_p_bothfeed, avg_abs_p_la))
 
 print("Max voltage for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_v), max(ll_both_feed_abs_v), max(ll_la_abs_v)))
 

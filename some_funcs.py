@@ -1,9 +1,11 @@
 import sys
 import os
+sys.path.append("..")
+# print(sys.path)
 
 parent_path = os.path.abspath("..")
 sys.path.append(parent_path+"/stateestimation")
-# sys.path.append("/home/shub/Documents/phd/stateestimation/") # to deal with when running code from impedanceestimation
+sys.path.append("/home/shub/Documents/phd/stateestimation/") # to deal with when running code from impedanceestimation
 
 # print(sys.path)
 import numpy as np
@@ -16,6 +18,10 @@ from BackwardForwardSweep import BackwardForwardSweep
 import solvers
 import matplotlib.pyplot as plt
 # error function
+
+from power_flow.modified_dist import modified_dist
+from power_flow_modelling.networks import Network
+from pre_calc_info_for_mod_dist import get_pre_calc_info
 
 def get_index_for_keys_init_stat_var(P_Load):
     ''' 
@@ -111,7 +117,7 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
         # Regenerated measurements using the estimated states
         if est_lin == 1: # reconstruction using lindist or distflow depending on loss and pflow vals
             [V_con, V_mag_con ,P_line_con, Q_line_con, _, e_max_con, k_con] = LinDistFlowBackwardForwardSweep(
-                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow, max_iter =1) # using lindistflow
+                P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow) # using lindistflow
                 # P_Load_est, Q_Load_est, which, full_x_est[-1], loss, pflow) # using lindistflow
             # print('lin')
         # using Full AC Network
@@ -142,6 +148,48 @@ def error_calc_refactor(x, x_estn, non_zib_index, num_buses, est_lin, est_full_a
     #            errperc_vectorp, mean_error_st_q, max_error_st_q, errabs_vectorq, mean_error_st_abs_q, max_error_st_abs_q, \
 
     return errperc_vector_vmag, errperc_vectorp, errabs_vectorv, errabs_vectorp # all vectors
+
+def calcErrorForModifiedDistflow(x_est_la, x, V, non_zib_index_array, path_to_all_nodes, network37, pre_calculated_info2):
+    # for distflow voltage error
+    # network37           = Network('network37', sparse=False)  # the sparse option might give speed improvements on
+    lines_key           = network37.lines_key
+    # non_zib_index_array = network37.non_zib_index_array
+    # non_zib_index_array = np.arange(1,num_buses)
+    num_buses           = network37.busNo
+    num_bus_with_loads  = len(non_zib_index_array)
+    num_lines           = network37.num_lines
+    
+    # path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(num_buses, node_a, node_b)
+    # pre_calculated_info2 = get_pre_calc_info(lines_key, non_zib_index_array, num_buses, 
+                          # path_to_all_nodes)
+    
+    # load voltage, power and line param: from state vars (update)
+    u_0, p_load, q_load, res, react = x_est_la[-1], x_est_la[0:num_bus_with_loads], \
+    x_est_la[num_bus_with_loads:2*num_bus_with_loads], \
+      network37.line_z_pu.real.reshape(num_lines,), network37.line_z_pu.imag.reshape(num_lines,)
+    
+    # start here
+    u_i_MD, P_line_MD, Q_line_MD, tot_time = modified_dist(network37, u_0, 
+                        p_load, q_load, res, react, pre_calculated_info2)        
+
+    # # calculate error between state vectors
+    # errperc_vectorp, mean_error_st_p, max_error_st_p, errabs_vectorp, mean_error_st_abs_p, max_error_st_abs_p, max_index_p = \
+    #     error_calc(x[0:num_buses][non_zib_index_array], p_load)
+    # errperc_vectorq, mean_error_st_q, max_error_st_q, errabs_vectorq, mean_error_st_abs_q, max_error_st_abs_q, _ = \
+    #     error_calc(x[num_buses:2*num_buses][non_zib_index_array], q_load)
+
+    # # print some results
+    # # print('mean_perc_error, max_perc_error, mean_abs_error, max_abs_error')
+    # print('p bus err:', mean_error_st_p, max_error_st_p, mean_error_st_abs_p, max_error_st_abs_p) 
+    # print('q bus err:', mean_error_st_q, max_error_st_q, mean_error_st_abs_q, max_error_st_abs_q)
+                        
+    # errperc_vector_vsq, mean_vsq_err, max_vsq_err, _, mean_abs_vsq_err, max_abs_vsq_err, max_index_v = error_calc(np.array(list(V.values())), np.array(list(V_con.values())))
+    errperc_vector_vmag, mean_vmag_err, max_vmag_err, errabs_vectorv, mean_abs_vmag_err, max_abs_vmag_err, _ = \
+        error_calc(np.sqrt(np.array(list(V.values()))), np.sqrt(u_i_MD))
+
+    print('vmag bus err:', mean_vmag_err, max_vmag_err, mean_abs_vmag_err, max_abs_vmag_err)
+    # return errperc_vector_vmag, errperc_vectorp, errabs_vectorv, errabs_vectorp # all vector
+    return errperc_vector_vmag, errabs_vectorv # all vector
 
 def get_nodes_downstream_of_each_branch(meas_P_line, P_Load_state, path_to_all_nodes):
     downstream_matrix = np.zeros((len(meas_P_line), len(P_Load_state)))

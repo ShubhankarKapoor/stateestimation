@@ -20,7 +20,8 @@ from itertools import combinations
 import seaborn as sns
 from some_funcs import error_calc, create_mes_set, subset_of_measurements, \
                        weight_vals, noise_addition, bus_measurements_equal_distribution, \
-                       error_calc_refactor, countour_plot, inc_avg, get_nodes_downstream_of_each_branch
+                       error_calc_refactor, countour_plot, inc_avg, get_nodes_downstream_of_each_branch, calcErrorForModifiedDistflow, \
+                      get_pre_calc_info
 from power_flow_modelling.networks import Network
 import time
 import torch
@@ -52,7 +53,7 @@ data_full_ac = 1
 est_lin = 1 # lindisflow or distflow depending on a few more params
 est_full_ac = 0
 comparison = 0
-
+print('Debugging....')
 # masurement set
 if data_lin == 1:
     [V, V_mag, P_line, Q_line, S_line, e_max, k] = LinDistFlowBackwardForwardSweep(P_Load, Q_Load, which)
@@ -119,14 +120,21 @@ x_true = np.insert(x_true, len(x_true), gt_V) # ground truth for states
 ###############################################################################
 # load the network object for sped up distflow
 network906 = Network('network906', sparse=False)
+lines_key           = network906.lines_key
+# non_zib_index_array = network37.non_zib_index_array
+# non_zib_index_array = np.arange(1,num_buses)
+num_buses           = network906.busNo
+num_bus_with_loads  = len(non_zib_index_array)
+num_lines           = network906.num_lines
 ###############################################################################
 ###############################################################################
-
 # get paths from slack bus to all nodes
 path_to_all_nodes, path_to_all_nodes_list = path_to_nodes(which)
+pre_calculated_info2 = get_pre_calc_info(lines_key, non_zib_index_array, num_buses, 
+                      path_to_all_nodes)
 
 # get subset of lineflow measurement set
-num_plow_meas = 1
+num_plow_meas = 0
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -365,7 +373,7 @@ for row, i in enumerate(num_known):
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n0+=countsn0      # average of all elements
         perc_v_nofeed, perc_p_nofeed, abs_v_nofeed, abs_p_nofeed = error_calc_refactor(x, x_estn0, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements        
         avg_perc_v_nofeed = inc_avg(avg_perc_v_nofeed, total_counts_v, perc_v_nofeed[non_zib_index])
         avg_abs_v_nofeed = inc_avg(avg_abs_v_nofeed, total_counts_v, abs_v_nofeed[non_zib_index])
@@ -397,7 +405,7 @@ for row, i in enumerate(num_known):
         # # costsn = cost(x_estn, jacobian_matrix, z, W)
         # iters_n1+=countsn1
         # perc_v_vfeed, perc_p_vfeed, abs_v_vfeed, abs_p_vfeed = error_calc_refactor(x, x_estn1, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-        #                         which, V, V_mag, loss = 1, pflow = 1) # for WLS
+        #                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # # average of all elements
         # avg_perc_v_vfeed = inc_avg(avg_perc_v_vfeed, total_counts_v, perc_v_vfeed[non_zib_index])
         # avg_abs_v_vfeed = inc_avg(avg_abs_v_vfeed, total_counts_v, abs_v_vfeed[non_zib_index])
@@ -425,7 +433,7 @@ for row, i in enumerate(num_known):
         # # costsn = cost(x_estn, jacobian_matrix, z, W)
         # iters_n2+=countsn2
         # perc_v_pfeed, perc_p_pfeed, abs_v_pfeed, abs_p_pfeed = error_calc_refactor(x, x_estn2, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-        #                         which, V, V_mag, loss = 1, pflow = 1) # for WLS
+        #                         which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # # average of all elements
         # avg_perc_v_pfeed = inc_avg(avg_perc_v_pfeed, total_counts_v, perc_v_pfeed[non_zib_index])
         # avg_abs_v_pfeed = inc_avg(avg_abs_v_pfeed, total_counts_v, abs_v_pfeed[non_zib_index])
@@ -453,7 +461,7 @@ for row, i in enumerate(num_known):
         # costsn = cost(x_estn, jacobian_matrix, z, W)
         iters_n+=countsn
         perc_v_n, perc_p_n, abs_v_n, abs_p_n = error_calc_refactor(x, x_estn, non_zib_index, len(P_Load), est_lin, est_full_ac, 
-                                which, V, V_mag, loss = 1, pflow = 1) # for WLS
+                                which, V, V_mag, loss = loss, pflow = pflow) # for WLS
         # average of all elements
         avg_perc_v_bothfeed = inc_avg(avg_perc_v_bothfeed, total_counts_v, perc_v_n[non_zib_index])
         avg_abs_v_bothfeed = inc_avg(avg_abs_v_bothfeed, total_counts_v, abs_v_n[non_zib_index])
@@ -522,6 +530,8 @@ for row, i in enumerate(num_known):
         #######################################################################
         perc_v_la, perc_p_la, abs_v_la, abs_p_la = error_calc_refactor(x, x_est_la, non_zib_index, len(P_Load), est_lin, est_full_ac, 
                                 which, V, V_mag, loss = 1, pflow = 1) # non linear GN with assumption
+        perc_v_la, abs_v_la= calcErrorForModifiedDistflow(x_est_la, x, V, 
+                 non_zib_index_array, path_to_all_nodes, network906, pre_calculated_info2) # for V error in MD
         # average of all elements
         avg_perc_v_la = inc_avg(avg_perc_v_la, total_counts_v, perc_v_la[non_zib_index])
         avg_abs_v_la = inc_avg(avg_abs_v_la, total_counts_v, abs_v_la[non_zib_index])
@@ -632,37 +642,39 @@ g.set_titles("")
 # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
 g.set(yticks=[], ylabel="", xlabel="ABSOLUTE VOLTAGE ERROR",title="", xlim=(None, 0.009))
 g.despine(bottom=True, left=True)
+plt.xlabel("ABSOLUTE VOLTAGE ERROR", fontsize=BIGGER_SIZE) # shouldnt need it but doesnt read the global params sometimes
 
 # Add a common y-axis label
 g.fig.text(0.1, 0.45, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
 print("Max voltage for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_v), max(ll_both_feed_abs_v), max(ll_la_abs_v)))
 
 ######## for NO BSP ########
-g = sns.FacetGrid(dfAbsV, row="method", hue="method", aspect=15, height=.5, palette=pal)
-g.map(sns.kdeplot, "error_abs_V",
-      bw_adjust=.5, clip_on=False,
-      fill=True, alpha=1, linewidth=1.5)
-g.map(sns.kdeplot, "error_abs_V", clip_on=False, color="w", lw=2, bw_adjust=.5)
-# passing color=None to refline() uses the hue mapping
-g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False) # seaborn version needs to be updated
-def label(x, color, label):
-    ax = plt.gca()
-    ax.text(0, .2, label, fontweight="bold", color=color,
-            ha="left", va="center", transform=ax.transAxes)
+# g = sns.FacetGrid(dfAbsV, row="method", hue="method", aspect=15, height=.5, palette=pal)
+# g.map(sns.kdeplot, "error_abs_V",
+#       bw_adjust=.5, clip_on=False,
+#       fill=True, alpha=1, linewidth=1.5)
+# g.map(sns.kdeplot, "error_abs_V", clip_on=False, color="w", lw=2, bw_adjust=.5)
+# # passing color=None to refline() uses the hue mapping
+# # g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False) # seaborn version needs to be updated
+# def label(x, color, label):
+#     ax = plt.gca()
+#     ax.text(0, .2, label, fontweight="bold", color=color,
+#             ha="left", va="center", transform=ax.transAxes)
 
-g.map(label, "error_abs_V")
-# Set the subplots to overlap
-g.figure.subplots_adjust(hspace=-.2) # seaborn version needs to be updated
-# Remove axes details that don't play well with overlap
-g.set_titles("")
-# g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
-g.set(yticks=[], ylabel="", xlabel="ABSOLUTE VOLTAGE ERROR",title="", xlim=(None, 0.012))
-g.despine(bottom=True, left=True)
+# g.map(label, "error_abs_V")
+# # Set the subplots to overlap
+# g.figure.subplots_adjust(hspace=-.2) # seaborn version needs to be updated
+# # Remove axes details that don't play well with overlap
+# g.set_titles("")
+# # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
+# g.set(yticks=[], ylabel="", xlabel="ABSOLUTE VOLTAGE ERROR",title="", xlim=(None, 0.012))
+# g.despine(bottom=True, left=True)
+# plt.xlabel("ABSOLUTE VOLTAGE ERROR", fontsize=BIGGER_SIZE) # shouldnt need it but doesnt read the global params sometimes
 
-# Add a common y-axis label
-g.fig.text(0.02, 0.5, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
+# # Add a common y-axis label
+# g.fig.text(0.02, 0.5, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
 
-print("Max voltage for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_v), max(ll_both_feed_abs_v), max(ll_la_abs_v)))
+# print("Max voltage for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_v), max(ll_both_feed_abs_v), max(ll_la_abs_v)))
 
 #############################################################
 
