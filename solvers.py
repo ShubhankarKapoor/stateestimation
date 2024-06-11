@@ -107,48 +107,50 @@ def se_wls(x_est, z, W, meas_P_line, P_Load_state, meas_P_load, path_to_all_node
                                                                         x_est, lossy_volt_est['non_zib_index'], lossy_volt_est['num_buses'])
 
                 ###############################################################
-                # V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
-                #         P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], 
-                #         # loss, pflow, max_iter=1)
-                #         loss, pflow)
+                # Distflow Sweep/ Feedback
+                V_est, _, Pline_est, Qline_est, _, _, k = LinDistFlowBackwardForwardSweep(
+                        P_Load_est, Q_Load_est, lossy_volt_est['which'], full_x_est[-1], 
+                        # loss, pflow, max_iter=1)
+                        # loss, pflow)
+                        loss, pflow, max_iter=1000)
 
-                # # update the estimates -- after feedback calculation
-                # Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
-                # Qline_known_meas = {k:Qline_est[k] for k in lossy_volt_est['plines']} # get qflow vals for known measurements
-                # # update the pline/qline measurement estimates
-                # hx[0:len(Pline_known_meas)]=list(Pline_known_meas.values()) # update values
-                # hx[len(Pline_known_meas):2*len(Pline_known_meas)]=list(Qline_known_meas.values()) # update values
+                # update the estimates -- after feedback calculation
+                Pline_known_meas = {k:Pline_est[k] for k in lossy_volt_est['plines']} # get pflow vals for known measurements
+                Qline_known_meas = {k:Qline_est[k] for k in lossy_volt_est['plines']} # get qflow vals for known measurements
+                # update the pline/qline measurement estimates
+                hx[0:len(Pline_known_meas)]=list(Pline_known_meas.values()) # update values
+                hx[len(Pline_known_meas):2*len(Pline_known_meas)]=list(Qline_known_meas.values()) # update values
 
-                # # update the voltage estimates for buses with measurements
-                # V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
-                # # print('max volt diff', max(abs(np.asarray(hx[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
-                # hx[-len(V_known_meas):]=list(V_known_meas.values()) # update values
+                # update the voltage estimates for buses with measurements
+                V_known_meas = {k:V_est[k] for k in lossy_volt_est['volt_buses']} # get voltage vals for known measurements
+                # print('max volt diff', max(abs(np.asarray(hx[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
+                hx[-len(V_known_meas):]=list(V_known_meas.values()) # update values
                 ###############################################################
 
                 # --------------->>>>>>>>>>>><<<<<<<<<<<<-------------#
                 # updated distflow
                 # could clean up P_Load_est, Q_Load_est more
-                P_Load_est = np.asarray(list(P_Load_est.values()))
-                P_Load_est = np.expand_dims(P_Load_est, axis=1)
-                Q_Load_est = np.asarray(list(Q_Load_est.values()))
-                Q_Load_est = np.expand_dims(Q_Load_est, axis=1)
+                # P_Load_est = np.asarray(list(P_Load_est.values()))
+                # P_Load_est = np.expand_dims(P_Load_est, axis=1)
+                # Q_Load_est = np.asarray(list(Q_Load_est.values()))
+                # Q_Load_est = np.expand_dims(Q_Load_est, axis=1)
 
-                # without jacobian, just using arrays
-                # x_line, V_est = newton_no_jacob(network, P_Load_est, 
-                # Q_Load_est, V0=full_x_est[-1], loss=loss, pflow = pflow)
+                # # without jacobian, just using arrays
+                # # x_line, V_est = newton_no_jacob(network, P_Load_est, 
+                # # Q_Load_est, V0=full_x_est[-1], loss=loss, pflow = pflow)
                 
-                # with jacobian using GN
-                x_line, V_est = newton_with_jacob(network, P_Load_est, 
-                Q_Load_est, V0=full_x_est[-1], loss=loss, pflow = pflow)
-                # update the estimates -- after feedback calculation
-                # update the pline/qline measurement estimates
-                # doing it for 0,1 only
-                hx[0:len(meas_P_line)]=x_line[0] # update values
-                hx[len(meas_P_line):2*len(meas_P_line)]=x_line[int(len(x_line)/2+0)] # update values
+                # # with jacobian using GN
+                # x_line, V_est = newton_with_jacob(network, P_Load_est, 
+                # Q_Load_est, V0=full_x_est[-1], loss=loss, pflow = pflow)
+                # # update the estimates -- after feedback calculation
+                # # update the pline/qline measurement estimates
+                # # doing it for 0,1 only
+                # hx[0:len(meas_P_line)]=x_line[0] # update values
+                # hx[len(meas_P_line):2*len(meas_P_line)]=x_line[int(len(x_line)/2+0)] # update values
 
-                # update the voltage estimates for buses with measurements
-                # print('max volt diff', max(abs(np.asarray(hx[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
-                hx[-len(meas_V):]=V_est[list(lossy_volt_est['volt_buses'])].ravel() # update values
+                # # update the voltage estimates for buses with measurements
+                # # print('max volt diff', max(abs(np.asarray(hx[-len(V_known_meas):]) - np.asarray(list(V_known_meas.values())))))
+                # hx[-len(meas_V):]=V_est[list(lossy_volt_est['volt_buses'])].ravel() # update values
                 ###############################################################
 
             else:
