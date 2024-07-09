@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import random
 from random import seed
 
+import sys
+sys.path.append("..") # Adds higher directory to python modules path
 ###########################################################
 #Network characteristics
 ########################################################### 
@@ -249,7 +251,22 @@ LineData_Z_pu = {
 
 # fix this fuunction later
 # P_Load, Q_Load = getLoadsFromRealLoads()
-p,q = np.random.rand(busNo-1), np.random.rand(busNo-1)
+pAll, qAll= np.load("../NextGen/p_array.npy"), np.load("../NextGen/q_array.npy")
+np.random.seed(0)
+t    = random.randint(0, pAll.shape[1] - 1)
+flag = 0
+# scaling factor to have loading conditins similar to IEEE 37 Simulated nw
+scaling_factor = 5*2.5 # 2.5: perfect, 2.85: worked
+while flag ==0:
+    p, q = pAll[:,t] *scaling_factor, qAll[:,t]*scaling_factor
+    # print(sum(p)/Sbase, sum(q)/Sbase)
+    if sum(p)/Sbase<8 and sum(q)/Sbase<4.2:
+        # print(sum(p)/Sbase, sum(q)/Sbase)
+        flag = 1
+    scaling_factor-=1 # update scaling facotr
+    # you can do more manipulation, I just did soething with trial and error
+# sum of p and q to see it
+# p,q = np.random.rand(busNo-1), np.random.rand(busNo-1)
 P_Load, Q_Load = {}, {}
 P_Load[0], Q_Load[0] = 0, 0
 loadKeys = np.arange(1,busNo)

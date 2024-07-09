@@ -55,12 +55,17 @@ if which == 906 or which == 907: # IEEE 37-node or IEEE 906-node
     which = 906 + 1 # becasue there are 907 buses, see nw 906 script
 
 val = abs_p_la*Sbase
-# val = perc_v_la
+val = perc_v_la
+val = abs_v_la
 
+# vmin should be the value that is minimum among all cases you are plotting
+# vmax should be the value that is maximum among all cases you are plotting
 # if vmin == None and np.all(val)!= None:
 vmin = np.min(val)
 # if vmin == None and np.all(val)!= None:
 vmax = np.max(val)
+vmin = 1.8280967670758486e-06 # for abs_v_la in three cases
+vmax = 0.0013578693650653229 # for abs_v_la in three cases
 # instantiate the graph
 G = nx.Graph()
 # add nodes

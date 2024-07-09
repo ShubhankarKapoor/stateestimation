@@ -28,6 +28,7 @@ from power_flow_modelling.networks import Network
 import time
 import torch
 import matplotlib.pyplot as plt
+import random
 
 SMALL_SIZE = 8
 MEDIUM_SIZE = 15
@@ -148,7 +149,8 @@ num_known = np.arange(len(non_zib_index))[::-1]
 # num_known = np.arange(len(non_zib_index))[:0:-1]
 # num_known = np.array((9,8,5,4,3,2,1))
 # num_known = np.array((9,8,7,6,5))
-num_known = np.array((36,))
+# num_known = np.array((35,32,28,25))
+num_known = np.array((33, 29, 25))
 # num_known = [20, 19, 1] # known number of measurements
 # number of known measurements
 # i = 8
@@ -296,6 +298,10 @@ r_hat, x_hat = pline_with_p_pre_calculated_terms(meas_P_line, P_Load_state, path
 df_pline_with_v0, mat_r, mat_x =  pline_with_vnode_calculated_terms(meas_P_line, P_Load_state, path_to_all_nodes, 
                             R_line, X_line, elems_comb, non_zib_index_array)
 ###############################################################################
+np.random.seed(40)
+# another way to generate combs
+def generate_random_combination(arr, i):
+    return tuple(random.sample(list(arr), i))
 
 node_26_error_for_diff_known_meas = [] # to store known indices for max error
 count = 0 # total number of iters, should be sum of all combs at the end
@@ -304,7 +310,23 @@ time_n0, time_n1, time_n2, time_nn, time_la = 0, 0, 0, 0, 0
 tot_counts = 0
 for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
-    combs = list(combinations(arr,i))
+    total_combinations = int(np.math.factorial(len(arr)) / (np.math.factorial(i) * np.math.factorial(len(arr) - i)))
+
+    if total_combinations <= 1000:
+            combs = list(combinations(arr,i))
+    else:
+        combs = set()
+        while len(combs) < 1000:
+            combs.add(generate_random_combination(arr, i))
+        # Convert set to list if needed
+        combs = list(combs)
+
+    # combs = list(combinations(arr,i))
+    # if len(combs) > 1000: # sampling
+    #     np.random.seed(0) # 40 for latex, 28 alternative
+    #     idx = np.random.choice(len(combs), 1000, replace=False)
+    #     combs = np.array(combs)
+    #     combs=combs[idx]
 
     # stores the max perc voltage and power error for each node
     volt_max_perc_nofeed, p_max_perc_nofeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
@@ -652,7 +674,7 @@ g.map(sns.kdeplot, "error_abs_V",
       fill=True, alpha=1, linewidth=1.5)
 g.map(sns.kdeplot, "error_abs_V", clip_on=False, color="w", lw=2, bw_adjust=bw_value)
 # passing color=None to refline() uses the hue mapping
-g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
+# g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False) # doesnt work with seaborn in desktop
 def label(x, color, label):
     ax = plt.gca()
     ax.text(0, .2, label, fontweight="bold", color=color,
@@ -660,7 +682,7 @@ def label(x, color, label):
 
 g.map(label, "error_abs_V")
 # Set the subplots to overlap
-g.figure.subplots_adjust(hspace=-.25)
+# g.figure.subplots_adjust(hspace=-.25) # doesnt work with seaborn in desktop
 # Remove axes details that don't play well with overlap
 g.set_titles("")
 # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
@@ -699,7 +721,7 @@ g.map(sns.kdeplot, "error_abs_V",
       fill=True, alpha=1, linewidth=1.5)
 g.map(sns.kdeplot, "error_abs_V", clip_on=False, color="w", lw=2, bw_adjust=bw_value)
 # passing color=None to refline() uses the hue mapping
-g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
+# g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False) # doesnt work with seaborn in desktop
 def label(x, color, label):
     ax = plt.gca()
     ax.text(0, .2, label, fontweight="bold", color=color,
@@ -707,7 +729,7 @@ def label(x, color, label):
 
 g.map(label, "error_abs_V")
 # Set the subplots to overlap
-g.figure.subplots_adjust(hspace=-.25)
+# g.figure.subplots_adjust(hspace=-.25) # doesnt work with seaborn in desktop
 # Remove axes details that don't play well with overlap
 g.set_titles("")
 # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
@@ -722,7 +744,6 @@ g.despine(bottom=True, left=True)
 
 # Add a common y-axis label
 g.fig.text(0.09, 0.4, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
-print("Max voltage for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_v), max(ll_both_feed_abs_v), max(ll_la_abs_v)))
 
 #############################################################
 

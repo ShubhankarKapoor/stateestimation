@@ -145,9 +145,9 @@ else:
 # num_known = [9,] # known number of measurements
 num_known = np.arange(len(non_zib_index))[::-1]
 # num_known = np.array(5,).reshape(1,)
-# num_known = np.arange(len(non_zib_index))[:0:-1]
+num_known = np.arange(len(non_zib_index))[:0:-1]
 # num_known = np.array((9,8,5,4,3,2,1))
-num_known = np.array((9,8,7,6,5))
+# num_known = np.array((9,8,7,6,5))
 # num_known = [20, 19, 1] # known number of measurements
 # number of known measurements
 # i = 8
@@ -304,7 +304,14 @@ tot_counts = 0
 for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
     combs = list(combinations(arr,i))
-
+    ############
+     # for testing specific cases
+    # combs = set()
+    # # combs.add((3, 5, 6, 7, 9)) # case 1
+    # # combs.add((3, 5, 6, 7, 8)) # case 2
+    # combs.add((0, 3, 5, 6, 7)) # case 3
+    # combs = list(combs)
+    ###########
     # stores the max perc voltage and power error for each node
     volt_max_perc_nofeed, p_max_perc_nofeed = np.zeros((len(P_Load))), np.zeros((len(non_zib_index)))
     # stores the max abs voltage and power error for each node
@@ -721,7 +728,6 @@ g.despine(bottom=True, left=True)
 
 # Add a common y-axis label
 g.fig.text(0.09, 0.4, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
-print("Max voltage for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_v), max(ll_both_feed_abs_v), max(ll_la_abs_v)))
 
 #############################################################
 
