@@ -666,7 +666,7 @@ def label(x, color, label):
 
 g.map(label, "error_abs_V")
 # Set the subplots to overlap
-g.figure.subplots_adjust(hspace=-.25)
+g.figure.subplots_adjust(hspace=-.2)
 # Remove axes details that don't play well with overlap
 g.set_titles("")
 # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
@@ -685,7 +685,8 @@ g.fig.text(0.09, 0.4, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation
 print("Max voltage for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_v), max(ll_both_feed_abs_v), max(ll_la_abs_v)))
 print("MSE for LN: {}, LB: {}, LA: {}".format(np.mean(np.square(ll_no_feed_abs_v)), np.mean(np.square(ll_both_feed_abs_v)), np.mean(np.square(ll_la_abs_v))))
 ###############################################################################
-################################### for NO BSP ################################
+###############################################################################
+# for NO BSP 
 method_labels = ['LN'] * len(ll_no_feed_abs_v) + ['LB'] * len(ll_both_feed_abs_v) + ['LA'] * len(ll_la_abs_v)
 
 # Create a DataFrame
