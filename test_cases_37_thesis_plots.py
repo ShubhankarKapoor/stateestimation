@@ -133,7 +133,7 @@ pre_calculated_info2 = get_pre_calc_info(lines_key, non_zib_index_array, num_bus
                       path_to_all_nodes)
 
 # get subset of lineflow measurement set
-num_plow_meas = 0
+num_plow_meas = 1
 # chose lineflows
 meas_P_line, meas_Q_line = subset_of_measurements(
     num_plow_meas, arcs, P_line, Q_line, V)
@@ -305,7 +305,7 @@ for row, i in enumerate(num_known):
     arr = np.arange(len(non_zib_index)) # used for combinations
     combs = list(combinations(arr,i))
     ############
-     # for testing specific cases
+    # for testing specific cases
     # combs = set()
     # # combs.add((3, 5, 6, 7, 9)) # case 1
     # # combs.add((3, 5, 6, 7, 8)) # case 2
