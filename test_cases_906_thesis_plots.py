@@ -631,7 +631,7 @@ g.map(sns.kdeplot, "error_abs_V", clip_on=False, color="w", lw=2, bw_adjust=.5)
 # g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False) # needs updated seaborn version
 def label(x, color, label):
     ax = plt.gca()
-    ax.text(0, .2, label, fontweight="bold", color=color,
+    ax.text(0, .2, label, fontweight="bold", color=color, fontsize=BIGGER_SIZE,
             ha="left", va="center", transform=ax.transAxes)
 
 g.map(label, "error_abs_V")
@@ -640,7 +640,7 @@ g.map(label, "error_abs_V")
 # Remove axes details that don't play well with overlap
 g.set_titles("")
 # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
-g.set(yticks=[], ylabel="", xlabel="ABSOLUTE VOLTAGE ERROR",title="", xlim=(None, 0.009))
+g.set(yticks=[], ylabel="", xlabel="ABSOLUTE VOLTAGE ERROR",title="", xlim=(None, 0.004))
 g.despine(bottom=True, left=True)
 plt.xlabel("ABSOLUTE VOLTAGE ERROR", fontsize=BIGGER_SIZE) # shouldnt need it but doesnt read the global params sometimes
 
@@ -679,40 +679,41 @@ print("MSE for LN: {}, LB: {}, LA: {}".format(np.mean(np.square(ll_no_feed_abs_v
 #############################################################
 
 # power errors
-# sns.set_theme(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
-# all_lists_abs_P = ll_no_feed_abs_p + ll_both_feed_abs_p + ll_la_abs_p
+sns.set_theme(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
+all_lists_abs_P = ll_no_feed_abs_p + ll_both_feed_abs_p + ll_la_abs_p
 
-# # Create the method labels
-# method_labelsP = ['LN'] * len(ll_no_feed_abs_p) + ['LB'] * len(ll_both_feed_abs_p) + ['LA'] * len(ll_la_abs_p)
+# Create the method labels
+method_labelsP = ['LN'] * len(ll_no_feed_abs_p) + ['LB'] * len(ll_both_feed_abs_p) + ['LA'] * len(ll_la_abs_p)
 
-# # Create a DataFrame
-# dfAbsP = pd.DataFrame({
-#     'method': method_labelsP,
-#     'error_abs_P': all_lists_abs_P
-# })
+# Create a DataFrame
+dfAbsP = pd.DataFrame({
+    'method': method_labelsP,
+    'error_abs_P': all_lists_abs_P
+})
 
-# palP = sns.cubehelix_palette(len(dfAbsP["method"].unique()), start=1.4, rot=-.25, light=.7, dark=.4)
-# gP = sns.FacetGrid(dfAbsP, row="method", hue="method", aspect=15, height=.5, palette=palP)
+palP = sns.cubehelix_palette(len(dfAbsP["method"].unique()), start=1.4, rot=-.25, light=.7, dark=.4)
+gP = sns.FacetGrid(dfAbsP, row="method", hue="method", aspect=15, height=.5, palette=palP)
 
-# # Draw the densities in a few steps
-# gP.map(sns.kdeplot, "error_abs_P",
-#       bw_adjust=.5, clip_on=False,
-#       fill=True, alpha=1, linewidth=1.5)
-# gP.map(sns.kdeplot, "error_abs_P", clip_on=False, color="w", lw=2, bw_adjust=.5)
-# # passing color=None to refline() uses the hue mapping
+# Draw the densities in a few steps
+gP.map(sns.kdeplot, "error_abs_P",
+      bw_adjust=.5, clip_on=False,
+      fill=True, alpha=1, linewidth=1.5)
+gP.map(sns.kdeplot, "error_abs_P", clip_on=False, color="w", lw=2, bw_adjust=.5)
+# passing color=None to refline() uses the hue mapping
 # gP.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
 
-# gP.map(label, "error_abs_P")
-# # Set the subplots to overlap
+gP.map(label, "error_abs_P")
+# Set the subplots to overlap
 # gP.figure.subplots_adjust(hspace=-.5)
-# # Remove axes details that don't play well with overlap
-# gP.set_titles("")
-# # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
+# Remove axes details that don't play well with overlap
+gP.set_titles("")
+# g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
 # gP.set(yticks=[], ylabel="", xlabel="ABSOLUTE POWER ERROR",title="", xlim=(None,None))
+gP.set(ylabel="", xlabel="ABSOLUTE POWER ERROR",title="", xlim=(None,None))
 # gP.despine(bottom=True, left=True)
 
 # Add a common y-axis label
-# gP.fig.text(0.06, 0.4, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
+gP.fig.text(0.06, 0.4, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
 print("Max P Error for LN: {}, LB: {}, LA: {}".format(max(ll_no_feed_abs_p), max(ll_both_feed_abs_p), max(ll_la_abs_p)))
 print("Mean P Error for LN: {}, LB: {}, LA: {}".format(avg_abs_p_nofeed, avg_abs_p_bothfeed, avg_abs_p_la))
 
