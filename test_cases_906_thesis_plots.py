@@ -31,12 +31,12 @@ SMALL_SIZE = 8
 MEDIUM_SIZE = 15
 BIGGER_SIZE = 22
 
-plt.rc('font', size=BIGGER_SIZE)        # controls default text sizes
-plt.rc('axes', titlesize=BIGGER_SIZE)   # fontsize of the axes title
-plt.rc('axes', labelsize=BIGGER_SIZE)   # fontsize of the x and y labels
-plt.rc('xtick', labelsize=BIGGER_SIZE)  # fontsize of the tick labels
-plt.rc('ytick', labelsize=BIGGER_SIZE)  # fontsize of the tick labels
-plt.rc('legend', fontsize=MEDIUM_SIZE)  # legend fontsize
+plt.rc('font', size=BIGGER_SIZE)         # controls default text sizes
+plt.rc('axes', titlesize=BIGGER_SIZE)    # fontsize of the axes title
+plt.rc('axes', labelsize=BIGGER_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=BIGGER_SIZE)   # fontsize of the tick labels
+plt.rc('ytick', labelsize=BIGGER_SIZE)   # fontsize of the tick labels
+plt.rc('legend', fontsize=MEDIUM_SIZE)   # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)
 
 which = 906 # IEEE 37-node or IEEE 906-node
@@ -709,8 +709,19 @@ gP.map(label, "error_abs_P")
 gP.set_titles("")
 # g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
 # gP.set(yticks=[], ylabel="", xlabel="ABSOLUTE POWER ERROR",title="", xlim=(None,None))
-gP.set(ylabel="", xlabel="ABSOLUTE POWER ERROR",title="", xlim=(None,None))
+# gP.set(ylabel="", xlabel="ABSOLUTE POWER ERROR",title="", xlim=(-0.3,0.3))
 # gP.despine(bottom=True, left=True)
+
+# g.set(yticks=[], xlabel="", ylabel="", xlim=(None, 680), title="")
+gP.set(yticks=[], ylabel="", xlabel="ABSOLUTE POWER ERROR",title="", xlim=(-0.3,0.3))
+# Explicitly set the font sizes for the axes labels and ticks
+for ax in g.axes.flatten():
+    ax.set_xlabel(ax.get_xlabel(), fontsize=BIGGER_SIZE)
+    ax.set_ylabel(ax.get_ylabel(), fontsize=BIGGER_SIZE)
+    ax.tick_params(axis='both', which='major', labelsize=BIGGER_SIZE)
+gP.despine(bottom=True, left=True)
+# Add a common y-axis label
+# g.fig.text(0.09, 0.4, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
 
 # Add a common y-axis label
 gP.fig.text(0.06, 0.4, "DISTRIBUTION OF DIFFERENT METHODS", va='center', rotation='vertical', fontsize=BIGGER_SIZE)
