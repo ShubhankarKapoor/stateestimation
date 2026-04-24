@@ -1,12 +1,11 @@
 # Distribution System State Estimation Research Code
 
 This repository contains open-source research software developed as part of a PhD
-and subsequent peer-reviewed publications on distribution network state estimation
-and related power system analysis topics.
+and subsequent peer-reviewed publications on distribution system state estimation.
 
 ## Purpose
-The code provides accessible implementations of established distribution network
-power flow and state estimation methods. It has been used to generate results for
+The code provides accessible implementations of established distribution system
+state estimation methods. It has been used to generate results for
 peer-reviewed papers and a doctoral thesis. The focus is on transparency,
 reproducibility, and reuse, rather than production-grade deployment or the
 development of new algorithms.
